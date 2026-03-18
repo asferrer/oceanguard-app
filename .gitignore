@@ -79,6 +79,6 @@ Dockerfile*
 # Screenshots & temp
 screenshots/
 
-# Landing page repo (submodule or reference copy)
-OceanguardAI/
+# Landing page repo (now a git submodule)
+# OceanguardAI/
 
