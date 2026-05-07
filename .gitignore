@@ -88,3 +88,10 @@ screenshots/
 alex.html
 dumpstate-*.zip
 graphify-out/
+
+# Eval set captured images (kept off-repo, distributed as release asset)
+docs/submission/eval_set/images/*.jpg
+docs/submission/eval_set/images/*.jpeg
+docs/submission/eval_set/images/*.png
+docs/submission/eval_set/images/*.heic
+!docs/submission/eval_set/images/.gitkeep
