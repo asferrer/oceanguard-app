@@ -83,3 +83,8 @@ screenshots/
 # Landing page repo (now a git submodule)
 # OceanguardAI/
 
+
+# Local artifacts that should never reach a public snapshot
+alex.html
+dumpstate-*.zip
+graphify-out/
