@@ -9,6 +9,14 @@ Gemma 4 E2B to describe, verify and report.
 This repository holds the Android source code, the RT-DETRv2 to TFLite conversion and validation tools, and the
 Gemma 4 conversion utilities. It contains no model weights, images or signing keys.
 
+| Home | Analysis modes | Models |
+|---|---|---|
+| ![Home](docs/screenshots/home.png) | ![Analysis modes](docs/screenshots/analysis-modes.png) | ![Models](docs/screenshots/models.png) |
+
+| Achievements | MarineDex |
+|---|---|
+| ![Achievements](docs/screenshots/achievements.png) | ![MarineDex](docs/screenshots/marinedex.png) |
+
 ## How it works
 
 ```
