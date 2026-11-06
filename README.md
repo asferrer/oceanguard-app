@@ -13,6 +13,10 @@ Gemma 4 conversion utilities. It contains no model weights, images or signing ke
 |---|---|---|
 | ![Home](docs/screenshots/home.png) | ![Analysis modes](docs/screenshots/analysis-modes.png) | ![Models](docs/screenshots/models.png) |
 
+| Report | Export | Continuous scan |
+|---|---|---|
+| ![Report](docs/screenshots/report.png) | ![Export](docs/screenshots/export.png) | ![Continuous scan](docs/screenshots/continuous-scan.png) |
+
 | Achievements | MarineDex |
 |---|---|
 | ![Achievements](docs/screenshots/achievements.png) | ![MarineDex](docs/screenshots/marinedex.png) |
@@ -37,7 +41,7 @@ ReportValidator -> Markdown / PDF / CSV / GeoJSON
 - **Detector.** RT-DETRv2 (R50vd, 150 queries, 8 classes), the model `exp08_real_synth_minor_s3` of the study, converted
   to TFLite FP16 (about 83 MB). The app is the only consumer of the conversion described in
   [`tools/rtdetrv2/README.md`](tools/rtdetrv2/README.md).
-- **Deep analysis and reports.** Gemma 4 E2B through LiteRT-LM. The report agent calls 8 typed Kotlin `@Tool`
+- **Deep analysis and reports.** Gemma 4 E2B through LiteRT-LM, running on the phone GPU. The report agent calls 8 typed Kotlin `@Tool`
   methods (debris summary, material and type breakdown, risk assessment, collection waypoints, survey statistics,
   ecological impacts, temporal trend), so every number in a report is computed in Kotlin and not written by the model.
   `ReportValidator` scores the result with 12+ checks.
