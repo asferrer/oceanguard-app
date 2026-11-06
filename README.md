@@ -67,9 +67,9 @@ protocol:
 | TEST-200 | 0.1381 | 0.2941 |
 | VAL-100 | 0.1081 | 0.2820 |
 
-The app uses the base Gemma 4 E2B (`.litertlm`) by default. The adapter, merged and quantised to Q4_K_M GGUF, is served
-through llama.cpp (tier "OceanGuard FT"); a fine-tuned `.litertlm` does not exist, so `FINETUNED_LITERTLM_PUBLISHED`
-is `false` and the app does not offer it. The training code of the adapter is not part of this repository.
+The app uses the base Gemma 4 E2B (`.litertlm`) by default and offers the fine-tuned model as an optional `.litertlm`
+variant (int8, about 5.0 GiB, text and vision). The adapter, merged and quantised to Q4_K_M GGUF, is also served through
+llama.cpp (tier "OceanGuard FT"). The training code of the adapter is not part of this repository.
 
 ## Models
 
@@ -80,6 +80,7 @@ Nothing in this repository is a model. Where each one comes from:
 | RT-DETRv2 TFLite FP16 | Attached to the `v1.0.0` release; fetch it to `android/app/src/main/assets/models/` with `scripts/setup-models.sh` / `.ps1`, or build it with [`tools/rtdetrv2`](tools/rtdetrv2/README.md) | Public |
 | Gemma 4 E2B `.litertlm` (about 2.6 GB) | Downloaded in-app by `VlmModelManager` from `huggingface.co/litert-community/gemma-4-E2B-it-litert-lm` | Public |
 | Qwen 3.5 GGUF (optional) | Downloaded in-app from Hugging Face by `VlmModelManager` | See the constants in the source |
+| Fine-tuned Gemma 4 (`.litertlm` int8, about 5.0 GiB) | Downloaded in-app from [`asferrer/gemma-4-E2B-it-oceanguard-marine-debris`](https://huggingface.co/asferrer/gemma-4-E2B-it-oceanguard-marine-debris) | Public |
 | Fine-tuned Gemma 4 (GGUF) | Downloaded in-app from [`asferrer/gemma-4-E2B-it-oceanguard-marine-debris`](https://huggingface.co/asferrer/gemma-4-E2B-it-oceanguard-marine-debris) | Public |
 | BioDex species pack | Downloaded in-app from [`asferrer/oceanguard-biodex`](https://huggingface.co/asferrer/oceanguard-biodex) | Public |
 

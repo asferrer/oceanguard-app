@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
  *
  * Species names are resolved from [SpeciesCatalog] via [SpeciesNames], which
  * honours the in-app UI language override. Common names live in the catalog
- * JSON (not strings.xml) as specified in the design.
+ * JSON, not in strings.xml.
  */
 class SpeciesDexViewModel(
     private val repo: SpeciesCollectionRepository,

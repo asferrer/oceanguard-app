@@ -63,10 +63,9 @@ class VlmModelManager(
         const val GEMMA4_LITERTLM_FILENAME = "gemma-4-E2B-it.litertlm"
         private const val MIN_GEMMA4_LITERTLM_BYTES = 2_000_000_000L // 2 GB (~2.58 GB)
 
-        // Gemma 4 — OceanGuard fine-tuned variant (LiteRT-LM, int8, ~5.0 GB, text + vision). NOT published:
-        // the HF repo only holds the adapter and the GGUF. While false, the app neither offers nor downloads
-        // this variant (the fine-tuned model is the GGUF through llama.cpp, tier OCEANGUARD_FT).
-        const val FINETUNED_LITERTLM_PUBLISHED = false
+        // Gemma 4 — OceanGuard fine-tuned variant (LiteRT-LM, int8, ~5.0 GB, text + vision).
+        // When false, the app neither offers nor downloads this variant.
+        const val FINETUNED_LITERTLM_PUBLISHED = true
         const val GEMMA4_LITERTLM_FINETUNED_FILENAME = "gemma-4-E2B-it-oceanguard.litertlm"
         private const val GEMMA4_LITERTLM_FINETUNED_URL =
             "$HF_BASE/asferrer/gemma-4-E2B-it-oceanguard-marine-debris/resolve/main/gemma-4-E2B-it-oceanguard.litertlm"

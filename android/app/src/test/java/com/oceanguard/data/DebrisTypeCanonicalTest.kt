@@ -10,9 +10,8 @@ import org.junit.Test
  * the 11 [DebrisType.CANONICAL] entries that the MarineDex, achievements, and
  * reports operate on.
  *
- * Source of truth: the debris taxonomy plan A1 mapping
- * (approved by user 2026-05-14). Any change to the mapping must update this
- * test in lockstep so regressions are caught at build time.
+ * Any change to the mapping must update this test in lockstep so regressions
+ * are caught at build time.
  */
 class DebrisTypeCanonicalTest {
 
