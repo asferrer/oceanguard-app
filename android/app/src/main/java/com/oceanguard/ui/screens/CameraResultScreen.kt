@@ -1,98 +1,81 @@
 package com.oceanguard.ai.ui.screens
 
+import android.content.res.Configuration
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import coil3.compose.AsyncImage
-import kotlinx.coroutines.delay
 import com.oceanguard.ai.OceanGuardApp
 import com.oceanguard.ai.R
-import com.oceanguard.ai.data.SettingsRepository
+import com.oceanguard.ai.data.AnalysisMode
+import com.oceanguard.ai.data.AnalysisModels
 import com.oceanguard.ai.inference.AnalysisResult
-import com.oceanguard.ai.inference.DetectionResult
-import com.oceanguard.ai.inference.DetectorType
+import com.oceanguard.ai.inference.AnalysisState
 import com.oceanguard.ai.service.InferenceServiceState
 import com.oceanguard.ai.ui.MainViewModel
 import com.oceanguard.ai.ui.UiState
-import com.oceanguard.ai.ui.components.BoundingBoxOverlay
-import com.oceanguard.ai.ui.components.InferenceAnimationOverlay
-import com.oceanguard.ai.ui.components.OceanGradientButton
-import com.oceanguard.ai.ui.components.OnGradientColor
-import com.oceanguard.ai.ui.components.pressableScale
-import com.oceanguard.ai.ui.theme.OceanGreen
-import com.oceanguard.ai.ui.theme.healthScoreColor
+import com.oceanguard.ai.ui.components.AnalysisStatusPill
+import com.oceanguard.ai.ui.components.analysis.AnalysisFlow
+import com.oceanguard.ai.ui.components.analysis.AnalysisStatus
+import com.oceanguard.ai.ui.components.analysis.AnalysisSweepStage
+import com.oceanguard.ai.ui.components.analysis.SweepReveal
+import com.oceanguard.ai.ui.components.analysis.rememberElapsedSeconds
+import com.oceanguard.ai.ui.components.analysis.rememberSweepReveal
+import com.oceanguard.ai.ui.components.sonar.SonarErrorState
+import com.oceanguard.ai.ui.motion.OceanMotion
+import com.oceanguard.ai.ui.navigation.OceanRoutes
+import com.oceanguard.ai.ui.navigation.OceanSharedKeys
+import com.oceanguard.ai.ui.navigation.oceanSharedElement
+import com.oceanguard.ai.ui.screens.camera.AnalysisPanel
+import java.util.Locale
+
+private const val MILLIS_PER_SECOND = 1_000f
+
+private val SIDE_PANEL_WIDTH = 320.dp
+private val TOP_BAR_PADDING = 4.dp
+private val STATUS_PADDING = 16.dp
+private val ERROR_PADDING = 24.dp
 
 /**
- * CameraResultScreen — dedicated landing for the camera-capture flow.
+ * Landing of every analysis started from the camera: the signature moment and the result, on the
+ * same photo.
  *
- * The captured photo is displayed full-screen on a black backdrop while the
- * detection pipeline runs. An [InferenceAnimationOverlay] (sonar + scan beam +
- * reticle) sits on top so the user gets continuous feedback that work is
- * happening on-device. As soon as the detector emits boxes, they are drawn
- * directly on the photo with the canonical [BoundingBoxOverlay] — large, with
- * class and confidence labels — so the user sees the result on the captured
- * frame itself, not in a card-style list.
- *
- * When the analysis completes the screen swaps the live overlay for the
- * pre-rendered annotated thumbnail (same bake the History detail uses) and
- * surfaces a compact bottom bar with a summary and two actions:
- *   - "View Details" → `session/{id}` (the full analysis card from ResultsScreen)
- *   - "New Scan"     → back to the camera viewfinder
- *
- * Gallery / batch flows continue to use [ResultsScreen]; this screen is
- * reached only when the user navigates from the camera viewfinder via the
- * "camera_result" route.
+ * The sonar line runs for exactly as long as the pipeline works. When the boxes arrive, a last pass
+ * reveals them in order; neither detector reports progress, so nothing here pretends to. The screen
+ * then stays until the user picks "New scan" or "View details".
  */
 @Composable
 fun CameraResultScreen(
@@ -101,465 +84,236 @@ fun CameraResultScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val capturedImageUri by viewModel.capturedImageUri.collectAsStateWithLifecycle()
-    val annotatedThumbnailUri by viewModel.annotatedThumbnailUri.collectAsStateWithLifecycle()
     val serviceState by viewModel.inferenceServiceState.collectAsStateWithLifecycle()
-
     val context = LocalContext.current
     val app = remember(context) { context.applicationContext as OceanGuardApp }
-    val detectorModeKey by app.settingsRepository.detectorMode
-        .collectAsStateWithLifecycle(initialValue = SettingsRepository.DEFAULT_DETECTOR_MODE)
-    val isGemma4 = detectorModeKey == DetectorType.GEMMA4_VISION.key
+    val initialMode = remember { app.settingsRepository.getAnalysisModeSync() }
+    val mode by app.settingsRepository.analysisMode.collectAsStateWithLifecycle(initialMode)
+    val contributing by app.settingsRepository.contributeConsentGiven
+        .collectAsStateWithLifecycle(initialValue = false)
 
-    // Elapsed-seconds tick for the long Gemma 4 path.
-    var elapsedSec by remember { mutableIntStateOf(0) }
-    LaunchedEffect(uiState) {
-        elapsedSec = 0
-        while (uiState is UiState.Detecting ||
-            uiState is UiState.ModelLoading ||
-            uiState is UiState.DetectionsReady ||
-            uiState is UiState.AnalyzingDeep
-        ) {
-            delay(1_000)
-            elapsedSec += 1
-        }
+    val reveal = rememberSweepReveal(AnalysisFlow.detections(uiState))
+    val result = (uiState as? UiState.AnalysisComplete)?.result
+    val sessionId = (serviceState as? InferenceServiceState.SingleComplete)?.sessionId?.takeIf { it > 0 }
+    val effectiveMode = remember(mode) { mode.effective(app::isModelDownloaded) }
+    val exits = remember(navController, viewModel) { AnalysisExits(navController, viewModel) }
+    DisposableEffect(exits) { onDispose(exits::clearAfterLeaving) }
+
+    AnalysisLayout(
+        header = { AnalysisHeader(analysisHeaderText(result, effectiveMode), exits::back) },
+        stage = { stageModifier ->
+            PhotoStage(
+                imageUri = capturedImageUri,
+                reveal = reveal,
+                uiState = uiState,
+                app = app,
+                mode = effectiveMode,
+                sessionId = sessionId,
+                onRetry = { capturedImageUri?.let(exits::retry) },
+                modifier = stageModifier,
+            )
+        },
+        panel = { panelModifier ->
+            AnalysisPanel(
+                found = reveal.fired,
+                result = result,
+                contributing = contributing,
+                onViewDetails = sessionId?.let { id -> { exits.details(id) } },
+                onNewScan = exits::newScan,
+                modifier = panelModifier,
+            )
+        },
+    )
+}
+
+/**
+ * Everything that leaves this analysis. It is cleared once the screen is gone, not before: the
+ * photo and its boxes must stay visible during the transition, and the photo may fly to the detail.
+ */
+private class AnalysisExits(
+    private val navController: NavController,
+    private val viewModel: MainViewModel,
+) {
+    private var leaving = false
+
+    fun clearAfterLeaving() {
+        if (leaving) viewModel.resetState()
     }
 
-    val currentDetections: List<DetectionResult> = when (val state = uiState) {
-        is UiState.DetectionsReady -> state.detections
-        is UiState.AnalyzingDeep -> state.detections
-        is UiState.AnalysisComplete -> state.result.rtdetrDetections
-        else -> emptyList()
+    fun back() {
+        leaving = true
+        navController.popBackStack()
     }
-    val currentResult: AnalysisResult? = (uiState as? UiState.AnalysisComplete)?.result
-    val completedSessionId: Long? = (serviceState as? InferenceServiceState.SingleComplete)?.sessionId
 
-    // Hoist the "new scan" action so both the button and the auto-return
-    // LaunchedEffect reference the same lambda.
-    val onNewScan: () -> Unit = {
+    fun retry(photo: Uri) {
         viewModel.resetState()
-        navController.navigate("camera") {
-            popUpTo("home") { inclusive = false }
+        viewModel.analyzeImage(photo)
+    }
+
+    fun newScan() {
+        leaving = true
+        navController.navigate(OceanRoutes.CAMERA) {
+            popUpTo(OceanRoutes.HOME) { inclusive = false }
         }
     }
 
-    // Auto-return countdown — fires only once analysis is complete (completedSessionId
-    // becomes a stable non-null Long). If the user taps "New Scan" first, the screen
-    // leaves composition and the effect is cancelled automatically.
-    var autoReturnCountdown by remember { mutableIntStateOf(10) }
-    LaunchedEffect(completedSessionId) {
-        if (completedSessionId != null) {
-            autoReturnCountdown = 10
-            repeat(10) { tick ->
-                delay(1_000L)
-                autoReturnCountdown = 9 - tick
-            }
-            onNewScan()
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            // Use the exact same `colorScheme.background` that every other
-            // screen (Home, History, Map…) uses for its Scaffold container, so
-            // the letterbox bands around a non-matching photo aspect ratio are
-            // pixel-identical to the rest of the app's chrome.
-            .background(MaterialTheme.colorScheme.background),
-    ) {
-        CapturedImageWithDetections(
-            imageUri = capturedImageUri,
-            annotatedThumbnailUri = annotatedThumbnailUri,
-            detections = currentDetections,
-            showLiveOverlay = uiState !is UiState.AnalysisComplete,
-            modifier = Modifier.fillMaxSize(),
-        )
-
-        // Live inference animation — only while pipeline is running.
-        val showOverlay = uiState is UiState.Detecting ||
-            uiState is UiState.ModelLoading ||
-            uiState is UiState.AnalyzingDeep ||
-            (uiState is UiState.DetectionsReady && isGemma4.not())
-        AnimatedVisibility(
-            visible = showOverlay,
-            enter = fadeIn(),
-            exit = fadeOut(),
-        ) {
-            val statusText = inferenceStatusText(uiState, isGemma4)
-            // Only show elapsed-time line; we no longer surface a time estimate
-            // teaser so the overlay reads as a clean activity indicator.
-            val subText = if (elapsedSec > 0) {
-                stringResource(R.string.results_status_elapsed, elapsedSec)
-            } else null
-            InferenceAnimationOverlay(
-                statusText = statusText,
-                subText = subText,
-                accentColor = OceanGreen,
-            )
-        }
-
-        // Top bar: minimal transparent back button.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(12.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            IconButton(
-                onClick = {
-                    viewModel.resetState()
-                    navController.popBackStack()
-                },
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(Color.Black.copy(alpha = 0.45f), CircleShape),
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.cd_go_back),
-                    tint = Color.White,
-                )
-            }
-        }
-
-        // Bottom bar: live count chip while running, full summary when done.
-        AnimatedVisibility(
-            visible = uiState is UiState.AnalysisComplete || currentDetections.isNotEmpty(),
-            enter = fadeIn() + slideInVertically { it / 2 },
-            exit = fadeOut() + slideOutVertically { it / 2 },
-            modifier = Modifier.align(Alignment.BottomCenter),
-        ) {
-            BottomActionBar(
-                result = currentResult,
-                liveDetectionCount = currentDetections.size,
-                isComplete = uiState is UiState.AnalysisComplete,
-                autoReturnCountdown = autoReturnCountdown,
-                onViewDetails = if (completedSessionId != null && completedSessionId > 0) {
-                    {
-                        viewModel.resetState()
-                        navController.navigate("session/$completedSessionId") {
-                            popUpTo("home") { inclusive = false }
-                        }
-                    }
-                } else null,
-                onNewScan = onNewScan,
-            )
-        }
-
-        // Error overlay
-        val errorState = uiState as? UiState.Error
-        if (errorState != null) {
-            ErrorCard(
-                message = errorState.message,
-                onRetry = {
-                    capturedImageUri?.let { viewModel.analyzeImage(it) }
-                },
-                onBack = {
-                    viewModel.resetState()
-                    navController.popBackStack()
-                },
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(24.dp),
-            )
+    fun details(sessionId: Long) {
+        leaving = true
+        navController.navigate("session/$sessionId") {
+            popUpTo(OceanRoutes.HOME) { inclusive = false }
         }
     }
 }
 
+/** Photo above the panel in portrait, next to it in landscape, where height is short. */
 @Composable
-private fun CapturedImageWithDetections(
-    imageUri: Uri?,
-    annotatedThumbnailUri: String?,
-    detections: List<DetectionResult>,
-    showLiveOverlay: Boolean,
-    modifier: Modifier = Modifier,
+private fun AnalysisLayout(
+    header: @Composable () -> Unit,
+    stage: @Composable (Modifier) -> Unit,
+    panel: @Composable (Modifier) -> Unit,
 ) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        when {
-            // Final state with a pre-rendered annotated thumbnail — render that
-            // as the source of truth so the screen matches the History detail
-            // pixel-for-pixel and we don't double-draw boxes on top of baked ones.
-            !showLiveOverlay && annotatedThumbnailUri != null -> {
-                AsyncImage(
-                    model = annotatedThumbnailUri,
-                    contentDescription = stringResource(R.string.session_detail_cd_annotated_image),
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-            // Live (in-progress) or final without baked thumbnail — draw boxes
-            // dynamically on top of the captured photo. BoundingBoxOverlay uses
-            // ContentScale.Fit internally, so the photo keeps its aspect ratio
-            // and the boxes line up exactly with the displayed image.
-            imageUri != null -> {
-                BoundingBoxOverlay(
-                    imageUri = imageUri.toString(),
-                    detections = detections,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-            else -> {
-                Text(
-                    text = stringResource(R.string.results_status_preparing),
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun inferenceStatusText(state: UiState, isGemma4: Boolean): String = when (state) {
-    is UiState.ModelLoading -> state.progress
-    is UiState.Detecting -> if (isGemma4) {
-        stringResource(R.string.results_status_detecting_gemma4)
-    } else {
-        stringResource(R.string.results_status_detecting)
-    }
-    is UiState.DetectionsReady,
-    is UiState.AnalyzingDeep -> stringResource(R.string.results_status_generating)
-    else -> stringResource(R.string.results_status_preparing)
-}
-
-@Composable
-private fun BottomActionBar(
-    result: AnalysisResult?,
-    liveDetectionCount: Int,
-    isComplete: Boolean,
-    autoReturnCountdown: Int,
-    onViewDetails: (() -> Unit)?,
-    onNewScan: () -> Unit,
-) {
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            // Tinted in the exact theme background colour so the bar reads as a
-            // continuation of the chrome rather than a black band on the photo.
-            .background(
-                color = MaterialTheme.colorScheme.background.copy(alpha = 0.82f),
-            )
-            .navigationBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding(),
     ) {
-        if (isComplete && result != null) {
-            CompleteSummary(result = result)
-        } else if (liveDetectionCount > 0) {
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = OceanGreen.copy(alpha = 0.85f),
-            ) {
-                Text(
-                    text = stringResource(R.string.camera_result_live_count, liveDetectionCount),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
-                )
-            }
-        }
-
-        if (isComplete) {
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedButton(
-                    onClick = onNewScan,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(42.dp)
-                        .pressableScale(),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 10.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.55f)),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.CameraAlt,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = stringResource(R.string.camera_result_btn_new_scan),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-
-                if (onViewDetails != null) {
-                    OceanGradientButton(
-                        onClick = onViewDetails,
-                        modifier = Modifier.weight(1f),
-                        height = 42.dp,
-                        cornerRadius = 12.dp,
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = OnGradientColor,
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = stringResource(R.string.camera_result_btn_view_details),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = OnGradientColor,
-                        )
-                    }
-                }
-            }
-
-            // Auto-return countdown hint — stays visible until the timer fires or
-            // the user taps a button manually. Hidden once countdown reaches 0 to
-            // avoid a flash of "Scanning again in 0 s…" before navigation settles.
-            if (autoReturnCountdown > 0) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = stringResource(R.string.camera_result_auto_return, autoReturnCountdown),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.55f),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CompleteSummary(result: AnalysisResult) {
-    val noDebris = result.totalDebrisCount == 0
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        if (noDebris) {
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = OceanGreen.copy(alpha = 0.85f),
-            ) {
-                Text(
-                    text = stringResource(R.string.camera_result_no_debris),
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
+        header()
+        if (isLandscape) {
+            Row(Modifier.fillMaxSize()) {
+                stage(Modifier.weight(1f).fillMaxHeight())
+                panel(
+                    Modifier
+                        .width(SIDE_PANEL_WIDTH)
+                        .verticalScroll(rememberScrollState()),
                 )
             }
         } else {
-            SummaryChip(
-                label = stringResource(R.string.camera_result_summary_debris),
-                value = result.totalDebrisCount.toString(),
-                tint = Color.White,
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            SummaryChip(
-                label = stringResource(R.string.camera_result_summary_health),
-                value = "${result.healthScore}%",
-                tint = healthScoreColor(result.healthScore),
-            )
+            stage(Modifier.weight(1f).fillMaxWidth())
+            panel(Modifier)
         }
     }
 }
 
 @Composable
-private fun SummaryChip(label: String, value: String, tint: Color) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = Color.White.copy(alpha = 0.10f),
+private fun analysisHeaderText(result: AnalysisResult?, mode: AnalysisMode): String =
+    if (result == null) {
+        stringResource(mode.labelRes)
+    } else {
+        stringResource(
+            R.string.sonar_analysis_done_meta,
+            result.modelName,
+            String.format(Locale.getDefault(), "%.1f", result.processingTimeMs / MILLIS_PER_SECOND),
+        )
+    }
+
+@Composable
+private fun AnalysisHeader(title: String, onBack: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(TOP_BAR_PADDING),
+        horizontalArrangement = Arrangement.spacedBy(TOP_BAR_PADDING),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = tint,
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.85f),
+        IconButton(onClick = onBack) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.cd_go_back),
+                tint = MaterialTheme.colorScheme.onSurface,
             )
         }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
 
 @Composable
-private fun ErrorCard(
-    message: String,
+private fun PhotoStage(
+    imageUri: Uri?,
+    reveal: SweepReveal,
+    uiState: UiState,
+    app: OceanGuardApp,
+    mode: AnalysisMode,
+    sessionId: Long?,
     onRetry: () -> Unit,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
-        color = Color.Black.copy(alpha = 0.85f),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
-    ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Error,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.error,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = stringResource(R.string.results_error_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.85f),
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(18.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(
-                    onClick = onBack,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
-                ) {
-                    Text(stringResource(R.string.common_back))
-                }
-                OceanGradientButton(
-                    onClick = onRetry,
-                    height = 44.dp,
-                    cornerRadius = 12.dp,
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = OnGradientColor,
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = stringResource(R.string.results_btn_retry_analysis),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = OnGradientColor,
-                    )
-                }
-            }
-        }
+    val running = AnalysisFlow.isRunning(uiState)
+    val result = (uiState as? UiState.AnalysisComplete)?.result
+    val modelName = result?.modelName ?: app.activeDetectorModelName()
+    val hasConfidence = AnalysisModels.hasModelConfidence(modelName)
+    Box(modifier = modifier) {
+        AnalysisSweepStage(
+            imageUri = imageUri,
+            reveal = reveal,
+            running = running,
+            sweepPeriodMs = AnalysisFlow.sweepPeriodMs(mode),
+            showConfidence = hasConfidence,
+            modifier = Modifier.fillMaxSize(),
+            imageModifier = sessionId?.let {
+                Modifier.oceanSharedElement(OceanSharedKeys.sessionImage(it))
+            } ?: Modifier,
+        )
+        AnalysisStatusOverlay(uiState, app, gemmaDetector = !hasConfidence)
+        if (uiState is UiState.Error) AnalysisErrorOverlay(onRetry)
     }
 }
+
+/** Says what is happening and for how long: the screen shows no estimate it cannot back. */
+@Composable
+private fun BoxScope.AnalysisStatusOverlay(
+    uiState: UiState,
+    app: OceanGuardApp,
+    gemmaDetector: Boolean,
+) {
+    val pipelineState by app.detectionOrchestrator.analysisState.collectAsStateWithLifecycle()
+    val running = AnalysisFlow.isRunning(uiState)
+    val elapsed = rememberElapsedSeconds(running)
+    val warming = pipelineState is AnalysisState.WarmingUpModel
+    AnimatedVisibility(
+        visible = running,
+        enter = fadeIn(OceanMotion.fast()),
+        exit = fadeOut(OceanMotion.exit()),
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(STATUS_PADDING),
+    ) {
+        AnalysisStatusPill(
+            statusText = statusText(AnalysisFlow.status(uiState, warming, gemmaDetector)),
+            subText = stringResource(R.string.results_status_elapsed, elapsed).takeIf { elapsed > 0 },
+        )
+    }
+}
+
+@Composable
+private fun BoxScope.AnalysisErrorOverlay(onRetry: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .align(Alignment.Center)
+            .padding(ERROR_PADDING),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface,
+    ) {
+        SonarErrorState(
+            title = stringResource(R.string.results_error_title),
+            message = stringResource(R.string.sonar_analysis_error_message),
+            onRetry = onRetry,
+        )
+    }
+}
+
+@Composable
+private fun statusText(status: AnalysisStatus): String = stringResource(
+    when (status) {
+        AnalysisStatus.LOADING_IMAGE, AnalysisStatus.FINISHED -> R.string.results_status_preparing
+        AnalysisStatus.WARMING_MODEL -> R.string.sonar_analysis_status_warming
+        AnalysisStatus.DETECTING -> R.string.results_status_detecting
+        AnalysisStatus.GEMMA -> R.string.results_status_detecting_gemma4
+        AnalysisStatus.REFINING -> R.string.sonar_analysis_status_refining
+    },
+)

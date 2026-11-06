@@ -96,6 +96,10 @@ object BitmapAnnotator {
         "chemical_drum"     to 0xFFEF5350.toInt(),
     )
 
+    /** Text of a box's label: the class name and, when it is a real model confidence, `NN%`. */
+    internal fun labelFor(className: String, confidence: Float, showConfidence: Boolean): String =
+        if (showConfidence) "$className ${(confidence * 100).toInt()}%" else className
+
     private const val DEFAULT_COLOR = 0xFF607D8B.toInt() // MaterialOther
 
     private fun colorForClass(className: String): Int =
@@ -148,9 +152,15 @@ object BitmapAnnotator {
      *
      * @param source     The original image bitmap.
      * @param detections RT-DETR detections with normalized coordinates.
+     * @param showConfidence Whether the label carries `NN%`. Off for Gemma, whose score is not
+     *                       a model confidence.
      * @return A new bitmap with bounding boxes and labels painted on it.
      */
-    fun annotate(source: Bitmap, detections: List<DetectionResult>): Bitmap {
+    fun annotate(
+        source: Bitmap,
+        detections: List<DetectionResult>,
+        showConfidence: Boolean = true,
+    ): Bitmap {
         val annotated = source.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(annotated)
 
@@ -211,7 +221,7 @@ object BitmapAnnotator {
             drawCornerBrackets(canvas, left, top, right, bottom, bracketPaint)
 
             // 3. Pill-shaped label chip
-            val label = "${det.className} ${(det.confidence * 100).toInt()}%"
+            val label = labelFor(det.className, det.confidence, showConfidence)
             val labelWidth = textPaint.measureText(label)
             val chipHeight = textSize + padding * 2
             val chipRadius = chipHeight / 2f
@@ -315,6 +325,7 @@ object BitmapAnnotator {
      * @param imageUri   URI of the source image.
      * @param detections RT-DETR detections with normalized [0,1] coordinates.
      * @param quality    JPEG compression quality (0-100). Default 85.
+     * @param showConfidence Whether labels carry the percentage; see [annotate].
      * @return URI string of the saved annotated image, or null on failure.
      */
     fun annotateAndSave(
@@ -322,6 +333,7 @@ object BitmapAnnotator {
         imageUri: Uri,
         detections: List<DetectionResult>,
         quality: Int = 85,
+        showConfidence: Boolean = true,
     ): String? {
         if (detections.isEmpty()) return null
 
@@ -341,7 +353,7 @@ object BitmapAnnotator {
             val source = correctOrientation(context, imageUri, decoded)
 
             // Render annotations
-            val annotated = annotate(source, detections)
+            val annotated = annotate(source, detections, showConfidence)
             source.recycle()
 
             // Save to internal storage

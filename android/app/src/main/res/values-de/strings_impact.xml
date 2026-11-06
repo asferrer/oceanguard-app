@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Environmental impact of each debris type: persistence, main risk and yearly volume -->
+    <string name="impact_degradation_450">Über 450 Jahre</string>
+    <string name="impact_degradation_600">Über 600 Jahre</string>
+    <string name="impact_degradation_200">Über 200 Jahre</string>
+    <string name="impact_degradation_100">Über 100 Jahre</string>
+    <string name="impact_degradation_2000">Über 2000 Jahre</string>
+    <string name="impact_degradation_200_500">200-500 Jahre</string>
+    <string name="impact_degradation_1_200">1-200+ Jahre</string>
+    <string name="impact_degradation_million">Über 1.000.000 Jahre</string>
+    <string name="impact_degradation_variable">Variabel</string>
+    <string name="impact_risk_ingestion_fragmentation">Verschluckungsrisiko, Mikroplastik-Fragmentierung</string>
+    <string name="impact_risk_sharp_toxic">Scharfe Kanten, Auslaugung giftiger Chemikalien</string>
+    <string name="impact_risk_ghost_fishing">Geisterfischerei, Verfangung von Meereslebewesen</string>
+    <string name="impact_risk_ingestion_release">Verschluckungsrisiko, Freisetzung von Mikroplastik</string>
+    <string name="impact_risk_entanglement_small">Verfangung kleiner Meeresorganismen</string>
+    <string name="impact_risk_sharp_habitat">Scharfe Kanten, chemische Auslaugung, Lebensraumstörung</string>
+    <string name="impact_risk_plastic_fragmentation">Mikroplastik-Fragmentierung, Verschlucken durch Meeresfauna</string>
+    <string name="impact_risk_toxic_chemicals">Giftige Chemikalien (Zink, Cadmium, Schwermetalle)</string>
+    <string name="impact_risk_microfiber">Mikrofaser-Freisetzung, Verfangung</string>
+    <string name="impact_risk_physical_injury">Physische Verletzungen für Meereslebewesen</string>
+    <string name="impact_risk_unknown">Unbekannte Umweltauswirkung</string>
+    <string name="impact_volume_1m">~1 Mio. Tonnen/Jahr</string>
+    <string name="impact_volume_500k">~500.000 Tonnen/Jahr</string>
+    <string name="impact_volume_640k">~640.000 Tonnen/Jahr</string>
+    <string name="impact_volume_8m">~8 Mio. Tonnen/Jahr</string>
+    <string name="overlay_no_image">Kein Bild verfügbar</string>
+    <string name="overlay_image_cd">Aufgenommenes Bild mit erkanntem Müll</string>
+</resources>

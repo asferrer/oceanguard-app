@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Launch window, before Compose draws -->
+    <color name="sonar_deep">#071B2B</color>
+
     <!-- Ocean Theme Colors -->
     <color name="ocean_blue">#006994</color>
     <color name="ocean_blue_light">#4A9FBD</color>

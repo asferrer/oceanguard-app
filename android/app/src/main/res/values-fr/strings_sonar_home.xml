@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home strings. -->
+<resources>
+    <string name="home_target_debris">Déchets</string>
+    <string name="home_target_species">Espèces</string>
+    <string name="home_scan_action">Scanner</string>
+    <string name="home_scan_preparing">Préparation</string>
+    <string name="home_scan_cd_debris">Scanner les déchets avec l\'appareil photo</string>
+    <string name="home_scan_cd_species">Identifier les espèces avec l\'appareil photo</string>
+    <string name="home_pick_photos">Choisir des photos</string>
+    <string name="home_status_not_loaded">Pas encore chargé</string>
+    <string name="home_status_needs_download">Non téléchargé · ~%1$s Go</string>
+    <string name="home_status_reports_ready">Rapports : modèle prêt</string>
+    <string name="home_status_reports_missing">Rapports : modèle non téléchargé (%1$s)</string>
+    <string name="home_download_title">Télécharger le modèle</string>
+    <string name="home_download_message">Le mode %1$s nécessite un téléchargement unique d\'environ %2$s Go. Mieux vaut utiliser le Wi-Fi. Le télécharger maintenant ?</string>
+    <string name="home_achievements_button_cd">Succès : %1$d sur %2$d débloqués</string>
+    <string name="welcome_models_title">Que voulez-vous télécharger ?</string>
+    <string name="welcome_models_intro">La détection rapide fonctionne tout de suite : elle est déjà dans l\'application. Les autres modes décrivent chaque objet plus en détail mais demandent un téléchargement.</string>
+    <string name="welcome_models_note">Vous pourrez le changer plus tard depuis l\'accueil ou Modèles et IA. Le téléchargement continue en arrière-plan.</string>
+    <string name="welcome_option_included">Inclus, rien à télécharger</string>
+    <string name="welcome_option_download">Téléchargement de ~%1$s Go</string>
+    <string name="welcome_option_unavailable">Pas encore disponible</string>
+    <string name="welcome_tour_title">Faire un tour rapide ?</string>
+    <string name="welcome_tour_body">Un court parcours guidé présente les écrans principaux, un par un. Vous pouvez le rejouer à tout moment depuis les réglages.</string>
+    <string name="welcome_tour_start">Commencer le parcours</string>
+    <string name="welcome_tour_later">Pas maintenant</string>
+    <string name="welcome_page_cd">Page %1$d sur %2$d</string>
+</resources>

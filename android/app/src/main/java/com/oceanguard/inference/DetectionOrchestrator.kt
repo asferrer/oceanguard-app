@@ -111,7 +111,9 @@ class DetectionOrchestrator(
 
             val totalTime = System.currentTimeMillis() - startTime
             val refined = detections.any { it.subType != null || it.rawLabel != null }
-            val result = buildResult(detections, totalTime, deepAnalysis || refined)
+            val result = buildResult(
+                detections, totalTime, deepAnalysis || refined, modelNameFor(deepAnalysis, refined),
+            )
             _analysisState.value = AnalysisState.Complete(result)
             Log.i(TAG, "Analysis complete in ${totalTime}ms (deep=$deepAnalysis)")
             result
@@ -149,6 +151,16 @@ class DetectionOrchestrator(
         }
     }
 
+    /** Names what produced the output: a refiner that changed no box does not count. */
+    private fun modelNameFor(deepAnalysis: Boolean, refined: Boolean): String {
+        val second = refiner
+        return if (!deepAnalysis && refined && second != null) {
+            AnalysisModels.refined(detector.modelName, second.modelName)
+        } else {
+            detector.modelName
+        }
+    }
+
     /**
      * Quick detection only (no state side-effects). Used by the live preview.
      */
@@ -177,6 +189,7 @@ class DetectionOrchestrator(
         detections: List<DetectionResult>,
         processingTimeMs: Long,
         deepAnalysis: Boolean,
+        modelName: String,
     ): AnalysisResult {
         val debrisDetection = buildDebrisDetection(detections)
         return AnalysisResult(
@@ -186,6 +199,7 @@ class DetectionOrchestrator(
             totalDebrisCount = detections.size,
             processingTimeMs = processingTimeMs,
             hasVLMAnalysis = deepAnalysis,
+            modelName = modelName,
         )
     }
 
@@ -266,5 +280,7 @@ data class AnalysisResult(
     val healthScore: Int,
     val totalDebrisCount: Int,
     val processingTimeMs: Long,
-    val hasVLMAnalysis: Boolean
+    val hasVLMAnalysis: Boolean,
+    /** Model that really ran, which may differ from the chosen mode if a file was missing. */
+    val modelName: String,
 )

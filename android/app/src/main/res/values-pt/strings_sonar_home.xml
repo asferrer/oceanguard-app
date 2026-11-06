@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home strings. -->
+<resources>
+    <string name="home_target_debris">Resíduos</string>
+    <string name="home_target_species">Espécies</string>
+    <string name="home_scan_action">Analisar</string>
+    <string name="home_scan_preparing">A preparar</string>
+    <string name="home_scan_cd_debris">Analisar resíduos com a câmara</string>
+    <string name="home_scan_cd_species">Identificar espécies com a câmara</string>
+    <string name="home_pick_photos">Escolher fotos</string>
+    <string name="home_status_not_loaded">Ainda não carregado</string>
+    <string name="home_status_needs_download">Não transferido · ~%1$s GB</string>
+    <string name="home_status_reports_ready">Relatórios: modelo pronto</string>
+    <string name="home_status_reports_missing">Relatórios: modelo não transferido (%1$s)</string>
+    <string name="home_download_title">Transferir modelo</string>
+    <string name="home_download_message">O modo %1$s precisa de uma transferência única de cerca de %2$s GB. É melhor com Wi-Fi. Transferir agora?</string>
+    <string name="home_achievements_button_cd">Conquistas: %1$d de %2$d desbloqueadas</string>
+    <string name="welcome_models_title">O que quer transferir?</string>
+    <string name="welcome_models_intro">A deteção rápida funciona já: vem incluída na app. Os outros modos descrevem cada objeto com mais detalhe, mas precisam de uma transferência.</string>
+    <string name="welcome_models_note">Pode alterá-lo mais tarde no Início ou em Modelos e IA. A transferência continua em segundo plano.</string>
+    <string name="welcome_option_included">Incluído, nada para transferir</string>
+    <string name="welcome_option_download">Transferência de ~%1$s GB</string>
+    <string name="welcome_option_unavailable">Ainda não disponível</string>
+    <string name="welcome_tour_title">Fazer uma visita rápida?</string>
+    <string name="welcome_tour_body">Uma breve visita guiada mostra os ecrãs principais, um a um. Pode repeti-la quando quiser nas Definições.</string>
+    <string name="welcome_tour_start">Iniciar a visita</string>
+    <string name="welcome_tour_later">Agora não</string>
+    <string name="welcome_page_cd">Página %1$d de %2$d</string>
+</resources>

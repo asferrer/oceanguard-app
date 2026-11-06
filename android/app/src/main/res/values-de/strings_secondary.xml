@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Scan-Modus-Auswahl (Start) -->
-    <string name="scan_mode_title">Was möchtest du analysieren?</string>
-    <string name="scan_mode_debris_title">Müll erkennen</string>
-    <string name="scan_mode_debris_desc">Meeresmüll finden und klassifizieren</string>
-    <string name="scan_mode_species_title">Arten bestimmen</string>
-    <string name="scan_mode_species_desc">Meereslebewesen erkennen und zum BioDex hinzufügen</string>
     <string name="biodex_download_pack">Artenpaket herunterladen</string>
 
     <!-- ================================================================== -->
@@ -21,10 +16,7 @@
     <string name="session_detail_cd_annotated_image">Annotiertes Erkennungsbild</string>
     <string name="session_detail_empty">Analyse nicht gefunden</string>
     <string name="session_detail_label_total_debris">Müll insgesamt</string>
-    <string name="session_detail_label_processing">Verarbeitung</string>
     <string name="session_detail_label_quality">Qualität</string>
-    <string name="session_detail_section_material_breakdown">Materialaufschlüsselung</string>
-    <string name="session_detail_section_detected_objects">Erkannte Objekte</string>
     <string name="session_detail_location_add">Standort hinzufügen</string>
     <string name="session_detail_cd_edit_location_inline">Standort bearbeiten</string>
     <string name="session_detail_cd_edit_date">Analysedatum bearbeiten</string>
@@ -67,7 +59,6 @@
 
     <!-- Kartenfilter -->
     <string name="map_filter_debris_type">Abfallart</string>
-    <string name="map_filter_date_range">Zeitraum</string>
 
     <!-- Zonen-Infobereich -->
     <string name="zone_sheet_stat_dives">Tauchgänge</string>
@@ -80,7 +71,6 @@
 
     <!-- Berichtsfilter -->
     <string name="report_filter_location">Standort</string>
-    <string name="report_filter_date_range">Zeitraum</string>
     <string name="report_filter_sessions_selected">%1$d von %2$d Analysen</string>
 
     <!-- Erweiterte Verlaufsfilter -->
@@ -93,7 +83,6 @@
     <!-- ================================================================== -->
     <string name="report_title">Berichte</string>
     <string name="report_cd_go_back">Zurück</string>
-    <string name="report_cd_share">Bericht teilen</string>
     <string name="report_dialog_delete_title">Bericht löschen</string>
     <string name="report_dialog_delete_message">Möchten Sie diesen Bericht wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.</string>
     <string name="report_btn_delete">Löschen</string>
@@ -115,18 +104,11 @@
     <string name="report_card_cd_ai">KI-generiert</string>
     <string name="report_card_cd_template">Vorlage</string>
     <string name="report_card_delete_cd">Bericht löschen</string>
-    <string name="report_loading_engine">Analysemodul wird geladen…</string>
     <string name="report_verifying_detections">Erkennungen werden verifiziert… %1$d / %2$d</string>
     <string name="report_header_ai_generated">KI-generierter Bericht</string>
     <string name="report_header_template">Vorlagenbericht</string>
     <string name="report_template_banner_text">Vorlagenbericht erstellt. Stellen Sie das KI-Modell bereit, um eine unterstützte Analyse zu erhalten.</string>
     <string name="report_error_title">Berichtserstellung fehlgeschlagen</string>
-    <string name="report_btn_retry">Erneut versuchen</string>
-    <string name="report_btn_back_to_list">Zurück zur Liste</string>
-    <string name="report_btn_share">Teilen</string>
-    <string name="report_snackbar_export_error">Exportdatei konnte nicht erstellt werden. Überprüfen Sie die Speicherberechtigungen.</string>
-    <string name="report_cd_download_pdf">PDF herunterladen</string>
-    <string name="report_snackbar_pdf_error">PDF konnte nicht erstellt werden.</string>
     <string name="report_images_title">Analysierte Bilder</string>
 
     <!-- ================================================================== -->
@@ -136,7 +118,6 @@
     <string name="settings_cd_back">Zurück</string>
 
     <!-- Erkennungsabschnitt -->
-    <string name="settings_section_detection">Erkennung</string>
     <string name="settings_label_confidence_threshold">Konfidenz-Schwellenwert</string>
     <string name="settings_desc_confidence_threshold">Nur Erkennungen mit einem Konfidenzniveau über diesem Wert anzeigen</string>
     <string name="settings_label_detector_precision">Detektorgenauigkeit</string>
@@ -152,7 +133,6 @@
     <string name="settings_desc_confirm_capture">Vorschau des Fotos vor der Übergabe an die Erkennung</string>
 
     <!-- App-Sprachabschnitt -->
-    <string name="settings_section_app_language">App-Sprache</string>
     <string name="settings_label_interface_language">Oberflächensprache</string>
     <string name="settings_desc_interface_language">Ändert die gesamte App-Oberfläche. Wird sofort wirksam.</string>
 
@@ -167,12 +147,10 @@
     <string name="audience_citizen">Bürger</string>
 
     <!-- Anzeigeabschnitt -->
-    <string name="settings_section_display">Anzeige</string>
     <string name="settings_label_dark_mode">Dunkelmodus</string>
     <string name="settings_desc_dark_mode">Dunkles Design für bessere Sichtbarkeit unter Wasser verwenden</string>
 
     <!-- Datenabschnitt -->
-    <string name="settings_section_data">Daten</string>
     <string name="settings_label_reset_all_data">Alle Daten zurücksetzen</string>
     <string name="settings_desc_reset_all_data">Alle Analysen, MarineDex-Einträge und Errungenschaften entfernen, um von vorne zu beginnen</string>
     <string name="settings_btn_reset_all_data">Alle Daten zurücksetzen</string>
@@ -186,12 +164,10 @@
     <string name="settings_btn_replay_tours">Geführte Touren wiederholen</string>
 
     <!-- Entwickler-Abschnitt (Easter Egg: Logo 21 Mal tippen) -->
-    <string name="settings_section_developer">Entwickler</string>
     <string name="settings_dev_mode_activated">Entwicklermodus aktiviert!</string>
     <string name="settings_dev_mode_countdown">Noch %1$d Mal tippen…</string>
     <string name="settings_dev_mode_disable">Entwicklermodus deaktivieren</string>
     <string name="settings_label_vlm_provider">VLM-Anbieter</string>
-    <string name="settings_desc_vlm_provider">Modellfamilie für Berichte und Tiefenanalyse. Gemma 4 bietet native Bildverarbeitung.</string>
     <string name="settings_label_vlm_tier">VLM-Textmodell</string>
     <string name="settings_desc_vlm_tier">Bevorzugtes Modell für die Berichtserstellung. Weicht auf das beste verfügbare Modell aus, wenn das gewählte nicht heruntergeladen ist.</string>
     <string name="settings_vlm_not_downloaded">nicht heruntergeladen</string>
@@ -204,11 +180,9 @@
     <string name="settings_desc_gemma4_mmproj">Laden Sie den Vision-Projektor herunter, um die Bildanalyse mit Gemma 4 zu aktivieren.</string>
 
     <!-- Über-Abschnitt -->
-    <string name="settings_section_about">Über</string>
     <string name="settings_cd_logo">OceanGuard Logo</string>
     <string name="settings_about_version">v1.0.0</string>
     <string name="settings_about_description">Offline-Erkennung von Meeresmüll mit KI. Unsere Ozeane schützen, ein Scan nach dem anderen.</string>
-    <string name="settings_about_powered_by">Unterstützt von llama.cpp &amp; TensorFlow Lite</string>
     <!-- HINWEIS: "Dual pipeline: RT-DETRv2 + Gemma 3n VLM" wird gemäß Aufgabenanweisungen
          absichtlich in SettingsScreen.kt fest kodiert. -->
 
@@ -223,9 +197,6 @@
     <string name="marinedex_stat_favorites">Favoriten</string>
     <string name="marinedex_stat_detections">Erkennungen</string>
     <!-- Karten-Inhaltsbeschreibung wird im Code über formatDebrisName() erstellt -->
-    <string name="marinedex_card_cd_discovered">%1$s, %2$d Mal erkannt</string>
-    <string name="marinedex_card_cd_locked">%s, noch nicht entdeckt</string>
-    <string name="marinedex_card_click_label">Details zu %s anzeigen</string>
 
     <!-- ================================================================== -->
     <!-- MarineDex-Detailbildschirm                                           -->
@@ -293,7 +264,7 @@
 
     <!-- Errungenschaftsbeschreibungen -->
     <string name="achievement_desc_first_scan">Ersten Scan abschließen</string>
-    <string name="achievement_desc_first_live">Live-Erkennung zum ersten Mal verwenden</string>
+    <string name="achievement_desc_first_live">Dauerscan zum ersten Mal verwenden</string>
     <string name="achievement_desc_first_report">Ersten KI-Bericht erstellen</string>
     <string name="achievement_desc_first_batch">Erste Bildserie verarbeiten</string>
     <string name="achievement_desc_first_dex_entry">Ersten Mülltyp entdecken</string>
@@ -373,9 +344,9 @@
 
     <!-- Startseiten-Tour -->
     <string name="tour_home_scan_title">Scannen starten</string>
-    <string name="tour_home_scan_desc">Verwenden Sie die Kamera zum Erfassen, oder tippen Sie auf « Aus Galerie scannen » um aus Galerie oder Dateien zu wählen. Unterstützt Bilder und Videos - die App erkennt den Typ und verarbeitet jede Datei automatisch.</string>
+    <string name="tour_home_scan_desc">Wählen Sie Müll oder Arten und tippen Sie auf Scannen, um die Kamera zu öffnen. Fotos auswählen nimmt Bilder oder Videos aus Galerie oder Dateien, und der Modus ändert die Analyse.</string>
     <string name="tour_home_model_status_title">KI-Status</string>
-    <string name="tour_home_model_status_desc">Zeigt an, ob der Erkennungsmotor und das Tiefenanalyse-Modell geladen und bereit sind.</string>
+    <string name="tour_home_model_status_desc">Zeigt, welches Modell Ihre Fotos analysiert und ob es bereit ist, lädt oder noch heruntergeladen werden muss. Zeigt auch, ob das Berichtsmodell installiert ist.</string>
     <string name="tour_home_stats_title">Ihre Wirkung</string>
     <string name="tour_home_stats_desc">Verfolgen Sie Ihre Analysen, gefundene Abfälle und den durchschnittlichen Ozean-Gesundheitswert.</string>
     <string name="tour_home_marinedex_title">MarineDex</string>
@@ -390,12 +361,12 @@
     <string name="tour_camera_grid_desc">Verwenden Sie das Drittel-Raster, um Ihr Bild zu gestalten.</string>
 
     <!-- Live-Erkennungs-Tour -->
-    <string name="tour_live_detection_viewfinder_title">Echtzeit-Erkennung</string>
-    <string name="tour_live_detection_viewfinder_desc">Richten Sie Ihre Kamera auf Meeresmüll - Erkennungen erscheinen als Live-Begrenzungsrahmen.</string>
-    <string name="tour_live_detection_fps_title">Leistung</string>
-    <string name="tour_live_detection_fps_desc">Zeigt Bilder pro Sekunde und Inferenzlatenz an.</string>
-    <string name="tour_live_detection_capture_title">Bild aufnehmen</string>
-    <string name="tour_live_detection_capture_desc">Tippen Sie, um die aktuelle Erkennung zur Analyse zu speichern.</string>
+    <string name="tour_live_detection_viewfinder_title">Dauerscan</string>
+    <string name="tour_live_detection_viewfinder_desc">Richten Sie Ihre Kamera auf Meeresmüll. RT-DETRv2 analysiert im Hintergrund, und die Rahmen bleiben bis zum nächsten Durchlauf.</string>
+    <string name="tour_live_detection_fps_title">Gemessener Takt</string>
+    <string name="tour_live_detection_fps_desc">Wie oft ein Durchlauf auf Ihrem Telefon endet und wie lange das Modell braucht.</string>
+    <string name="tour_live_detection_capture_title">Vollständige Analyse</string>
+    <string name="tour_live_detection_capture_desc">Nimmt ein Foto auf und analysiert es mit Ihrem aktuellen Modus.</string>
 
     <!-- Ergebnis-Tour -->
     <string name="tour_results_image_title">Erkennungsergebnisse</string>
@@ -419,7 +390,7 @@
     <string name="tour_history_filters_title">Erweiterte Filter</string>
     <string name="tour_history_filters_desc">Filtern Sie nach Abfalltyp, Ort oder Datumsbereich. Kombinieren Sie Filter, um genau das zu finden, was Sie suchen.</string>
     <string name="tour_history_card_title">Analysekarte</string>
-    <string name="tour_history_card_desc">Tippen für Details. Nach links wischen zum Löschen. Lange drücken für Mehrfachauswahl.</string>
+    <string name="tour_history_card_desc">Tippen für Details. Nach links wischen zum Löschen, mit Rückgängig, falls Sie es sich anders überlegen. Mit Auswählen oder langem Drücken starten Sie Sammelaktionen.</string>
 
     <!-- Sitzungsdetail-Tour -->
     <string name="tour_session_detail_image_title">Annotiertes Bild</string>
@@ -431,15 +402,15 @@
 
     <!-- Karten-Tour -->
     <string name="tour_map_view_title">Erkennungskarte</string>
-    <string name="tour_map_view_desc">Alle Ihre Analysen auf der Karte. Cluster gruppieren nahe Erkennungen - tippen Sie auf einen Cluster für Zonendetails und Trends.</string>
+    <string name="tour_map_view_desc">Alle Ihre Analysen an ihrer echten Position. Jeder Cluster zeigt, wie viele Fotos er enthält: Tippen Sie darauf, die Karte fliegt dorthin und öffnet ihn in einen Pin pro Foto.</string>
     <string name="tour_map_heatmap_title">Heatmap</string>
-    <string name="tour_map_heatmap_desc">Wechseln Sie zwischen Heatmap und Pin-Ansicht, um Abfalldichte-Muster zu sehen.</string>
+    <string name="tour_map_heatmap_desc">Die Flammen-Schaltfläche wechselt zwischen Pins und einer Heatmap, die zeigt, wo sich der Müll am dichtesten sammelt.</string>
     <string name="tour_map_style_title">Kartenstil</string>
-    <string name="tour_map_style_desc">Wechseln Sie zwischen Positron (hell), Dunkel und Liberty (Gelände).</string>
+    <string name="tour_map_style_desc">Öffnen Sie das Ebenenmenü und wählen Sie Hell, Dunkel oder Gelände.</string>
     <string name="tour_map_filters_title">Kartenfilter</string>
     <string name="tour_map_filters_desc">Filtern Sie Kartenmarkierungen nach Abfalltyp oder Datumsbereich, um sich auf bestimmte Daten zu konzentrieren.</string>
     <string name="tour_map_fit_all_title">Alles Anzeigen</string>
-    <string name="tour_map_fit_all_desc">Zoomen Sie die Karte, um alle Erkennungsmarkierungen auf einmal anzuzeigen.</string>
+    <string name="tour_map_fit_all_desc">Die Rahmen-Schaltfläche zoomt die Karte so, dass alle Ihre Erkennungen gleichzeitig sichtbar sind.</string>
 
     <!-- Berichts-Tour -->
     <string name="tour_reports_generate_title">Bericht erstellen</string>
@@ -450,8 +421,8 @@
     <string name="tour_reports_zone_desc">Wählen Sie einen Beobachtungsort für einen zonenspezifischen Umweltbericht. Zonen werden automatisch aus GPS-Daten erkannt.</string>
 
     <!-- Einstellungs-Tour -->
-    <string name="tour_settings_confidence_title">Erkennungseinstellungen</string>
-    <string name="tour_settings_confidence_desc">Wählen Sie, ob Fotos vor der Analyse in der Vorschau angezeigt werden sollen. Erweiterte Optionen (Konfidenzschwelle, Modellgenauigkeit) sind im Entwicklermodus verfügbar.</string>
+    <string name="tour_settings_confidence_title">Modelle und KI</string>
+    <string name="tour_settings_confidence_desc">Wählen Sie, wie Fotos analysiert werden, und sehen Sie, welche Modelle installiert sind und wie viel Platz frei ist. Die erweiterten Optionen sind ebenfalls hier, hinter einem Schalter.</string>
     <string name="tour_settings_deep_analysis_title">Tiefenanalyse</string>
     <string name="tour_settings_deep_analysis_desc">Aktivieren Sie die VLM-Tiefenanalyse für detailliertere Umweltinformationen und KI-generierte Berichte.</string>
     <string name="tour_settings_theme_title">Dunkelmodus</string>
@@ -524,7 +495,6 @@
     <string name="report_zone_preview_trend_stable">Stabil</string>
     <string name="report_btn_generate_zone">Zonenbericht erstellen</string>
     <string name="report_btn_generate_vision">Visueller Bericht</string>
-    <string name="report_no_zones_message">Keine Standorte mit GPS-Daten gefunden</string>
     <string name="zone_name_unknown">Untersuchungszone</string>
     <string name="report_zone_fallback">Zone %d</string>
     <string name="report_snackbar_generated">Bericht erfolgreich erstellt</string>
@@ -559,7 +529,7 @@
 
     <!-- Camera mode toggle -->
     <string name="camera_mode_capture">Aufnahme</string>
-    <string name="camera_mode_live">Live</string>
+    <string name="camera_mode_live">Dauerscan</string>
 
     <!-- Live detection saved frame count -->
     <string name="live_saved_count">%1$d gespeichert</string>
@@ -606,9 +576,6 @@
     <string name="report_notif_querying">Abfrage von %1$s…</string>
     <string name="report_notif_complete">Bericht fertig!</string>
     <string name="report_notif_error">Berichterstellung fehlgeschlagen</string>
-    <string name="report_querying_tool">Abfrage von %1$s…</string>
-    <string name="report_querying_tool_progress">(%1$d/%2$d) Abfrage von %3$s…</string>
-    <string name="report_phase2_composing">Bericht wird verfasst…</string>
 
     <string name="tool_per_session_details">Details pro Bild</string>
     <string name="tool_debris_summary">Abfallzusammenfassung</string>
@@ -624,7 +591,6 @@
     <string name="vlm_download_dialog_title">KI-Modell herunterladen</string>
     <string name="vlm_download_dialog_message">Das Tiefenanalyse-Modell (%1$s) ist noch nicht installiert. Jetzt über WLAN herunterladen?</string>
     <string name="vlm_download_dialog_confirm">Herunterladen</string>
-    <string name="vlm_download_banner_title">KI-Modell wird heruntergeladen…</string>
     <string name="vlm_download_complete_snackbar">KI-Modell bereit!</string>
     <string name="vlm_download_error_snackbar">Download-Fehler: %1$s</string>
     <string name="vlm_download_notif_title">KI-Modell herunterladen</string>
@@ -746,7 +712,6 @@
     <string name="biodex_result_done">Fertig</string>
     <string name="species_identifying">Art wird bestimmt…</string>
 
-    <string name="species_result_auto_return">Neuer Scan in %1$d s…</string>
     <string name="species_result_btn_new_scan">Neuer Scan</string>
     <string name="species_result_btn_view_biodex">BioDex</string>
     <string name="biodex_result_none_short">Keine Arten</string>
@@ -756,4 +721,7 @@
     <string name="species_batch_btn_new_batch">Neuer Batch</string>
     <string name="species_batch_btn_view_biodex">BioDex anzeigen</string>
 
+    <string name="report_cd_session_thumbnail">Sitzungsdetails ansehen</string>
+    <string name="tour_session_detail_location_title">Standort</string>
+    <string name="tour_session_detail_location_desc">GPS-Koordinaten, an denen dieses Bild aufgenommen wurde. Zum Korrigieren auf Bearbeiten tippen.</string>
 </resources>

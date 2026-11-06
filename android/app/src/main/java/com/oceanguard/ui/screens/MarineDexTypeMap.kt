@@ -10,10 +10,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.oceanguard.ai.data.DebrisType
 import com.oceanguard.ai.data.DetectionSession
-import com.oceanguard.ai.ui.components.LottieEmptyState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOff
+import androidx.compose.ui.res.stringResource
+import com.oceanguard.ai.R
+import com.oceanguard.ai.ui.components.dex.debrisDisplayName
+import com.oceanguard.ai.ui.components.sonar.SonarEmptyState
 import com.oceanguard.ai.ui.screens.map.MapStyles
 import com.oceanguard.ai.ui.theme.LocalIsDarkTheme
-import com.oceanguard.ai.ui.theme.OceanBlueLight
+import com.oceanguard.ai.ui.theme.SonarTheme
 import com.oceanguard.ai.utils.toGeoJsonFeatureCollection
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
@@ -86,7 +91,12 @@ fun MarineDexTypeMap(
             val stableOptions = remember { GeoJsonOptions(cluster = false) }
             val source = rememberGeoJsonSource(data = stableData, options = stableOptions)
 
-            DebrisTypeCircleLayer(source = source, onSessionClick = onSessionClick)
+            DebrisTypeCircleLayer(
+                source = source,
+                pinColor = SonarTheme.colors.echo,
+                outlineColor = SonarTheme.colors.abyss,
+                onSessionClick = onSessionClick,
+            )
         }
     }
 }
@@ -99,12 +109,14 @@ fun MarineDexTypeMap(
 @Composable
 private fun DebrisTypeCircleLayer(
     source: org.maplibre.compose.sources.GeoJsonSource,
+    pinColor: androidx.compose.ui.graphics.Color,
+    outlineColor: androidx.compose.ui.graphics.Color,
     onSessionClick: (Long) -> Unit,
 ) {
     CircleLayer(
         id = "debris-type-points",
         source = source,
-        color = const(OceanBlueLight),
+        color = const(pinColor),
         radius = interpolate(
             type = linear(),
             input = zoom(),
@@ -113,7 +125,7 @@ private fun DebrisTypeCircleLayer(
             14 to const(14.dp),
         ),
         strokeWidth = const(2.dp),
-        strokeColor = const(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f)),
+        strokeColor = const(outlineColor),
         onClick = { features ->
             val sessionId = features.firstOrNull()
                 ?.properties
@@ -163,20 +175,17 @@ private fun TypeMapEmptyState(
     hasSessions: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val displayName = debrisType.name
-        .replace("_", " ")
-        .lowercase()
-        .replaceFirstChar { it.uppercase() }
-
+    val displayName = debrisDisplayName(debrisType)
     val message = if (hasSessions) {
-        "None of your $displayName captures include location data. Grant location permission before capturing to see GPS markers here."
+        stringResource(R.string.dex_map_empty_no_location, displayName)
     } else {
-        "No $displayName detected yet. Capture an image containing $displayName to populate this map."
+        stringResource(R.string.dex_map_empty_no_captures, displayName)
     }
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        LottieEmptyState(
-            title = "No locations",
+        SonarEmptyState(
+            icon = Icons.Filled.LocationOff,
+            title = stringResource(R.string.dex_map_empty_title),
             message = message,
             modifier = Modifier.padding(horizontal = 32.dp),
         )

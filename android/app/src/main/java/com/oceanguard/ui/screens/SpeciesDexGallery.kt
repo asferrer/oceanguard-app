@@ -1,21 +1,15 @@
 package com.oceanguard.ai.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,34 +17,33 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.species.SpeciesObservation
-import com.oceanguard.ai.ui.components.GlassCard
-import com.oceanguard.ai.ui.components.LottieEmptyState
-import com.oceanguard.ai.ui.theme.CoralRed
-import com.oceanguard.ai.ui.theme.OceanBlueLight
-import com.oceanguard.ai.ui.theme.OceanGreen
+import com.oceanguard.ai.ui.components.dex.DexGalleryTile
+import com.oceanguard.ai.ui.components.dex.tileTextColor
+import com.oceanguard.ai.ui.components.sonar.SonarEmptyState
+import com.oceanguard.ai.ui.theme.SonarDarkColors
+import com.oceanguard.ai.ui.theme.SonarTheme
 import java.text.SimpleDateFormat
 import java.util.Locale
+
+/** Confidence from which an observation is framed as reliable, and the lower "uncertain" bound. */
+private const val HIGH_CONFIDENCE = 0.75f
+private const val MEDIUM_CONFIDENCE_PCT = 50
+private const val HIGH_CONFIDENCE_PCT = 75
 
 /**
  * 2-column grid of [SpeciesObservation] thumbnails for a single species.
  *
- * Each cell shows the observation image via Coil 3, a confidence badge,
- * an optional "out-of-range" warning, and the observation date.
- * Mirrors [MarineDexGallery] in structure and visual style.
+ * Each tile shows the observation photo, its confidence, an "out of range" badge when it
+ * applies, and the date. Tapping a tile opens the observation.
  *
- * @param observations Observations for the currently displayed species.
- * @param onObservationClick Invoked with the observation id when a cell is tapped.
+ * @param observations Observations of the species being displayed.
+ * @param onObservationClick Invoked with the observation id when a tile is tapped.
  */
 @Composable
 fun SpeciesDexGallery(
@@ -60,7 +53,12 @@ fun SpeciesDexGallery(
     modifier: Modifier = Modifier,
 ) {
     if (observations.isEmpty()) {
-        SpeciesGalleryEmptyState(speciesDisplayName = speciesDisplayName, modifier = modifier.fillMaxSize())
+        SonarEmptyState(
+            icon = Icons.Filled.PhotoLibrary,
+            title = stringResource(R.string.biodex_gallery_empty_title),
+            message = stringResource(R.string.biodex_gallery_empty_message, speciesDisplayName),
+            modifier = modifier.fillMaxSize().padding(horizontal = 32.dp),
+        )
         return
     }
 
@@ -72,17 +70,10 @@ fun SpeciesDexGallery(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         items(items = observations, key = { it.id }) { obs ->
-            SpeciesGalleryItem(
-                observation = obs,
-                onClick = { onObservationClick(obs.id) },
-            )
+            SpeciesGalleryItem(observation = obs, onClick = { onObservationClick(obs.id) })
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Grid item
-// ---------------------------------------------------------------------------
 
 @Composable
 private fun SpeciesGalleryItem(
@@ -90,119 +81,58 @@ private fun SpeciesGalleryItem(
     onClick: () -> Unit,
 ) {
     val dateFormat = remember { SimpleDateFormat("dd MMM", Locale.getDefault()) }
-    val imageUri = observation.thumbnailUri ?: observation.imageUri
-
+    val colors = SonarTheme.colors
     val confidencePct = (observation.confidence * 100).toInt()
     val borderColor = when {
-        observation.outOfRange -> CoralRed.copy(alpha = 0.8f)
-        observation.confidence >= 0.75f -> OceanGreen.copy(alpha = 0.8f)
+        observation.outOfRange -> colors.alert
+        observation.confidence >= HIGH_CONFIDENCE -> colors.trace
         else -> Color.Transparent
     }
+    // Over the dark scrim the dark-theme tokens are the ones that keep their contrast.
+    val confidenceColor = when {
+        confidencePct >= HIGH_CONFIDENCE_PCT -> SonarDarkColors.trace
+        confidencePct >= MEDIUM_CONFIDENCE_PCT -> SonarDarkColors.echo
+        else -> SonarDarkColors.alert
+    }
 
-    GlassCard(
-        animate = false,
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(width = 2.dp, color = borderColor, shape = RoundedCornerShape(20.dp))
-            .clickable(onClick = onClick),
+    DexGalleryTile(
+        imageModel = observation.thumbnailUri ?: observation.imageUri,
+        contentDescription = stringResource(R.string.biodex_gallery_cd_observation),
+        onClick = onClick,
+        borderColor = borderColor,
+        badge = if (observation.outOfRange) {
+            { OutOfRangeBadge(Modifier.align(Alignment.TopEnd)) }
+        } else {
+            null
+        },
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(12.dp)),
-        ) {
-            AsyncImage(
-                model = imageUri,
-                contentDescription = stringResource(R.string.biodex_gallery_cd_observation),
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-            GalleryItemScrim(
-                confidencePct = confidencePct,
-                outOfRange = observation.outOfRange,
-                date = dateFormat.format(observation.timestamp),
-            )
-        }
+        Text(
+            text = stringResource(R.string.sonar_percent, confidencePct),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = confidenceColor,
+        )
+        Text(
+            text = dateFormat.format(observation.timestamp),
+            style = MaterialTheme.typography.labelSmall,
+            color = tileTextColor(),
+        )
     }
 }
 
 @Composable
-private fun GalleryItemScrim(
-    confidencePct: Int,
-    outOfRange: Boolean,
-    date: String,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color.Transparent, Color(0xCC000000)),
-                    startY = 0.5f,
-                )
-            ),
+private fun OutOfRangeBadge(modifier: Modifier) {
+    Surface(
+        shape = RoundedCornerShape(bottomStart = 8.dp),
+        color = SonarTheme.colors.alertContainer,
+        modifier = modifier,
     ) {
-        // Out-of-range badge — top-right corner
-        if (outOfRange) {
-            Surface(
-                shape = RoundedCornerShape(bottomStart = 8.dp),
-                color = CoralRed.copy(alpha = 0.85f),
-                modifier = Modifier.align(Alignment.TopEnd),
-            ) {
-                Text(
-                    text = stringResource(R.string.biodex_badge_out_of_range),
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                )
-            }
-        }
-
-        // Bottom scrim: confidence + date
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                val confColor = when {
-                    confidencePct >= 75 -> OceanGreen
-                    confidencePct >= 50 -> OceanBlueLight
-                    else -> CoralRed
-                }
-                Text(
-                    text = "$confidencePct%",
-                    color = confColor,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp,
-                )
-            }
-            Text(
-                text = date,
-                color = Color.White.copy(alpha = 0.8f),
-                style = MaterialTheme.typography.labelSmall,
-            )
-        }
+        Text(
+            text = stringResource(R.string.biodex_badge_out_of_range),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = SonarTheme.colors.onAlertContainer,
+        )
     }
-}
-
-// ---------------------------------------------------------------------------
-// Empty state
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun SpeciesGalleryEmptyState(
-    speciesDisplayName: String,
-    modifier: Modifier = Modifier,
-) {
-    LottieEmptyState(
-        title = stringResource(R.string.biodex_gallery_empty_title),
-        message = stringResource(R.string.biodex_gallery_empty_message, speciesDisplayName),
-        modifier = modifier.padding(horizontal = 32.dp),
-    )
 }

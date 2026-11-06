@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Selezione modalità di scansione (Home) -->
-    <string name="scan_mode_title">Cosa vuoi analizzare?</string>
-    <string name="scan_mode_debris_title">Rilevare rifiuti</string>
-    <string name="scan_mode_debris_desc">Trova e classifica i rifiuti marini</string>
-    <string name="scan_mode_species_title">Identificare specie</string>
-    <string name="scan_mode_species_desc">Riconosci la vita marina e aggiungila al tuo BioDex</string>
     <string name="biodex_download_pack">Scarica il pacchetto specie</string>
 
     <!-- ================================================================== -->
@@ -21,10 +16,7 @@
     <string name="session_detail_cd_annotated_image">Immagine di rilevamento annotata</string>
     <string name="session_detail_empty">Analisi non trovata</string>
     <string name="session_detail_label_total_debris">Rifiuti Totali</string>
-    <string name="session_detail_label_processing">Elaborazione</string>
     <string name="session_detail_label_quality">Qualità</string>
-    <string name="session_detail_section_material_breakdown">Composizione Materiali</string>
-    <string name="session_detail_section_detected_objects">Oggetti Rilevati</string>
     <string name="session_detail_location_add">Aggiungi Posizione</string>
     <string name="session_detail_cd_edit_location_inline">Modifica posizione</string>
     <string name="session_detail_cd_edit_date">Modifica data dell\'analisi</string>
@@ -67,7 +59,6 @@
 
     <!-- Filtri mappa -->
     <string name="map_filter_debris_type">Tipo di rifiuto</string>
-    <string name="map_filter_date_range">Periodo</string>
 
     <!-- Pannello inferiore zona -->
     <string name="zone_sheet_stat_dives">Immersioni</string>
@@ -80,7 +71,6 @@
 
     <!-- Filtri report -->
     <string name="report_filter_location">Posizione</string>
-    <string name="report_filter_date_range">Periodo</string>
     <string name="report_filter_sessions_selected">%1$d di %2$d analisi</string>
 
     <!-- Filtri avanzati cronologia -->
@@ -93,7 +83,6 @@
     <!-- ================================================================== -->
     <string name="report_title">Report</string>
     <string name="report_cd_go_back">Torna indietro</string>
-    <string name="report_cd_share">Condividi report</string>
     <string name="report_dialog_delete_title">Elimina Report</string>
     <string name="report_dialog_delete_message">Sei sicuro di voler eliminare questo report? Questa azione non può essere annullata.</string>
     <string name="report_btn_delete">Elimina</string>
@@ -115,18 +104,11 @@
     <string name="report_card_cd_ai">Generato dall\'AI</string>
     <string name="report_card_cd_template">Modello</string>
     <string name="report_card_delete_cd">Elimina report</string>
-    <string name="report_loading_engine">Caricamento motore di analisi…</string>
     <string name="report_verifying_detections">Verifica rilevamenti… %1$d / %2$d</string>
     <string name="report_header_ai_generated">Report Generato dall\'AI</string>
     <string name="report_header_template">Report Modello</string>
     <string name="report_template_banner_text">Report modello generato. Distribuisci il modello AI per l\'analisi assistita.</string>
     <string name="report_error_title">Generazione Report Fallita</string>
-    <string name="report_btn_retry">Riprova</string>
-    <string name="report_btn_back_to_list">Torna all\'Elenco</string>
-    <string name="report_btn_share">Condividi</string>
-    <string name="report_snackbar_export_error">Impossibile creare il file di esportazione. Controlla i permessi di archiviazione.</string>
-    <string name="report_cd_download_pdf">Scarica PDF</string>
-    <string name="report_snackbar_pdf_error">Impossibile creare il PDF.</string>
     <string name="report_images_title">Immagini analizzate</string>
 
     <!-- ================================================================== -->
@@ -136,7 +118,6 @@
     <string name="settings_cd_back">Indietro</string>
 
     <!-- Sezione Rilevamento -->
-    <string name="settings_section_detection">Rilevamento</string>
     <string name="settings_label_confidence_threshold">Soglia di Confidenza</string>
     <string name="settings_desc_confidence_threshold">Mostra solo i rilevamenti con confidenza superiore a questo valore</string>
     <string name="settings_label_detector_precision">Precisione del Rilevatore</string>
@@ -152,7 +133,6 @@
     <string name="settings_desc_confirm_capture">Visualizza l\'anteprima della foto prima di inviarla al rilevamento</string>
 
     <!-- Sezione Lingua App -->
-    <string name="settings_section_app_language">Lingua dell\'App</string>
     <string name="settings_label_interface_language">Lingua dell\'interfaccia</string>
     <string name="settings_desc_interface_language">Modifica l\'intera interfaccia dell\'app. Effettivo immediatamente.</string>
 
@@ -167,12 +147,10 @@
     <string name="audience_citizen">Cittadino</string>
 
     <!-- Sezione Visualizzazione -->
-    <string name="settings_section_display">Visualizzazione</string>
     <string name="settings_label_dark_mode">Modalità Scura</string>
     <string name="settings_desc_dark_mode">Usa il tema scuro per la visibilità subacquea</string>
 
     <!-- Sezione Dati -->
-    <string name="settings_section_data">Dati</string>
     <string name="settings_label_reset_all_data">Reimposta Tutti i Dati</string>
     <string name="settings_desc_reset_all_data">Rimuovi tutte le analisi, le voci del MarineDex e i traguardi per ricominciare da capo</string>
     <string name="settings_btn_reset_all_data">Reimposta Tutti i Dati</string>
@@ -186,12 +164,10 @@
     <string name="settings_btn_replay_tours">Ripeti Tour Guidati</string>
 
     <!-- Sezione Sviluppatore (easter egg: tocca il logo 21 volte) -->
-    <string name="settings_section_developer">Sviluppatore</string>
     <string name="settings_dev_mode_activated">Modalità sviluppatore attivata!</string>
     <string name="settings_dev_mode_countdown">Ancora %1$d tocchi…</string>
     <string name="settings_dev_mode_disable">Disattiva modalità sviluppatore</string>
     <string name="settings_label_vlm_provider">Provider VLM</string>
-    <string name="settings_desc_vlm_provider">Famiglia di modelli per report e analisi approfondita. Gemma 4 aggiunge la visione nativa.</string>
     <string name="settings_label_vlm_tier">Modello di testo VLM</string>
     <string name="settings_desc_vlm_tier">Modello preferito per la generazione dei report. Usa il migliore disponibile se quello scelto non è scaricato.</string>
     <string name="settings_vlm_not_downloaded">non scaricato</string>
@@ -204,11 +180,9 @@
     <string name="settings_desc_gemma4_mmproj">Scarica il proiettore di visione per abilitare l\'analisi delle immagini con Gemma 4.</string>
 
     <!-- Sezione Info -->
-    <string name="settings_section_about">Informazioni</string>
     <string name="settings_cd_logo">Logo OceanGuard</string>
     <string name="settings_about_version">v1.0.0</string>
     <string name="settings_about_description">Rilevamento offline dei rifiuti marini con IA. Proteggere i nostri oceani, una scansione alla volta.</string>
-    <string name="settings_about_powered_by">Basato su llama.cpp &amp; TensorFlow Lite</string>
     <!-- NOTA: "Dual pipeline: RT-DETRv2 + Gemma 3n VLM" è mantenuto intenzionalmente
          hardcoded in SettingsScreen.kt come da istruzioni del progetto. -->
 
@@ -223,9 +197,6 @@
     <string name="marinedex_stat_favorites">Preferiti</string>
     <string name="marinedex_stat_detections">Rilevamenti</string>
     <!-- descrizione contenuto scheda costruita nel codice tramite formatDebrisName() -->
-    <string name="marinedex_card_cd_discovered">%1$s, rilevato %2$d volte</string>
-    <string name="marinedex_card_cd_locked">%s, non ancora scoperto</string>
-    <string name="marinedex_card_click_label">Visualizza dettagli %s</string>
 
     <!-- ================================================================== -->
     <!-- Schermata Dettaglio MarineDex                                        -->
@@ -293,7 +264,7 @@
 
     <!-- Descrizioni traguardi -->
     <string name="achievement_desc_first_scan">Completa la tua prima scansione</string>
-    <string name="achievement_desc_first_live">Usa il rilevamento dal vivo per la prima volta</string>
+    <string name="achievement_desc_first_live">Usa la scansione continua per la prima volta</string>
     <string name="achievement_desc_first_report">Genera il tuo primo report AI</string>
     <string name="achievement_desc_first_batch">Elabora il tuo primo gruppo di immagini</string>
     <string name="achievement_desc_first_dex_entry">Scopri il tuo primo tipo di rifiuto</string>
@@ -373,9 +344,9 @@
 
     <!-- Tour Home -->
     <string name="tour_home_scan_title">Inizia la Scansione</string>
-    <string name="tour_home_scan_desc">Usa la fotocamera per catturare, o tocca "Scansiona dalla Galleria" per scegliere dalla Galleria o dai File. Supporta immagini e video - l\'app rileva il tipo e elabora ogni file automaticamente.</string>
+    <string name="tour_home_scan_desc">Scegli Rifiuti o Specie e tocca Scansiona per aprire la fotocamera. Scegli foto prende immagini o video da galleria o file, e la modalità cambia come vengono analizzate.</string>
     <string name="tour_home_model_status_title">Stato AI</string>
-    <string name="tour_home_model_status_desc">Mostra se il motore di rilevamento e il modello di analisi profonda sono caricati e pronti.</string>
+    <string name="tour_home_model_status_desc">Mostra quale modello analizza le tue foto e se è pronto, in caricamento o ancora da scaricare. Indica anche se il modello dei report è installato.</string>
     <string name="tour_home_stats_title">Il Tuo Impatto</string>
     <string name="tour_home_stats_desc">Monitora le tue analisi totali, i rifiuti trovati e il punteggio medio di salute oceanica.</string>
     <string name="tour_home_marinedex_title">MarineDex</string>
@@ -390,12 +361,12 @@
     <string name="tour_camera_grid_desc">Usa la griglia dei terzi per inquadrare il soggetto.</string>
 
     <!-- Tour Rilevamento dal Vivo -->
-    <string name="tour_live_detection_viewfinder_title">Rilevamento in Tempo Reale</string>
-    <string name="tour_live_detection_viewfinder_desc">Punta la fotocamera sui rifiuti - i rilevamenti appaiono come riquadri di delimitazione in tempo reale.</string>
-    <string name="tour_live_detection_fps_title">Prestazioni</string>
-    <string name="tour_live_detection_fps_desc">Mostra i fotogrammi al secondo e la latenza di inferenza.</string>
-    <string name="tour_live_detection_capture_title">Acquisisci Fotogramma</string>
-    <string name="tour_live_detection_capture_desc">Tocca per salvare il rilevamento corrente per l\'analisi.</string>
+    <string name="tour_live_detection_viewfinder_title">Scansione continua</string>
+    <string name="tour_live_detection_viewfinder_desc">Punta la fotocamera sui rifiuti. RT-DETRv2 analizza in background e i riquadri restano fino al passaggio successivo.</string>
+    <string name="tour_live_detection_fps_title">Cadenza misurata</string>
+    <string name="tour_live_detection_fps_desc">Ogni quanto termina un passaggio sul tuo telefono e quanto impiega il modello.</string>
+    <string name="tour_live_detection_capture_title">Analisi completa</string>
+    <string name="tour_live_detection_capture_desc">Scatta una foto e la analizza con la modalità attuale.</string>
 
     <!-- Tour Risultati -->
     <string name="tour_results_image_title">Risultati Rilevamento</string>
@@ -419,7 +390,7 @@
     <string name="tour_history_filters_title">Filtri Avanzati</string>
     <string name="tour_history_filters_desc">Filtra per tipo di rifiuto, luogo o intervallo di date. Combina i filtri per trovare esattamente ciò che cerchi.</string>
     <string name="tour_history_card_title">Scheda Analisi</string>
-    <string name="tour_history_card_desc">Tocca per i dettagli. Scorri a sinistra per eliminare. Tieni premuto per la selezione multipla.</string>
+    <string name="tour_history_card_desc">Tocca per i dettagli. Scorri a sinistra per eliminare, con Annulla se cambi idea. Usa Seleziona, o tieni premuto, per le azioni multiple.</string>
 
     <!-- Tour Dettaglio Sessione -->
     <string name="tour_session_detail_image_title">Immagine Annotata</string>
@@ -431,15 +402,15 @@
 
     <!-- Tour Mappa -->
     <string name="tour_map_view_title">Mappa Rilevamenti</string>
-    <string name="tour_map_view_desc">Tutte le tue analisi sulla mappa. I cluster raggruppano rilevamenti vicini - tocca un cluster per dettagli e tendenze della zona.</string>
+    <string name="tour_map_view_desc">Tutte le tue analisi nella loro posizione reale. Ogni gruppo indica quante foto contiene: toccalo e la mappa vola lì e lo apre in un segnaposto per foto.</string>
     <string name="tour_map_heatmap_title">Mappa di Calore</string>
-    <string name="tour_map_heatmap_desc">Alterna tra mappa di calore e pin per vedere i pattern di densità dei rifiuti.</string>
+    <string name="tour_map_heatmap_desc">Il pulsante a fiamma passa tra pin e mappa di calore, che mostra dove i rifiuti sono più densi.</string>
     <string name="tour_map_style_title">Stile Mappa</string>
-    <string name="tour_map_style_desc">Alterna tra gli stili Positron (chiaro), Scuro e Liberty (terreno).</string>
+    <string name="tour_map_style_desc">Apri il menu dei livelli per scegliere Chiaro, Scuro o Terreno.</string>
     <string name="tour_map_filters_title">Filtri Mappa</string>
     <string name="tour_map_filters_desc">Filtra i marcatori per tipo di rifiuto o intervallo di date per concentrarti su dati specifici.</string>
     <string name="tour_map_fit_all_title">Mostra Tutto</string>
-    <string name="tour_map_fit_all_desc">Zooma la mappa per mostrare tutti i tuoi marcatori di rilevamento contemporaneamente.</string>
+    <string name="tour_map_fit_all_desc">Il pulsante a cornice regola lo zoom per mostrare tutti i tuoi rilevamenti insieme.</string>
 
     <!-- Tour Report -->
     <string name="tour_reports_generate_title">Genera Report</string>
@@ -450,8 +421,8 @@
     <string name="tour_reports_zone_desc">Seleziona un luogo di osservazione per generare un rapporto ambientale per zona. Le zone vengono rilevate automaticamente dai dati GPS.</string>
 
     <!-- Tour Impostazioni -->
-    <string name="tour_settings_confidence_title">Impostazioni di Rilevamento</string>
-    <string name="tour_settings_confidence_desc">Scegli se visualizzare l\'anteprima delle foto prima dell\'analisi. Le opzioni avanzate (soglia di confidenza, precisione del modello) sono disponibili in modalità sviluppatore.</string>
+    <string name="tour_settings_confidence_title">Modelli e IA</string>
+    <string name="tour_settings_confidence_desc">Scegli come analizzare le foto, vedi quali modelli sono installati e quanto spazio resta. Anche le opzioni avanzate sono qui, dietro un interruttore.</string>
     <string name="tour_settings_deep_analysis_title">Analisi Approfondita</string>
     <string name="tour_settings_deep_analysis_desc">Attiva il motore VLM per analisi ambientali più dettagliate e rapporti generati dall\'IA.</string>
     <string name="tour_settings_theme_title">Modalità Scura</string>
@@ -524,7 +495,6 @@
     <string name="report_zone_preview_trend_stable">Stabile</string>
     <string name="report_btn_generate_zone">Genera report della zona</string>
     <string name="report_btn_generate_vision">Rapporto Visivo</string>
-    <string name="report_no_zones_message">Nessuna posizione con dati GPS trovata</string>
     <string name="zone_name_unknown">Zona di studio</string>
     <string name="report_zone_fallback">Zona %d</string>
     <string name="report_snackbar_generated">Report generato con successo</string>
@@ -559,7 +529,7 @@
 
     <!-- Camera mode toggle -->
     <string name="camera_mode_capture">Cattura</string>
-    <string name="camera_mode_live">Live</string>
+    <string name="camera_mode_live">Scansione continua</string>
 
     <!-- Live detection saved frame count -->
     <string name="live_saved_count">%1$d salvati</string>
@@ -606,9 +576,6 @@
     <string name="report_notif_querying">Interrogazione di %1$s…</string>
     <string name="report_notif_complete">Rapporto pronto!</string>
     <string name="report_notif_error">Generazione del rapporto fallita</string>
-    <string name="report_querying_tool">Interrogazione di %1$s…</string>
-    <string name="report_querying_tool_progress">(%1$d/%2$d) Interrogazione di %3$s…</string>
-    <string name="report_phase2_composing">Redazione del rapporto…</string>
 
     <string name="tool_per_session_details">dettagli per immagine</string>
     <string name="tool_debris_summary">riepilogo rifiuti</string>
@@ -624,7 +591,6 @@
     <string name="vlm_download_dialog_title">Scarica modello IA</string>
     <string name="vlm_download_dialog_message">Il modello di analisi approfondita (%1$s) non è ancora installato. Scaricarlo ora tramite Wi-Fi?</string>
     <string name="vlm_download_dialog_confirm">Scarica</string>
-    <string name="vlm_download_banner_title">Download del modello IA…</string>
     <string name="vlm_download_complete_snackbar">Modello IA pronto!</string>
     <string name="vlm_download_error_snackbar">Errore di download: %1$s</string>
     <string name="vlm_download_notif_title">Download del modello IA</string>
@@ -746,7 +712,6 @@
     <string name="biodex_result_done">Fine</string>
     <string name="species_identifying">Identificazione in corso…</string>
 
-    <string name="species_result_auto_return">Nuova scansione tra %1$d s…</string>
     <string name="species_result_btn_new_scan">Nuova scansione</string>
     <string name="species_result_btn_view_biodex">BioDex</string>
     <string name="biodex_result_none_short">Nessuna specie</string>
@@ -756,4 +721,7 @@
     <string name="species_batch_btn_new_batch">Nuovo batch</string>
     <string name="species_batch_btn_view_biodex">Vedi BioDex</string>
 
+    <string name="report_cd_session_thumbnail">Vedi i dettagli della sessione</string>
+    <string name="tour_session_detail_location_title">Posizione</string>
+    <string name="tour_session_detail_location_desc">Coordinate GPS in cui è stata scattata questa immagine. Tocca modifica per correggerle.</string>
 </resources>

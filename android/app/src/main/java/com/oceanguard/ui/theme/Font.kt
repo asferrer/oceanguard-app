@@ -1,32 +1,41 @@
 package com.oceanguard.ai.ui.theme
 
+import androidx.annotation.FontRes
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.googlefonts.Font
-import androidx.compose.ui.text.googlefonts.GoogleFont
 import com.oceanguard.ai.R
 
 /**
- * Google Fonts provider for the Inter font family.
- *
- * Falls back to system default (Roboto) automatically when Google Play
- * Services is unavailable — safe for fully offline / underwater use.
+ * Bundled variable fonts (SIL OFL 1.1, licences in `assets/licenses/`). Nothing is fetched from
+ * the network: the typography must look the same offline.
  */
-val provider = GoogleFont.Provider(
-    providerAuthority = "com.google.android.gms.fonts",
-    providerPackage = "com.google.android.gms",
-    certificates = R.array.com_google_android_gms_fonts_certs,
+@OptIn(ExperimentalTextApi::class)
+private fun variable(@FontRes resId: Int, weight: FontWeight) = Font(
+    resId = resId,
+    weight = weight,
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)),
 )
 
-private val InterFont = GoogleFont("Inter")
+private fun family(@FontRes resId: Int, vararg weights: FontWeight) =
+    FontFamily(weights.map { variable(resId, it) })
 
-/**
- * Inter font family — clean, modern, highly legible at all sizes.
- * Used across all typography styles in [OceanGuardTypography].
- */
-val InterFontFamily = FontFamily(
-    Font(googleFont = InterFont, fontProvider = provider, weight = FontWeight.Normal),
-    Font(googleFont = InterFont, fontProvider = provider, weight = FontWeight.Medium),
-    Font(googleFont = InterFont, fontProvider = provider, weight = FontWeight.SemiBold),
-    Font(googleFont = InterFont, fontProvider = provider, weight = FontWeight.Bold),
+/** Titles. */
+val SoraFontFamily = family(
+    R.font.sora_variable,
+    FontWeight.Normal, FontWeight.Medium, FontWeight.SemiBold, FontWeight.Bold,
+)
+
+/** Body text and labels. */
+val HankenFontFamily = family(
+    R.font.hanken_grotesk_variable,
+    FontWeight.Normal, FontWeight.Medium, FontWeight.SemiBold, FontWeight.Bold,
+)
+
+/** Figures and measurements only. */
+val JetBrainsMonoFontFamily = family(
+    R.font.jetbrains_mono_variable,
+    FontWeight.Normal, FontWeight.Medium, FontWeight.SemiBold,
 )

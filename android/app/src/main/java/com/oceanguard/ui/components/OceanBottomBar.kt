@@ -1,13 +1,8 @@
 package com.oceanguard.ai.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,13 +15,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,10 +33,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.oceanguard.ai.ui.theme.GlassBorder
-import com.oceanguard.ai.ui.theme.OceanGreen
+import com.oceanguard.ai.ui.motion.OceanMotion
+import com.oceanguard.ai.ui.motion.motionSpec
 
 /**
  * Data class representing a single bottom navigation tab.
@@ -81,11 +78,12 @@ fun OceanBottomBar(
     modifier: Modifier = Modifier,
 ) {
     val selectedIndex = tabs.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
+    val borderColor = MaterialTheme.colorScheme.outline
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .drawBehind { drawTopEdgeBorder() }
+            .drawBehind { drawTopEdgeBorder(borderColor) }
             .background(MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.95f))
             .windowInsetsPadding(WindowInsets.navigationBars),
     ) {
@@ -93,7 +91,8 @@ fun OceanBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(72.dp)
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 8.dp)
+                .selectableGroup(),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -122,38 +121,36 @@ private fun TabItem(
     onTabSelected: (String) -> Unit,
 ) {
     val iconColor by animateColorAsState(
-        targetValue = if (isSelected) OceanGreen
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(durationMillis = 300),
+        animationSpec = motionSpec(OceanMotion.standard()),
         label = "iconColor_${tab.route}",
     )
     val labelColor by animateColorAsState(
-        targetValue = if (isSelected) OceanGreen
-        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-        animationSpec = tween(durationMillis = 300),
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = motionSpec(OceanMotion.standard()),
         label = "labelColor_${tab.route}",
     )
     val iconScale by animateFloatAsState(
         targetValue = if (isSelected) 1.12f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium,
-        ),
+        animationSpec = motionSpec(OceanMotion.popSpring()),
         label = "iconScale_${tab.route}",
     )
     val indicatorAlpha by animateFloatAsState(
         targetValue = if (isSelected) 1f else 0f,
-        animationSpec = tween(durationMillis = 300),
+        animationSpec = motionSpec(OceanMotion.standard()),
         label = "indicatorAlpha_${tab.route}",
     )
 
     Column(
         modifier = Modifier
             .width(72.dp)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-            ) { if (!isSelected) onTabSelected(tab.route) },
+            .selectable(
+                selected = isSelected,
+                role = Role.Tab,
+                onClick = { if (!isSelected) onTabSelected(tab.route) },
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -185,6 +182,7 @@ private fun TabIconWithPill(
     iconScale: Float,
     indicatorAlpha: Float,
 ) {
+    val accent = MaterialTheme.colorScheme.primary
     Box(contentAlignment = Alignment.Center) {
         // Glow dot behind selected icon
         Box(
@@ -195,7 +193,7 @@ private fun TabIconWithPill(
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                OceanGreen.copy(alpha = 0.35f),
+                                accent.copy(alpha = 0.35f),
                                 Color.Transparent,
                             ),
                         ),
@@ -211,13 +209,14 @@ private fun TabIconWithPill(
                 .height(28.dp)
                 .graphicsLayer { alpha = indicatorAlpha }
                 .clip(RoundedCornerShape(14.dp))
-                .background(OceanGreen.copy(alpha = 0.15f)),
+                .background(accent.copy(alpha = 0.15f)),
         )
 
         // Tab icon with spring scale
         Icon(
             imageVector = tab.icon,
-            contentDescription = stringResource(tab.labelRes),
+            // The label below already names the tab: TalkBack must not read it twice.
+            contentDescription = null,
             tint = iconColor,
             modifier = Modifier
                 .size(24.dp)
@@ -233,10 +232,10 @@ private fun TabIconWithPill(
  * Draws a horizontal gradient line across the top edge of the composable.
  * Used via [Modifier.drawBehind] on the bar container.
  */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTopEdgeBorder() {
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTopEdgeBorder(color: Color) {
     drawLine(
         brush = Brush.horizontalGradient(
-            colors = listOf(Color.Transparent, GlassBorder, Color.Transparent),
+            colors = listOf(Color.Transparent, color, Color.Transparent),
         ),
         start = Offset(0f, 0f),
         end = Offset(size.width, 0f),

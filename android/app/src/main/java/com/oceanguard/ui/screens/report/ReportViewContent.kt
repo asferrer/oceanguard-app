@@ -1,266 +1,202 @@
 package com.oceanguard.ai.ui.screens.report
 
-import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.data.GeneratedReport
-import androidx.compose.ui.graphics.Color
-import com.oceanguard.ai.ui.components.GlassCard
 import com.oceanguard.ai.ui.components.MarkdownText
-import com.oceanguard.ai.ui.components.ShimmerLoadingScreen
-import com.oceanguard.ai.ui.components.pressableScale
-import com.oceanguard.ai.utils.DataExporter
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.offset
-import androidx.compose.material3.Badge
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
+import com.oceanguard.ai.ui.components.sonar.SonarCard
+import com.oceanguard.ai.ui.components.sonar.SonarSection
+import com.oceanguard.ai.ui.screens.results.BatchStats
+import com.oceanguard.ai.ui.screens.results.ReportExportFormat
+import com.oceanguard.ai.ui.screens.results.StatTile
+import com.oceanguard.ai.ui.screens.results.reportFigures
+import com.oceanguard.ai.ui.theme.SonarTheme
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+private val THUMB_SIZE = 88.dp
+
+/** Actions the open report hands back to its screen. */
+internal data class ReportViewActions(
+    val onClose: () -> Unit,
+    val onExport: (ReportExportFormat) -> Unit,
+    val onSessionClick: (Long) -> Unit,
+    val onAddLocation: () -> Unit,
+)
+
+/**
+ * A report in full: figures, the photos it analysed (each opens its detail), the text and the
+ * model that wrote it. Export offers PDF, Markdown, CSV and GeoJSON.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun GeneratingContent(isLoadingModel: Boolean = false) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        if (isLoadingModel) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                    Text(
-                        text = stringResource(R.string.report_loading_engine),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
+internal fun ReportFullScreenView(
+    report: GeneratedReport,
+    sessions: List<DetectionSession>,
+    exporting: Boolean,
+    actions: ReportViewActions,
+) {
+    var showExport by remember { mutableStateOf(false) }
+    BackHandler(onBack = actions.onClose)
+
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Scaffold(
+            topBar = {
+                ReportViewTopBar(report, exporting, actions.onClose) { showExport = true }
+            },
+            containerColor = MaterialTheme.colorScheme.background,
+        ) { padding ->
+            ReportBody(report, sessions, actions.onSessionClick, Modifier.padding(padding))
+        }
+        if (showExport) {
+            ReportExportSheet(
+                sessions = sessions,
+                onExport = {
+                    showExport = false
+                    actions.onExport(it)
+                },
+                onAddLocation = {
+                    showExport = false
+                    actions.onAddLocation()
+                },
+                onDismiss = { showExport = false },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReportViewTopBar(report: GeneratedReport, exporting: Boolean, onClose: () -> Unit, onExport: () -> Unit) {
+    TopAppBar(
+        title = {
+            Text(stringResource(if (report.usedAi) R.string.report_header_ai_generated else R.string.report_header_template))
+        },
+        navigationIcon = {
+            IconButton(onClick = onClose) { Icon(Icons.Filled.Close, stringResource(R.string.report_cd_go_back)) }
+        },
+        actions = {
+            IconButton(onClick = onExport, enabled = !exporting) {
+                if (exporting) {
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Filled.IosShare, stringResource(R.string.results_export))
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
-        }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+    )
+}
 
-        ShimmerLoadingScreen(
-            modifier = Modifier.fillMaxSize(),
+@Composable
+private fun ReportBody(
+    report: GeneratedReport,
+    sessions: List<DetectionSession>,
+    onSessionClick: (Long) -> Unit,
+    modifier: Modifier,
+) {
+    val figures = remember(sessions) { reportFigures(sessions) }
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        if (!report.usedAi) item { TemplateBanner() }
+        item { ReportHeader(report) }
+        if (sessions.isNotEmpty()) item { FiguresRow(figures) }
+        if (sessions.isNotEmpty()) item { AnalysedPhotos(sessions, onSessionClick) }
+        item { SonarCard { MarkdownText(text = report.text, modifier = Modifier.fillMaxWidth()) } }
+    }
+}
+
+@Composable
+private fun FiguresRow(figures: BatchStats) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        StatTile(stringResource(R.string.results_figure_photos), figures.photos.toString(), Modifier.weight(1f))
+        StatTile(stringResource(R.string.results_figure_objects), figures.totalObjects.toString(), Modifier.weight(1f))
+        StatTile(
+            label = stringResource(R.string.results_figure_health),
+            value = figures.averageHealth?.toString() ?: "—",
+            modifier = Modifier.weight(1f),
         )
     }
 }
 
+/** Kind, audience, date and the model that wrote the report, or that it was not recorded. */
 @Composable
-internal fun ReportContent(
-    report: GeneratedReport,
-    onShare: () -> Unit,
-    onBackToList: () -> Unit,
-) {
+internal fun ReportHeader(report: GeneratedReport) {
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
-
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        if (!report.usedAi) {
-            TemplateBanner()
-        }
-
-        ReportHeader(report = report, dateFormat = dateFormat)
-
-        GlassCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            animate = false,
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                MarkdownText(
-                    text = report.text,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            OutlinedButton(
-                onClick = onBackToList,
-                modifier = Modifier
-                    .pressableScale()
-                    .weight(1f)
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.report_btn_back_to_list),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-            }
-
-            Button(
-                onClick = onShare,
-                modifier = Modifier
-                    .pressableScale()
-                    .weight(1f)
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Share,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.report_btn_share),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-    }
-}
-
-@Composable
-internal fun ReportHeader(
-    report: GeneratedReport,
-    dateFormat: SimpleDateFormat,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            val iconCfg = remember(report.id) { debrisIconConfig(report.id) }
-            Surface(
-                shape = CircleShape,
-                color = iconCfg.containerColor,
-                modifier = Modifier.size(44.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(
-                        imageVector = iconCfg.icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(22.dp),
-                        tint = iconCfg.tint,
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text(
-                        text = if (report.usedAi) {
-                            stringResource(R.string.report_header_ai_generated)
-                        } else {
-                            stringResource(R.string.report_header_template)
-                        },
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    report.audience?.let { key ->
-                        val label = when (key) {
-                            "ngo_manager" -> stringResource(R.string.audience_ngo)
-                            "citizen" -> stringResource(R.string.audience_citizen)
-                            else -> stringResource(R.string.audience_scientific)
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                        ) {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
-                            )
-                        }
+    val meta = stringResource(
+        if (report.sessionCount != 1) R.string.report_card_meta_plural else R.string.report_card_meta_singular,
+        report.sessionCount,
+        report.language.uppercase(),
+        dateFormat.format(report.timestamp),
+    )
+    SonarCard {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                contentDescription = null,
+                tint = SonarTheme.colors.trace,
+                modifier = Modifier.size(28.dp),
+            )
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    report.locationName?.let {
+                        Text(it, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                     }
+                    report.audience?.let { AudienceBadge(audienceText(it)) }
                 }
+                Text(meta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    text = if (report.sessionCount != 1) stringResource(R.string.report_card_meta_plural, report.sessionCount, report.language.uppercase(), dateFormat.format(report.timestamp))
-                           else stringResource(R.string.report_card_meta_singular, report.sessionCount, report.language.uppercase(), dateFormat.format(report.timestamp)),
+                    text = report.modelName?.let { stringResource(R.string.results_report_written_by, it) }
+                        ?: stringResource(R.string.results_model_unrecorded),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
@@ -269,16 +205,8 @@ internal fun ReportHeader(
 
 @Composable
 internal fun TemplateBanner() {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+    Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.tertiaryContainer) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.MenuBook,
                 contentDescription = null,
@@ -294,279 +222,47 @@ internal fun TemplateBanner() {
     }
 }
 
+/** Row of the photos the report analysed; touching one opens its saved detail. */
 @Composable
-internal fun ErrorContent(
-    message: String,
-    onRetry: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = stringResource(R.string.report_error_title),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.error,
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        OutlinedButton(
-            onClick = onRetry,
-            modifier = Modifier
-                .pressableScale()
-                .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(12.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.report_btn_retry),
-                style = MaterialTheme.typography.titleSmall,
-            )
-        }
+private fun AnalysedPhotos(sessions: List<DetectionSession>, onSessionClick: (Long) -> Unit) {
+    val photos = remember(sessions) {
+        sessions.mapNotNull { s -> (s.thumbnailUri ?: s.imageUri).takeIf { it.isNotBlank() }?.let { s to it } }
     }
-}
-
-/**
- * Full-screen overlay for reading a report. Slides up from the bottom
- * and has its own TopAppBar with close + share actions.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun ReportFullScreenView(
-    report: GeneratedReport,
-    onClose: () -> Unit,
-    onShare: () -> Unit,
-    onDownloadPdf: () -> Unit = {},
-    isExportingPdf: Boolean = false,
-    sessions: List<DetectionSession> = emptyList(),
-    onSessionClick: (Long) -> Unit = {},
-) {
-    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
-
-    BackHandler(onBack = onClose)
-
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = if (report.usedAi) {
-                                stringResource(R.string.report_header_ai_generated)
-                            } else {
-                                stringResource(R.string.report_header_template)
-                            },
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onClose) {
-                            Icon(
-                                imageVector = Icons.Filled.Close,
-                                contentDescription = stringResource(R.string.report_cd_go_back),
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = onDownloadPdf,
-                            enabled = !isExportingPdf,
-                        ) {
-                            if (isExportingPdf) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp,
-                                )
-                            } else {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_picture_as_pdf),
-                                    contentDescription = stringResource(R.string.report_cd_download_pdf),
-                                )
-                            }
-                        }
-                        IconButton(onClick = onShare) {
-                            Icon(
-                                imageVector = Icons.Filled.Share,
-                                contentDescription = stringResource(R.string.report_cd_share),
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    ),
-                )
-            },
-            containerColor = MaterialTheme.colorScheme.background,
-        ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Spacer(modifier = Modifier.height(4.dp))
-
-                if (!report.usedAi) {
-                    TemplateBanner()
-                }
-
-                ReportHeader(report = report, dateFormat = dateFormat)
-
-                GlassCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    animate = false,
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState()),
-                    ) {
-                        // Thumbnail gallery — clickable to navigate to session detail
-                        if (sessions.isNotEmpty()) {
-                            SessionThumbnailStrip(
-                                sessions = sessions,
-                                onSessionClick = onSessionClick,
-                            )
-                        }
-
-                        MarkdownText(
-                            text = report.text,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-        }
-    }
-}
-
-/**
- * Horizontal scrollable strip showing annotated thumbnails from sessions.
- * Each thumbnail is clickable and navigates to the session detail screen.
- */
-@Composable
-private fun SessionThumbnailStrip(
-    sessions: List<DetectionSession>,
-    onSessionClick: (Long) -> Unit = {},
-) {
-    val sessionData = remember(sessions) {
-        sessions.mapNotNull { s ->
-            val uri = s.thumbnailUri ?: s.imageUri
-            if (uri.isNotBlank()) Triple(s.id, uri, s.totalCount) else null
-        }
-    }
-    if (sessionData.isEmpty()) return
-
-    Column(modifier = Modifier.padding(bottom = 8.dp)) {
-        Text(
-            text = stringResource(R.string.report_images_title),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 6.dp),
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            sessionData.forEach { (sessionId, uriStr, debrisCount) ->
+    if (photos.isEmpty()) return
+    SonarSection(stringResource(R.string.report_images_title)) {
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(photos, key = { it.first.id }) { (session, uri) ->
                 Box {
                     AsyncImage(
-                        model = Uri.parse(uriStr),
+                        model = Uri.parse(uri),
                         contentDescription = stringResource(R.string.report_cd_session_thumbnail),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .size(80.dp)
+                            .size(THUMB_SIZE)
                             .clip(RoundedCornerShape(8.dp))
-                            .border(
-                                1.dp,
-                                MaterialTheme.colorScheme.outlineVariant,
-                                RoundedCornerShape(8.dp),
-                            )
-                            .clickable { onSessionClick(sessionId) },
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                            .clickable(role = Role.Button) { onSessionClick(session.id) },
                     )
-                    if (debrisCount > 0) {
-                        Badge(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError,
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .offset(x = 4.dp, y = (-4).dp),
-                        ) {
-                            Text(
-                                text = debrisCount.toString(),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
-                    }
+                    CountBadge(session.totalCount, Modifier.align(Alignment.TopEnd))
                 }
             }
         }
     }
 }
 
-internal fun shareMarkdownReport(
-    context: Context,
-    reportText: String,
-    snackbarHostState: SnackbarHostState,
-    scope: CoroutineScope,
-    locationName: String? = null,
-) {
-    val uri = DataExporter.exportToMarkdown(
-        context = context,
-        report = reportText,
-        locationName = locationName ?: "OceanGuard_Survey",
-    )
-
-    if (uri != null) {
-        DataExporter.shareFile(context, uri, "text/markdown")
-    } else {
-        scope.launch {
-            snackbarHostState.showSnackbar(
-                context.getString(R.string.report_snackbar_export_error)
-            )
-        }
-    }
-}
-
-internal suspend fun sharePdfReport(
-    context: Context,
-    report: GeneratedReport,
-    sessions: List<DetectionSession>,
-    snackbarHostState: SnackbarHostState,
-) {
-    val uri = DataExporter.exportToPdf(context, report, sessions)
-    if (uri != null) {
-        DataExporter.shareFile(context, uri, "application/pdf")
-    } else {
-        snackbarHostState.showSnackbar(
-            context.getString(R.string.report_snackbar_pdf_error)
+@Composable
+private fun CountBadge(count: Int, modifier: Modifier) {
+    if (count <= 0) return
+    Surface(
+        modifier = modifier.padding(4.dp),
+        shape = RoundedCornerShape(10.dp),
+        color = SonarTheme.colors.echo,
+    ) {
+        Text(
+            text = count.toString(),
+            style = SonarTheme.type.dataSmall,
+            color = SonarTheme.colors.onEcho,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
         )
     }
 }

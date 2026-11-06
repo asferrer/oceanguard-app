@@ -1,50 +1,33 @@
 package com.oceanguard.ai.ui.screens
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -52,52 +35,46 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.oceanguard.ai.OceanGuardApp
 import com.oceanguard.ai.R
-import com.oceanguard.ai.data.SessionDatesHelper
-import com.oceanguard.ai.ui.components.DataDotDatePickerDialog
-import com.oceanguard.ai.ReportGenerationState
+import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.data.GeneratedReport
 import com.oceanguard.ai.data.SettingsRepository
-import com.oceanguard.ai.data.ZoneAggregator
+import com.oceanguard.ai.inference.TextModelTier
 import com.oceanguard.ai.inference.VlmDownloadState
-import com.oceanguard.ai.inference.ZoneReportInput
 import com.oceanguard.ai.ui.MainViewModel
-import com.oceanguard.ai.ui.components.spotlight.GuidedTourTransitionDialog
-import com.oceanguard.ai.ui.components.spotlight.SpotlightOverlay
+import com.oceanguard.ai.ui.components.sonar.SonarErrorState
 import com.oceanguard.ai.ui.components.spotlight.TourDefinitions
 import com.oceanguard.ai.ui.components.spotlight.rememberSpotlightBounds
 import com.oceanguard.ai.ui.components.spotlight.rememberSpotlightController
-import com.oceanguard.ai.ui.components.spotlight.spotlightTarget
-import com.oceanguard.ai.inference.TextModelTier
-import com.oceanguard.ai.ui.screens.report.DateLanguageRow
-import com.oceanguard.ai.ui.screens.report.ErrorContent
-import com.oceanguard.ai.ui.screens.report.GenerateButtonRow
-import com.oceanguard.ai.ui.screens.report.GeneratingBanner
-import com.oceanguard.ai.ui.screens.report.VlmDownloadBanner
-import com.oceanguard.ai.ui.screens.report.IdleContent
-import com.oceanguard.ai.ui.screens.report.ReportFullScreenView
-import com.oceanguard.ai.ui.screens.report.ZonePreviewCard
-import com.oceanguard.ai.ui.screens.report.ZoneSelector
-import com.oceanguard.ai.ui.screens.report.shareMarkdownReport
-import com.oceanguard.ai.ui.screens.report.sharePdfReport
-import com.oceanguard.ai.utils.toPlaceLabel
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.launch
+import com.oceanguard.ai.ui.screens.report.GenerateUi
+import com.oceanguard.ai.ui.screens.report.ReportChoicesState
+import com.oceanguard.ai.ui.screens.report.ReportEffectsHandle
+import com.oceanguard.ai.ui.screens.report.ReportZones
+import com.oceanguard.ai.ui.screens.report.SavedReportsDatePicker
+import com.oceanguard.ai.ui.screens.report.ReportDialogs
+import com.oceanguard.ai.ui.screens.report.ReportEffects
+import com.oceanguard.ai.ui.screens.report.ReportGenerateSection
+import com.oceanguard.ai.ui.screens.report.ReportProgressCard
+import com.oceanguard.ai.ui.screens.report.ReportScreenState
+import com.oceanguard.ai.ui.screens.report.ReportSelection
+import com.oceanguard.ai.ui.screens.report.ReportSetupPanel
+import com.oceanguard.ai.ui.screens.report.ReportTour
+import com.oceanguard.ai.ui.screens.report.ReportUiState
+import com.oceanguard.ai.ui.screens.report.ReportViewOverlay
+import com.oceanguard.ai.ui.screens.report.SavedReportsFilter
+import com.oceanguard.ai.ui.screens.report.rememberReportChoices
+import com.oceanguard.ai.ui.screens.report.rememberReportZones
+import com.oceanguard.ai.ui.screens.report.savedReportsSection
+import com.oceanguard.ai.ui.screens.results.GenerationInfo
+import com.oceanguard.ai.ui.screens.results.ReportModelStatus
+import com.oceanguard.ai.ui.screens.results.downloadProgress
+import com.oceanguard.ai.ui.screens.results.generationInfo
+import com.oceanguard.ai.ui.screens.results.isDownloading
+import com.oceanguard.ai.ui.screens.results.reportModelStatus
 
-// ---------------------------------------------------------------------------
-// Screen-level state sealed class
-// ---------------------------------------------------------------------------
-
-private sealed class ReportScreenState {
-    data object Idle : ReportScreenState()
-    data class ViewingReport(val report: GeneratedReport) : ReportScreenState()
-    data class Error(val message: String) : ReportScreenState()
-}
-
-// ---------------------------------------------------------------------------
-// Public screen composable
-// ---------------------------------------------------------------------------
-
+/**
+ * Reports: choose zone, period, language and audience, see whether the model is ready, generate,
+ * follow the real steps and read or export what was written. The choices are kept.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportScreen(
@@ -108,624 +85,180 @@ fun ReportScreen(
     preselectedName: String? = null,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
     val app = remember(context) { context.applicationContext as OceanGuardApp }
-    val boundsMap = rememberSpotlightBounds()
-    val tourController = rememberSpotlightController(TourDefinitions.REPORTS)
-    val tourComplete by app.settingsRepository
-        .isTourComplete(TourDefinitions.getScreenId(TourDefinitions.REPORTS))
-        .collectAsStateWithLifecycle(initialValue = true)
-    val guidedTourActive by app.settingsRepository.guidedTourActive
-        .collectAsStateWithLifecycle(initialValue = false)
-    var showTransitionDialog by remember { mutableStateOf(false) }
-
-    LaunchedEffect(tourComplete) {
-        if (!tourComplete) tourController.start()
-    }
-
+    val ui = remember { ReportUiState() }
+    val snackbar = remember { SnackbarHostState() }
     val sessions by viewModel.allSessions.collectAsStateWithLifecycle(initialValue = emptyList())
-    val savedReports by app.database.generatedReportDao().getAll()
-        .collectAsStateWithLifecycle(initialValue = emptyList())
-    val generationState by app.reportGenerationState.collectAsStateWithLifecycle(
-        initialValue = ReportGenerationState.Idle,
-    )
-
-    val persistedLanguage by viewModel.settingsRepository.language.collectAsStateWithLifecycle(
-        initialValue = SettingsRepository.DEFAULT_LANGUAGE,
-    )
-    var selectedLanguage by rememberSaveable { mutableStateOf(persistedLanguage) }
-    var screenState by remember { mutableStateOf<ReportScreenState>(ReportScreenState.Idle) }
-    var reportToDelete by remember { mutableStateOf<GeneratedReport?>(null) }
-    var newlyGeneratedReportId by remember { mutableStateOf<Long?>(null) }
-    var isExportingPdf by remember { mutableStateOf(false) }
-    // Cache report for exit animation (persists while overlay slides out)
-    var cachedViewingReport by remember { mutableStateOf<GeneratedReport?>(null) }
-    if (screenState is ReportScreenState.ViewingReport) {
-        cachedViewingReport = (screenState as ReportScreenState.ViewingReport).report
+    val zones = rememberReportZones(sessions, preselectedLat, preselectedLon, preselectedName)
+    val choices = rememberReportChoices(app.settingsRepository)
+    val selection = remember(zones.selectedZone, choices.choices.period) {
+        ReportSelection.of(zones.selectedZone, choices.choices.period)
     }
-    var dateRangeStartMs by remember { mutableStateOf<Long?>(null) }
-    var dateRangeEndMs by remember { mutableStateOf<Long?>(null) }
-    var showDatePicker by remember { mutableStateOf(false) }
-    val datesWithData = remember(sessions) { SessionDatesHelper.datesWithData(sessions) }
+    val boundsMap = rememberSpotlightBounds()
+    val tour = rememberSpotlightController(TourDefinitions.REPORTS)
+    val effects = ReportEffects(app, ui, snackbar)
 
-    // VLM download state
-    val vlmDownloadState by app.vlmModelManager.downloadState.collectAsStateWithLifecycle()
-    val vlmModelTierKey by app.settingsRepository.vlmModelTier
-        .collectAsStateWithLifecycle(initialValue = SettingsRepository.DEFAULT_VLM_MODEL_TIER)
-    val preferredTier = remember(vlmModelTierKey) { TextModelTier.fromKey(vlmModelTierKey) }
-    var showVisionDownloadDialog by remember { mutableStateOf(false) }
-    val isDownloading by remember {
-        derivedStateOf {
-            vlmDownloadState is VlmDownloadState.Downloading ||
-                vlmDownloadState is VlmDownloadState.Preparing ||
-                vlmDownloadState is VlmDownloadState.Installing
-        }
-    }
-
-    // Background generation state (inline banner, not full-screen)
-    val isGenerating by remember {
-        derivedStateOf {
-            generationState is ReportGenerationState.Generating ||
-                generationState is ReportGenerationState.LoadingModel ||
-                generationState is ReportGenerationState.ToolExecuting ||
-                generationState is ReportGenerationState.ComposingProse ||
-                generationState is ReportGenerationState.StreamingText
-        }
-    }
-    val isLoadingModel by remember { derivedStateOf { generationState is ReportGenerationState.LoadingModel } }
-    // Currently-running tool name (only set during the agentic PHASE 1).
-    val currentToolName by remember {
-        derivedStateOf { (generationState as? ReportGenerationState.ToolExecuting)?.toolName }
-    }
-    // (current, total) for the GeneratingBanner — drives the "(3/8)" prefix.
-    // Null until the first onToolCallProgress lands and when total <= 0 so the
-    // banner falls back to the no-progress variant cleanly.
-    val toolProgress: Pair<Int, Int>? by remember {
-        derivedStateOf {
-            val s = generationState as? ReportGenerationState.ToolExecuting
-            if (s != null && s.progressTotal > 0) s.progressCurrent to s.progressTotal else null
-        }
-    }
-    // PHASE the banner is rendering. PHASE_2_PROSE is the brief
-    // "Composing report prose…" window between the last tool and the first
-    // streamed token; once StreamingText arrives the banner keeps its
-    // phase-aware copy because streamingText takes over the heading line.
-    val reportPhase: com.oceanguard.ai.inference.ReportPhase? by remember {
-        derivedStateOf {
-            when (generationState) {
-                is ReportGenerationState.LoadingModel -> com.oceanguard.ai.inference.ReportPhase.LOADING
-                is ReportGenerationState.ToolExecuting -> com.oceanguard.ai.inference.ReportPhase.PHASE_1_TOOLS
-                is ReportGenerationState.ComposingProse -> com.oceanguard.ai.inference.ReportPhase.PHASE_2_PROSE
-                is ReportGenerationState.StreamingText -> com.oceanguard.ai.inference.ReportPhase.PHASE_2_PROSE
-                else -> null
-            }
-        }
-    }
-    // Wrap streaming reads in derivedStateOf so token-level emissions only
-    // recompose the GeneratingBanner, not the entire ReportScreen.
-    val streamingText by remember { derivedStateOf { (generationState as? ReportGenerationState.StreamingText)?.partialText } }
-    val tokenCount by remember { derivedStateOf { (generationState as? ReportGenerationState.StreamingText)?.tokenCount ?: 0 } }
-    val tokensPerSec by remember { derivedStateOf { (generationState as? ReportGenerationState.StreamingText)?.tokensPerSec ?: 0f } }
-    val maxTokens by remember { derivedStateOf { (generationState as? ReportGenerationState.StreamingText)?.maxTokens ?: 0 } }
-
-
-    // -----------------------------------------------------------------------
-    // Zone clustering + geocoded names (parallel)
-    // -----------------------------------------------------------------------
-    val locatedSessions = remember(sessions) { sessions.filter { it.location != null } }
-    val zoneClusters = remember(locatedSessions) { ZoneAggregator.cluster(locatedSessions) }
-
-    val geocoder = remember { app.geocoder }
-    var zoneNames by remember { mutableStateOf<List<String>>(emptyList()) }
-    var zoneNamesLoading by remember { mutableStateOf(false) }
-    LaunchedEffect(zoneClusters) {
-        if (zoneClusters.isEmpty()) {
-            zoneNames = emptyList()
-            return@LaunchedEffect
-        }
-        zoneNamesLoading = true
-        val names = zoneClusters.mapIndexed { idx, zone ->
-            async {
-                val result = geocoder.reverse(zone.centroidLat, zone.centroidLon)
-                result?.toPlaceLabel() ?: context.getString(R.string.report_zone_fallback, idx + 1)
-            }
-        }.awaitAll()
-        zoneNames = names
-        zoneNamesLoading = false
-    }
-
-    var selectedZoneIndex by rememberSaveable { mutableStateOf<Int?>(null) }
-
-    // Auto-select zone from nav params (map → report)
-    LaunchedEffect(preselectedLat, preselectedLon, zoneClusters) {
-        if (preselectedLat != null && preselectedLon != null &&
-            zoneClusters.isNotEmpty() && selectedZoneIndex == null
-        ) {
-            val closest = zoneClusters.withIndex().minByOrNull { (_, zone) ->
-                ZoneAggregator.haversineDistance(
-                    preselectedLat, preselectedLon,
-                    zone.centroidLat, zone.centroidLon,
-                )
-            }
-            if (closest != null) {
-                val dist = ZoneAggregator.haversineDistance(
-                    preselectedLat, preselectedLon,
-                    closest.value.centroidLat, closest.value.centroidLon,
-                )
-                if (dist < 1500.0) selectedZoneIndex = closest.index
-            }
-        }
-    }
-
-    // Override coordinate-only name with preselected name from map
-    LaunchedEffect(preselectedName, selectedZoneIndex, zoneNames) {
-        if (preselectedName != null && selectedZoneIndex != null &&
-            selectedZoneIndex!! < zoneNames.size
-        ) {
-            val current = zoneNames[selectedZoneIndex!!]
-            if (current.startsWith("Zone ") || current.matches(Regex("-?\\d+\\.\\d+, -?\\d+\\.\\d+"))) {
-                zoneNames = zoneNames.toMutableList().apply {
-                    set(selectedZoneIndex!!, preselectedName)
-                }
-            }
-        }
-    }
-
-    // Selected zone data
-    val selectedZone = selectedZoneIndex?.let { zoneClusters.getOrNull(it) }
-    val dayGroups = remember(selectedZone) {
-        selectedZone?.let { ZoneAggregator.groupByDay(it) } ?: emptyList()
-    }
-    val filteredZoneSessions = remember(selectedZone, dateRangeStartMs, dateRangeEndMs) {
-        (selectedZone?.sessions ?: emptyList()).filter { session ->
-            (dateRangeStartMs == null || session.timestamp.time >= dateRangeStartMs!!) &&
-                (dateRangeEndMs == null || session.timestamp.time <= dateRangeEndMs!!)
-        }
-    }
-    val filteredDayGroups = remember(dayGroups, dateRangeStartMs, dateRangeEndMs) {
-        dayGroups.filter { day ->
-            (dateRangeStartMs == null || day.date.time >= dateRangeStartMs!!) &&
-                (dateRangeEndMs == null || day.date.time <= dateRangeEndMs!!)
-        }
-    }
-    val selectedZoneName = selectedZoneIndex?.let { zoneNames.getOrNull(it) } ?: ""
-
-    // Resolve sessions for the report being viewed.
-    // Priority: 1) sessionIds from DB  2) filteredZoneSessions (active selection)
-    var sessionsForViewingReport by remember { mutableStateOf<List<com.oceanguard.ai.data.DetectionSession>>(emptyList()) }
-    val viewingReport = (screenState as? ReportScreenState.ViewingReport)?.report
-    LaunchedEffect(viewingReport?.id, filteredZoneSessions) {
-        val report = viewingReport ?: run {
-            sessionsForViewingReport = emptyList()
-            return@LaunchedEffect
-        }
-        val ids = report.sessionIds
-            ?.split(",")
-            ?.mapNotNull { it.trim().toLongOrNull() }
-            ?: emptyList()
-        if (ids.isNotEmpty()) {
-            sessionsForViewingReport = app.database.detectionSessionDao().getSessionsByIds(ids)
-        } else if (filteredZoneSessions.isNotEmpty()) {
-            sessionsForViewingReport = filteredZoneSessions
-        } else {
-            sessionsForViewingReport = emptyList()
-        }
-    }
-
-    // Background generation: sync app state → snackbar + auto-view
-    // Key on state class, not instance — avoids restarting this effect on every
-    // StreamingText token emission (was causing 5 coroutine restarts/second).
-    val generationStateClass = generationState::class
-    LaunchedEffect(generationStateClass) {
-        when (val state = generationState) {
-            is ReportGenerationState.Idle -> {}
-            is ReportGenerationState.LoadingModel,
-            is ReportGenerationState.Generating,
-            is ReportGenerationState.ToolExecuting,
-            is ReportGenerationState.ComposingProse,
-            is ReportGenerationState.StreamingText -> {} // inline banner handles this
-            is ReportGenerationState.Complete -> {
-                val completedReport = state.report
-                screenState = ReportScreenState.Idle
-                newlyGeneratedReportId = completedReport.id
-                app.reportGenerationState.value = ReportGenerationState.Idle
-                val result = snackbarHostState.showSnackbar(
-                    message = context.getString(R.string.report_snackbar_generated),
-                    actionLabel = context.getString(R.string.report_snackbar_view_action),
-                    duration = SnackbarDuration.Short,
-                )
-                if (result == SnackbarResult.ActionPerformed) {
-                    screenState = ReportScreenState.ViewingReport(completedReport)
-                }
-            }
-            is ReportGenerationState.Error -> {
-                screenState = ReportScreenState.Error(state.message)
-                app.reportGenerationState.value = ReportGenerationState.Idle
-            }
-        }
-    }
-
-    // React to download state changes
-    LaunchedEffect(vlmDownloadState) {
-        when (val s = vlmDownloadState) {
-            is VlmDownloadState.Complete -> snackbarHostState.showSnackbar(
-                message = context.getString(R.string.vlm_download_complete_snackbar),
-                duration = SnackbarDuration.Short,
-            )
-            is VlmDownloadState.Error -> snackbarHostState.showSnackbar(
-                message = context.getString(R.string.vlm_download_error_snackbar, s.message),
-                duration = SnackbarDuration.Long,
-            )
-            else -> {}
-        }
-    }
-
-    // Helper: build ZoneReportInput from current UI state
-    fun buildZoneReportInput() = ZoneReportInput(
-        locationName     = selectedZoneName,
-        centroidLat      = selectedZone!!.centroidLat,
-        centroidLon      = selectedZone!!.centroidLon,
-        sessions         = filteredZoneSessions,
-        dayGroups        = filteredDayGroups,
-        trend            = selectedZone!!.trend,
-        dateRangeStartMs = dateRangeStartMs,
-        dateRangeEndMs   = dateRangeEndMs,
-    )
-
-    // Unified report: requires the preferred tier to be downloaded.
-    // If the user changed the tier in Settings but hasn't downloaded it yet, show a dialog.
-    val launchGeneration = {
-        if (selectedZone != null) {
-            when {
-                app.vlmModelManager.isAnyVariantAvailable(preferredTier) ->
-                    app.launchZoneReportGeneration(buildZoneReportInput(), selectedLanguage)
-                !isDownloading -> showVisionDownloadDialog = true
-            }
-        }
-    }
-
-    // -----------------------------------------------------------------------
-    // Dialogs
-    // -----------------------------------------------------------------------
-
-    // Model download dialog — tier is the user's preferred tier from Settings (default: BALANCED 2B)
-    if (showVisionDownloadDialog) {
-        AlertDialog(
-            onDismissRequest = { showVisionDownloadDialog = false },
-            title = { Text(stringResource(R.string.vlm_download_dialog_title)) },
-            text = {
-                // Generic: only the size is shown to the user. Technical tier/model
-                // details are visible in developer-mode settings only.
-                Text(
-                    stringResource(
-                        R.string.vlm_download_dialog_message,
-                        preferredTier.sizeLabel,
-                    )
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showVisionDownloadDialog = false
-                    app.launchVlmDownload(preferredTier)
-                }) {
-                    Text(stringResource(R.string.vlm_download_dialog_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showVisionDownloadDialog = false }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
-        )
-    }
-
-    reportToDelete?.let { report ->
-        DeleteReportDialog(
-            onConfirm = {
-                scope.launch { app.database.generatedReportDao().delete(report) }
-                reportToDelete = null
-                if (screenState is ReportScreenState.ViewingReport &&
-                    (screenState as ReportScreenState.ViewingReport).report.id == report.id
-                ) screenState = ReportScreenState.Idle
-            },
-            onDismiss = { reportToDelete = null },
-        )
-    }
-
-
-    if (showDatePicker) {
-        DataDotDatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            initialStartDateMillis = dateRangeStartMs,
-            initialEndDateMillis = dateRangeEndMs,
-            datesWithData = datesWithData,
-            onConfirm = { start, end ->
-                dateRangeStartMs = start
-                dateRangeEndMs = end
-                showDatePicker = false
-            },
-        )
-    }
-
-    // -----------------------------------------------------------------------
-    // Scaffold
-    // -----------------------------------------------------------------------
-    Box(modifier = Modifier.fillMaxSize()) {
+    ReportDialogs(app, ui, choices, sessions)
+    Box(Modifier.fillMaxSize()) {
         Scaffold(
-            topBar = {
-                ReportTopBar(
-                    onBack = { navController.popBackStack() },
-                    boundsMap = boundsMap,
-                )
-            },
-            snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = { ReportTopBar(onBack = { navController.popBackStack() }) },
+            snackbarHost = { SnackbarHost(snackbar) },
             containerColor = MaterialTheme.colorScheme.background,
-        ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Zone selector
-                if (zoneClusters.isNotEmpty() && zoneNames.size == zoneClusters.size) {
-                    Box(modifier = Modifier.spotlightTarget("reports_zone", boundsMap)) {
-                        ZoneSelector(
-                            zoneNames = zoneNames,
-                            selectedIndex = selectedZoneIndex,
-                            onZoneSelected = { selectedZoneIndex = it },
-                            enabled = !isGenerating,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                } else if (zoneClusters.isNotEmpty() && zoneNamesLoading) {
-                    Box(modifier = Modifier.spotlightTarget("reports_zone", boundsMap)) {
-                        ZoneSelector(
-                            zoneNames = emptyList(),
-                            selectedIndex = null,
-                            onZoneSelected = {},
-                            enabled = false,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                } else if (sessions.isNotEmpty() && locatedSessions.isEmpty()) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.errorContainer,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.report_no_zones_message),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                        )
-                    }
-                }
-
-                // Zone preview card
-                val zoneIdx = selectedZoneIndex
-                if (selectedZone != null && zoneIdx != null && zoneIdx < zoneNames.size) {
-                    Box(modifier = Modifier.spotlightTarget("reports_preview", boundsMap)) {
-                        ZonePreviewCard(
-                            zone = selectedZone,
-                            zoneName = selectedZoneName,
-                            dayCount = dayGroups.size,
-                        )
-                    }
-                }
-
-                // Date range + language row
-                DateLanguageRow(
-                    dateRangeStartMs   = dateRangeStartMs,
-                    dateRangeEndMs     = dateRangeEndMs,
-                    onDateRangeCleared = { dateRangeStartMs = null; dateRangeEndMs = null },
-                    onDateRangeClick   = { showDatePicker = true },
-                    selectedLanguage   = selectedLanguage,
-                    onLanguageSelected = { selectedLanguage = it },
-                    enabled   = !isGenerating,
-                    boundsMap = boundsMap,
-                )
-
-                // Generate buttons (text + optional vision)
-                GenerateButtonRow(
-                    isGenerating    = isGenerating || isDownloading,
-                    hasZoneSelected = selectedZone != null,
-                    sessionCount    = filteredZoneSessions.size,
-                    onGenerate      = launchGeneration,
-                    boundsMap       = boundsMap,
-                )
-
-                // Inline generating banner (background generation)
-                AnimatedVisibility(
-                    visible = isGenerating,
-                    enter = slideInVertically { -it } + fadeIn(),
-                    exit = slideOutVertically { -it } + fadeOut(),
-                ) {
-                    GeneratingBanner(
-                        isLoadingModel    = isLoadingModel,
-                        currentToolName   = currentToolName,
-                        streamingText     = streamingText,
-                        tokenCount        = tokenCount,
-                        tokensPerSec      = tokensPerSec,
-                        maxTokens         = maxTokens,
-                        phase             = reportPhase,
-                        toolProgress      = toolProgress,
-                    )
-                }
-
-                // VLM download progress banner
-                AnimatedVisibility(
-                    visible = isDownloading,
-                    enter = slideInVertically { -it } + fadeIn(),
-                    exit = slideOutVertically { -it } + fadeOut(),
-                ) {
-                    VlmDownloadBanner(
-                        downloadState = vlmDownloadState,
-                        onCancel = { app.vlmModelManager.cancelDownload() },
-                    )
-                }
-
-                HorizontalDivider()
-
-                // Content area (Idle + Error only; report viewing is a full-screen overlay)
-                AnimatedContent(
-                    targetState = screenState,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
-                    label = "report_content_transition",
-                ) { state ->
-                    when (state) {
-                        is ReportScreenState.Idle,
-                        is ReportScreenState.ViewingReport -> IdleContent(
-                            hasSessions = sessions.isNotEmpty(),
-                            savedReports = savedReports,
-                            onViewReport = {
-                                newlyGeneratedReportId = null
-                                screenState = ReportScreenState.ViewingReport(it)
-                            },
-                            onDeleteReport = { reportToDelete = it },
-                            highlightReportId = newlyGeneratedReportId,
-                            onHighlightConsumed = { newlyGeneratedReportId = null },
-                        )
-                        is ReportScreenState.Error -> ErrorContent(
-                            message = state.message,
-                            onRetry = launchGeneration,
-                        )
-                    }
-                }
-            }
-        }
-
-        // Full-screen report overlay (slides up from bottom)
-        AnimatedVisibility(
-            visible = screenState is ReportScreenState.ViewingReport,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-        ) {
-            cachedViewingReport?.let { report ->
-                ReportFullScreenView(
-                    report = report,
-                    onClose = { screenState = ReportScreenState.Idle },
-                    onShare = {
-                        shareMarkdownReport(context, report.text, snackbarHostState, scope, report.locationName)
-                    },
-                    onDownloadPdf = {
-                        isExportingPdf = true
-                        scope.launch {
-                            sharePdfReport(
-                                context, report, sessionsForViewingReport, snackbarHostState,
-                            )
-                            isExportingPdf = false
-                        }
-                    },
-                    isExportingPdf = isExportingPdf,
-                    sessions = sessionsForViewingReport,
-                    onSessionClick = { sessionId ->
-                        screenState = ReportScreenState.Idle
-                        navController.navigate("session/$sessionId")
-                    },
-                )
-            }
-        }
-
-        // Spotlight / guided tour
-        SpotlightOverlay(
-            controller = tourController,
-            targetBounds = boundsMap,
-            onComplete = {
-                scope.launch {
-                    app.settingsRepository.markTourComplete(
-                        TourDefinitions.getScreenId(TourDefinitions.REPORTS),
-                    )
-                    if (guidedTourActive) showTransitionDialog = true
-                    else app.launchDemoCleanupIfComplete()
-                }
-            },
-            isGuidedTour = guidedTourActive,
-            onSkipTutorial = {
-                scope.launch { app.settingsRepository.markAllGuidedToursComplete() }
-                app.launchDemoCleanup()
-            },
-        )
-
-        if (showTransitionDialog) {
-            GuidedTourTransitionDialog(
-                screenId = "reports",
-                onContinue = {
-                    showTransitionDialog = false
-                    navController.navigate("history") {
-                        popUpTo("home") { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                onSkipTutorial = {
-                    showTransitionDialog = false
-                    scope.launch { app.settingsRepository.markAllGuidedToursComplete() }
-                    app.launchDemoCleanup()
-                },
+        ) { padding ->
+            ReportPage(
+                app = app,
+                ui = ui,
+                sessions = sessions,
+                zones = zones,
+                choices = choices,
+                selection = selection,
+                effects = effects,
+                boundsMap = boundsMap,
+                onAddLocation = { addLocation(navController, sessions) },
+                modifier = Modifier.padding(padding),
             )
         }
+        ReportViewOverlay(app, ui, snackbar, selection, navController, sessions)
+        ReportTour(app, navController, tour, boundsMap)
     }
 }
 
-// ---------------------------------------------------------------------------
-// Top app bar
-// ---------------------------------------------------------------------------
+/** Sends the person to place the first photo that has no location. */
+private fun addLocation(navController: NavController, sessions: List<DetectionSession>) {
+    sessions.firstOrNull { it.location == null }?.let { navController.navigate("location_picker/${it.id}") }
+}
+
+/** Everything the page needs from the app, read once and handed to the list below. */
+private class ReportPageData(
+    val info: GenerationInfo,
+    val download: VlmDownloadState,
+    val tier: TextModelTier,
+    val modelStatus: ReportModelStatus,
+    val savedReports: List<GeneratedReport>,
+)
+
+@Composable
+private fun rememberReportPageData(app: OceanGuardApp): ReportPageData {
+    // Derived, so the streamed tokens do not redraw the page: only a change of step does.
+    val generationState = app.reportGenerationState.collectAsStateWithLifecycle()
+    val info by remember { derivedStateOf { generationInfo(generationState.value) } }
+    val download by app.vlmModelManager.downloadState.collectAsStateWithLifecycle()
+    val tierKey by app.settingsRepository.vlmModelTier
+        .collectAsStateWithLifecycle(initialValue = SettingsRepository.DEFAULT_VLM_MODEL_TIER)
+    val tier = remember(tierKey) { TextModelTier.fromKey(tierKey) }
+    val saved by app.database.generatedReportDao().getAll().collectAsStateWithLifecycle(initialValue = emptyList())
+    val status = reportModelStatus(app.vlmModelManager.isAnyVariantAvailable(tier), isDownloading(download))
+    return ReportPageData(info, download, tier, status, saved)
+}
+
+@Composable
+private fun ReportPage(
+    app: OceanGuardApp,
+    ui: ReportUiState,
+    sessions: List<DetectionSession>,
+    zones: ReportZones,
+    choices: ReportChoicesState,
+    selection: ReportSelection,
+    effects: ReportEffectsHandle,
+    boundsMap: MutableMap<String, Rect>,
+    onAddLocation: () -> Unit,
+    modifier: Modifier,
+) {
+    val data = rememberReportPageData(app)
+    val filter = remember { SavedReportsFilter() }
+    val listState = rememberLazyListState()
+    val generate = { effects.onGenerate(zones, choices.choices, selection, data.modelStatus) }
+    val failed = ui.screen is ReportScreenState.Error
+    val savedIndex = 2 + listOf(data.info.generating, failed).count { it }
+
+    LaunchedEffect(ui.newReportId) { if (ui.newReportId != null) listState.animateScrollToItem(savedIndex) }
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item {
+            ReportSetupPanel(
+                zones = zones,
+                hasSessions = sessions.isNotEmpty(),
+                choices = choices.choices,
+                actions = choices.actions,
+                enabled = !data.info.generating,
+                boundsMap = boundsMap,
+                onAddLocation = onAddLocation,
+            )
+        }
+        item { GenerateItem(app, data, zones, selection, boundsMap, generate) }
+        runItems(app, data, failed, generate)
+        savedReportsSection(
+            hasSessions = sessions.isNotEmpty(),
+            reports = data.savedReports,
+            filter = filter,
+            highlightId = ui.newReportId,
+            onView = { ui.open(it) },
+            onDelete = { ui.reportToDelete = it },
+            onHighlightConsumed = { ui.newReportId = null },
+        )
+    }
+    SavedReportsDatePicker(filter, data.savedReports)
+}
+
+/** The progress card while a report is being written, or the failure of the last attempt. */
+private fun LazyListScope.runItems(app: OceanGuardApp, data: ReportPageData, failed: Boolean, retry: () -> Unit) {
+    if (data.info.generating) {
+        item { ReportProgressCard(app, data.info.stage, data.info.toolProgress, data.info.toolName) }
+    }
+    if (failed) item { ReportFailure(retry) }
+}
+
+@Composable
+private fun GenerateItem(
+    app: OceanGuardApp,
+    data: ReportPageData,
+    zones: ReportZones,
+    selection: ReportSelection,
+    boundsMap: MutableMap<String, Rect>,
+    onGenerate: () -> Unit,
+) {
+    ReportGenerateSection(
+        ui = GenerateUi(
+            modelStatus = data.modelStatus,
+            modelName = data.tier.displayName,
+            modelSize = data.tier.sizeLabel,
+            downloadProgress = downloadProgress(data.download),
+            generating = data.info.generating,
+            hasZone = zones.selectedZone != null,
+            sessionCount = selection.sessions.size,
+        ),
+        onGenerate = onGenerate,
+        onCancelDownload = { app.vlmModelManager.cancelDownload() },
+        boundsMap = boundsMap,
+    )
+}
+
+@Composable
+private fun ReportFailure(onRetry: () -> Unit) {
+    SonarErrorState(
+        title = stringResource(R.string.report_error_title),
+        message = stringResource(R.string.results_error_message),
+        onRetry = onRetry,
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ReportTopBar(
-    onBack: () -> Unit,
-    boundsMap: MutableMap<String, androidx.compose.ui.geometry.Rect>,
-) {
+private fun ReportTopBar(onBack: () -> Unit) {
     TopAppBar(
-        title = {
-            Text(
-                text = stringResource(R.string.report_title),
-                style = MaterialTheme.typography.titleLarge,
-            )
-        },
+        title = { Text(stringResource(R.string.report_title), style = MaterialTheme.typography.titleLarge) },
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.report_cd_go_back),
-                )
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.report_cd_go_back))
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface,
             titleContentColor = MaterialTheme.colorScheme.onSurface,
         ),
-    )
-}
-
-// ---------------------------------------------------------------------------
-// Delete confirmation dialog
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun DeleteReportDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.report_dialog_delete_title)) },
-        text = { Text(stringResource(R.string.report_dialog_delete_message)) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(
-                    text = stringResource(R.string.report_btn_delete),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
-        },
     )
 }

@@ -1,8 +1,6 @@
 package com.oceanguard.ai.ui.components
 
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.HealthScoreFactors
+import com.oceanguard.ai.ui.motion.OceanMotion
+import com.oceanguard.ai.ui.motion.motionSpec
 import com.oceanguard.ai.ui.theme.healthScoreColor
 
 // ---------------------------------------------------------------------------
@@ -46,7 +46,6 @@ private const val ARC_START_ANGLE  = 135f
 private const val ARC_SWEEP_MAX    = 270f
 
 /** Track ring colour: a muted surface variant. */
-private val TrackColor = Color(0x33FFFFFF)  // 20 % white works on both dark/light backgrounds
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -98,6 +97,8 @@ fun HealthScoreGauge(
     // Clamp so callers do not need to guard against out-of-range values.
     val clampedScore = score.coerceIn(0, 100)
     val arcColor     = healthColor(clampedScore)
+    // Muted ring behind the arc; the outline role reads on both the dark and the light theme.
+    val trackColor   = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
     val targetFraction = clampedScore / 100f
     val (labelRes, subtitleRes) = healthLabelResPair(clampedScore)
     val label    = stringResource(labelRes)
@@ -110,7 +111,7 @@ fun HealthScoreGauge(
 
     val animatedFraction by animateFloatAsState(
         targetValue    = animationTarget,
-        animationSpec  = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+        animationSpec  = motionSpec(OceanMotion.signature()),
         label          = "healthGaugeFraction"
     )
 
@@ -137,7 +138,7 @@ fun HealthScoreGauge(
 
                 // 1. Background track (full 270-degree ring in muted grey)
                 drawArc(
-                    color      = TrackColor,
+                    color      = trackColor,
                     startAngle = ARC_START_ANGLE,
                     sweepAngle = ARC_SWEEP_MAX,
                     useCenter  = false,

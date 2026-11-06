@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MarineDex, BioDex and achievements. -->
+<resources>
+    <string name="achievement_replay_action">Replay the unlock animation</string>
+    <string name="achievement_locked">Locked</string>
+    <string name="achievements_cd_collapse">Collapse %1$s</string>
+    <string name="achievements_cd_expand">Expand %1$s</string>
+    <string name="dex_card_cd_discovered">%1$s, seen %2$d times</string>
+    <string name="dex_card_cd_locked">%1$s, not discovered yet</string>
+    <string name="dex_card_open_label">Open %1$s</string>
+    <string name="dex_progress_caption">%1$d / %2$d discovered</string>
+    <string name="dex_debris_bottle">Bottle</string>
+    <string name="dex_debris_can">Can</string>
+    <string name="dex_debris_fishing_net">Fishing net</string>
+    <string name="dex_debris_glove">Glove</string>
+    <string name="dex_debris_mask">Mask</string>
+    <string name="dex_debris_metal_debris">Metal debris</string>
+    <string name="dex_debris_plastic_debris">Plastic debris</string>
+    <string name="dex_debris_tire">Tire</string>
+    <string name="dex_debris_fabric_debris">Fabric debris</string>
+    <string name="dex_debris_glass_debris">Glass debris</string>
+    <string name="dex_debris_other">Other</string>
+    <string name="dex_map_empty_title">No locations</string>
+    <string name="dex_map_empty_no_location">None of your %1$s photos has a location. Allow location access before taking photos to see markers here.</string>
+    <string name="dex_map_empty_no_captures">No %1$s detected yet. Analyse a photo that contains %1$s to fill this map.</string>
+    <string name="dex_gallery_empty_title">No photos yet</string>
+    <string name="dex_gallery_empty_message">Analyse a photo that contains %1$s and it will appear here.</string>
+    <string name="dex_gallery_cd_session">Analysed photo with %1$s</string>
+    <string name="biodex_iucn_badge">IUCN: %1$s</string>
+    <string name="species_batch_more">+%1$d more</string>
+</resources>

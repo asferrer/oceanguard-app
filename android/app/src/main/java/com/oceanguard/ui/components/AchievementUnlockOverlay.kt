@@ -2,11 +2,11 @@ package com.oceanguard.ai.ui.components
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,236 +19,178 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.collection.AchievementDef
-import com.oceanguard.ai.ui.theme.OceanGreen
+import com.oceanguard.ai.ui.components.dex.AchievementFx
+import com.oceanguard.ai.ui.components.dex.AchievementFxMath
+import com.oceanguard.ai.ui.motion.LocalReducedMotion
+import com.oceanguard.ai.ui.motion.OceanMotion
+import com.oceanguard.ai.ui.theme.SonarTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import nl.dionsegijn.konfetti.compose.KonfettiView
-import nl.dionsegijn.konfetti.core.Party
-import nl.dionsegijn.konfetti.core.Position
-import nl.dionsegijn.konfetti.core.emitter.Emitter
-import java.util.concurrent.TimeUnit
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-private val GoldenGradient = Brush.linearGradient(
-    listOf(Color(0xFFFFD700), Color(0xFFFFA500), Color(0xFFFFD700)),
-)
 
 private val CardShape = RoundedCornerShape(20.dp)
+private val TrophySize = 84.dp
 
-private val KonfettiParty = Party(
-    emitter = Emitter(duration = 2, TimeUnit.SECONDS).perSecond(40),
-    position = Position.Relative(0.5, 0.3),
-    colors = listOf(
-        0xFF00C9A7.toInt(),
-        0xFF1E90FF.toInt(),
-        0xFFFFD700.toInt(),
-        0xFFFF6B6B.toInt(),
-    ),
-)
-
-// ---------------------------------------------------------------------------
-// Public composable
-// ---------------------------------------------------------------------------
+/** Time the celebration stays on screen before it closes by itself. */
+private const val AUTO_DISMISS_MS = 3_500L
 
 /**
- * Full-screen overlay that celebrates an unlocked achievement.
+ * Full-screen overlay that celebrates an unlocked achievement with the effect of its category
+ * (wave, sonar sweep, orbiting sprites, rising tide, network or golden rays).
  *
- * Shown when [achievementDef] transitions from null to non-null. Auto-dismisses
- * after 3.5 seconds. Tapping the scrim also dismisses the overlay.
+ * Shown while [achievementDef] is not null. It closes itself after [AUTO_DISMISS_MS]; tapping
+ * the scrim closes it earlier. The same overlay replays an achievement the user taps in the
+ * list. Under "Remove animations" the trophy appears still, with no effect behind it.
  *
- * Animation sequence:
- * - 0 ms   : scrim fades in via [AnimatedVisibility]
- * - 100 ms : card scales in with a spring bounce (0 -> 1)
- * - 200 ms : icon rotates 0 -> 360 degrees with a spring
- * - 3500 ms: auto-dismiss via [onDismiss]
- *
- * Haptic feedback ([HapticFeedbackConstants.LONG_PRESS]) fires on each show.
- *
- * @param achievementDef Definition of the achievement to celebrate, or null
- *                       when the overlay should be hidden.
- * @param onDismiss      Called when the overlay should be removed (auto or tap).
+ * @param achievementDef Achievement to celebrate, or null while nothing is shown.
+ * @param onDismiss      Called when the overlay should be removed (timeout or tap).
  */
 @Composable
 fun AchievementUnlockOverlay(
     achievementDef: AchievementDef?,
     onDismiss: () -> Unit,
 ) {
-    // Animatable state for card scale and icon rotation; recreated each time
-    // a new achievement fires so the animation always starts from scratch.
-    val cardScale = remember(achievementDef) { Animatable(0f) }
-    val iconRotation = remember(achievementDef) { Animatable(0f) }
-
+    val reduced = LocalReducedMotion.current
     val view = LocalView.current
+    val timeline = remember(achievementDef) { Animatable(0f) }
+    val cardScale = remember(achievementDef) { Animatable(if (reduced) 1f else 0.6f) }
+    val currentDismiss by rememberUpdatedState(onDismiss)
 
-    // Drive all timed animations and the auto-dismiss from a single effect
-    // keyed on achievementDef so it restarts whenever a new achievement fires.
-    LaunchedEffect(achievementDef) {
+    LaunchedEffect(achievementDef, reduced) {
         if (achievementDef == null) return@LaunchedEffect
-
-        // Haptic feedback on show
         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-
-        // 100 ms: card spring bounce
-        launch {
-            delay(100L)
-            cardScale.animateTo(
-                targetValue = 1f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessLow,
-                ),
-            )
+        if (!reduced) {
+            launch { cardScale.animateTo(1f, OceanMotion.popSpring()) }
+            launch {
+                timeline.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(AchievementFxMath.DURATION_MS, easing = LinearEasing),
+                )
+            }
         }
-
-        // 200 ms: icon rotation
-        launch {
-            delay(200L)
-            iconRotation.animateTo(
-                targetValue = 360f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessLow,
-                ),
-            )
-        }
-
-        // 3500 ms: auto-dismiss
-        delay(3_500L)
-        onDismiss()
+        delay(AUTO_DISMISS_MS)
+        currentDismiss()
     }
 
     AnimatedVisibility(
         visible = achievementDef != null,
-        enter = fadeIn(),
-        exit = fadeOut(),
+        enter = fadeIn(if (reduced) OceanMotion.reducedFade() else OceanMotion.standard()),
+        exit = fadeOut(if (reduced) OceanMotion.reducedFade() else OceanMotion.exit()),
         modifier = Modifier
             .fillMaxSize()
             .zIndex(100f),
     ) {
         if (achievementDef == null) return@AnimatedVisibility
+        UnlockContent(
+            achievementDef = achievementDef,
+            reduced = reduced,
+            progress = { timeline.value },
+            cardScale = { cardScale.value },
+            onDismiss = onDismiss,
+        )
+    }
+}
 
+@Composable
+private fun UnlockContent(
+    achievementDef: AchievementDef,
+    reduced: Boolean,
+    progress: () -> Float,
+    cardScale: () -> Float,
+    onDismiss: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.72f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onDismiss,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (!reduced) {
+            AchievementFx(
+                category = achievementDef.category,
+                progress = progress,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.7f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss,
-                ),
-            contentAlignment = Alignment.Center,
+                .graphicsLayer {
+                    scaleX = cardScale()
+                    scaleY = cardScale()
+                }
+                .semantics { liveRegion = LiveRegionMode.Polite },
         ) {
-            // Konfetti layer behind the card
-            KonfettiView(
-                modifier = Modifier.fillMaxSize(),
-                parties = listOf(KonfettiParty),
-            )
-
-            // Card with spring bounce entry
-            Box(
-                modifier = Modifier
-                    .graphicsLayer {
-                        scaleX = cardScale.value
-                        scaleY = cardScale.value
-                    }
-                    // Prevent card tap from dismissing (only the scrim should)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {},
-                    ),
-            ) {
-                AchievementCard(
-                    achievementDef = achievementDef,
-                    iconRotationDegrees = iconRotation.value,
-                )
-            }
+            UnlockCard(achievementDef)
         }
     }
 }
 
-// ---------------------------------------------------------------------------
-// Private helpers
-// ---------------------------------------------------------------------------
-
 @Composable
-private fun AchievementCard(
-    achievementDef: AchievementDef,
-    iconRotationDegrees: Float,
-) {
+private fun UnlockCard(achievementDef: AchievementDef) {
+    val gold = SonarTheme.colors.echo
     Box(
         modifier = Modifier
             .clip(CardShape)
-            .background(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                shape = CardShape,
-            )
-            .border(width = 2.dp, brush = GoldenGradient, shape = CardShape)
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f), CardShape)
+            .border(width = 2.dp, color = gold, shape = CardShape)
             .padding(horizontal = 32.dp, vertical = 24.dp),
         contentAlignment = Alignment.Center,
     ) {
-        val achievementName = stringResource(achievementDef.nameRes)
-        val achievementDescription = stringResource(achievementDef.descriptionRes)
-
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = stringResource(R.string.achievement_unlock_overlay_title),
                 style = MaterialTheme.typography.labelLarge,
-                color = OceanGreen,
+                color = gold,
                 textAlign = TextAlign.Center,
             )
-
             Spacer(modifier = Modifier.height(16.dp))
-
             Icon(
-                imageVector = achievementDef.icon,
-                contentDescription = achievementName,
-                tint = OceanGreen,
-                modifier = Modifier
-                    .size(48.dp)
-                    .graphicsLayer { rotationZ = iconRotationDegrees },
+                imageVector = Icons.Filled.EmojiEvents,
+                contentDescription = null,
+                tint = gold,
+                modifier = Modifier.size(TrophySize),
             )
-
             Spacer(modifier = Modifier.height(12.dp))
-
             Text(
-                text = achievementName,
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                ),
-                color = Color.White,
+                text = stringResource(achievementDef.nameRes),
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
             )
-
             Spacer(modifier = Modifier.height(8.dp))
-
             Text(
-                text = achievementDescription,
+                text = stringResource(achievementDef.descriptionRes),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.8f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
         }

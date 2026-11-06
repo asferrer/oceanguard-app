@@ -393,7 +393,10 @@ data class DetectionSession(
     val processingTimeMs: Long,
 
     val notes: String? = null,
-    val tags: String? = null  // Comma-separated tags
+    val tags: String? = null,  // Comma-separated tags
+
+    // v13: model that really ran (AnalysisModels). Null on sessions saved before v13.
+    val modelName: String? = null,
 ) {
     /**
      * Get risk level based on health score
@@ -440,6 +443,8 @@ data class GeneratedReport(
     val validationDetails: String? = null,
     // v10: comma-separated session IDs used for this report
     val sessionIds: String? = null,
+    // v13: model that really wrote it (AnalysisModels). Null on reports saved before v13.
+    val modelName: String? = null,
 )
 
 /**

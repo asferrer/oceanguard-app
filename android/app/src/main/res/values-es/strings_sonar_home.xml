@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home strings. -->
+<resources>
+    <string name="home_target_debris">Residuos</string>
+    <string name="home_target_species">Especies</string>
+    <string name="home_scan_action">Escanear</string>
+    <string name="home_scan_preparing">Preparando</string>
+    <string name="home_scan_cd_debris">Escanear residuos con la cámara</string>
+    <string name="home_scan_cd_species">Identificar especies con la cámara</string>
+    <string name="home_pick_photos">Elegir fotos</string>
+    <string name="home_status_not_loaded">Aún sin cargar</string>
+    <string name="home_status_needs_download">Sin descargar · ~%1$s GB</string>
+    <string name="home_status_reports_ready">Informes: modelo listo</string>
+    <string name="home_status_reports_missing">Informes: modelo sin descargar (%1$s)</string>
+    <string name="home_download_title">Descargar modelo</string>
+    <string name="home_download_message">El modo %1$s necesita una descarga única de unos %2$s GB. Mejor con Wi-Fi. ¿Descargarlo ahora?</string>
+    <string name="home_achievements_button_cd">Logros: %1$d de %2$d desbloqueados</string>
+    <string name="welcome_models_title">¿Qué quieres descargar?</string>
+    <string name="welcome_models_intro">La detección rápida funciona ya: viene incluida en la app. Los otros modos describen cada objeto con más detalle, pero antes hay que descargarlos.</string>
+    <string name="welcome_models_note">Puedes cambiarlo después desde Inicio o Modelos e IA. La descarga continúa en segundo plano.</string>
+    <string name="welcome_option_included">Incluido, sin descargar nada</string>
+    <string name="welcome_option_download">Descarga de ~%1$s GB</string>
+    <string name="welcome_option_unavailable">Aún no disponible</string>
+    <string name="welcome_tour_title">¿Hacemos un recorrido rápido?</string>
+    <string name="welcome_tour_body">Un breve recorrido guiado te enseña las pantallas principales, una a una. Puedes repetirlo cuando quieras desde Ajustes.</string>
+    <string name="welcome_tour_start">Empezar el recorrido</string>
+    <string name="welcome_tour_later">Ahora no</string>
+    <string name="welcome_page_cd">Página %1$d de %2$d</string>
+</resources>

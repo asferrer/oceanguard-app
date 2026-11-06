@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Results strings. -->
+<resources>
+    <string name="results_add_location">Adicionar localização</string>
+    <string name="results_batch_counts">%1$d com objetos · %2$d sem detecções</string>
+    <string name="results_batch_failed">%1$d com erro</string>
+    <string name="results_batch_per_photo">%1$s s por foto</string>
+    <string name="results_error_message">Algo correu mal e não foi possível concluir. Tente novamente.</string>
+    <string name="results_export">Exportar</string>
+    <string name="results_export_csv">CSV</string>
+    <string name="results_export_csv_desc">Uma linha por objeto detetado</string>
+    <string name="results_export_error">Não foi possível criar o ficheiro. Verifique o espaço de armazenamento.</string>
+    <string name="results_export_geojson">GeoJSON</string>
+    <string name="results_export_geojson_desc">Um ponto por foto com localização</string>
+    <string name="results_export_markdown">Markdown</string>
+    <string name="results_export_markdown_desc">O texto do relatório</string>
+    <string name="results_export_no_location">Nenhuma destas fotos tem localização</string>
+    <string name="results_export_no_photos">Este relatório não tem fotos para exportar</string>
+    <string name="results_export_pdf">PDF</string>
+    <string name="results_export_pdf_desc">Relatório com imagens</string>
+    <string name="results_figure_health">Saúde média</string>
+    <string name="results_figure_objects">Objetos</string>
+    <string name="results_figure_photos">Fotos</string>
+    <string name="results_model_line">Modelo: %1$s</string>
+    <string name="results_model_unrecorded">Modelo não registado</string>
+    <string name="results_no_detections_message">Não foi encontrado nenhum objeto nesta foto, por isso não há pontuação de saúde.</string>
+    <string name="results_no_detections_title">Sem detecções</string>
+    <string name="results_period_30">30 dias</string>
+    <string name="results_period_7">7 dias</string>
+    <string name="results_period_all">Tudo</string>
+    <string name="results_period_custom">Escolher datas…</string>
+    <string name="results_repeated_warning">%1$d objetos do tipo «%2$s» numa só foto. Pode ser o mesmo objeto contado várias vezes.</string>
+    <string name="results_report_auto_start">Quando a transferência terminar, o relatório começa sozinho.</string>
+    <string name="results_report_generate_download">Transferir e gerar</string>
+    <string name="results_report_model_downloading">A transferir o modelo</string>
+    <string name="results_report_model_downloading_named">A transferir %1$s…</string>
+    <string name="results_report_model_missing">%1$s não está instalado (%2$s)</string>
+    <string name="results_report_model_ready">%1$s está pronto</string>
+    <string name="results_report_no_gps">Estas fotos não têm localização, por isso não é possível formar zonas. Adicione uma localização a uma foto para escolher uma zona.</string>
+    <string name="results_report_steps_title">A escrever o relatório</string>
+    <string name="results_report_written_by">Escrito por %1$s</string>
+    <string name="results_session_missing">Esta análise foi eliminada ou já não existe.</string>
+    <string name="results_setup_scope">O que incluir</string>
+    <string name="results_setup_voice">Idioma e público</string>
+    <string name="results_share_error">Não foi possível partilhar a foto.</string>
+    <string name="results_share_photo">Partilhar foto</string>
+    <string name="results_step_data">Consultar os dados</string>
+    <string name="results_step_model">Preparar o modelo</string>
+    <string name="results_step_writing">Redigir o texto</string>
+    <string name="results_time_line">%1$s s de análise</string>
+</resources>

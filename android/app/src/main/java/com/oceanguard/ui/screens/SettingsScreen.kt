@@ -1,41 +1,33 @@
 package com.oceanguard.ai.ui.screens
 
-import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.oceanguard.ai.OceanGuardApp
 import com.oceanguard.ai.R
-import com.oceanguard.ai.data.SettingsRepository
 import com.oceanguard.ai.ui.MainViewModel
 import com.oceanguard.ai.ui.components.spotlight.GuidedTourTransitionDialog
 import com.oceanguard.ai.ui.components.spotlight.SpotlightOverlay
@@ -43,1498 +35,156 @@ import com.oceanguard.ai.ui.components.spotlight.TourDefinitions
 import com.oceanguard.ai.ui.components.spotlight.rememberSpotlightBounds
 import com.oceanguard.ai.ui.components.spotlight.rememberSpotlightController
 import com.oceanguard.ai.ui.components.spotlight.spotlightTarget
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.os.LocaleListCompat
-import androidx.compose.material.icons.filled.Public
-import com.oceanguard.ai.inference.DetectorType
-import com.oceanguard.ai.inference.TextModelTier
-import com.oceanguard.ai.inference.TextModelVariant
-import com.oceanguard.ai.inference.VlmDownloadState
-import com.oceanguard.ai.inference.VlmModelManager
-import com.oceanguard.ai.inference.VlmProvider
-import kotlinx.coroutines.CoroutineScope
+import com.oceanguard.ai.ui.navigation.routes.ModelsRoutes
+import com.oceanguard.ai.ui.screens.models.AboutBlock
+import com.oceanguard.ai.ui.screens.models.GeneralGroup
+import com.oceanguard.ai.ui.screens.models.ModelsEntryCard
+import com.oceanguard.ai.ui.screens.models.PrivacyGroup
+import com.oceanguard.ai.ui.screens.models.ReportsGroup
+import com.oceanguard.ai.ui.screens.models.SettingsGroup
+import com.oceanguard.ai.ui.screens.models.ToursBlock
 import kotlinx.coroutines.launch
 
-private const val DEV_MODE_TAP_TARGET = 21
+private val SCREEN_PADDING = 16.dp
+private val GROUP_GAP = 24.dp
 
+/**
+ * Settings: Models & AI first, then General, Reports, Privacy and More. The guided tour keeps its
+ * six stops: the targets moved with the settings they point at.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     navController: NavController,
     viewModel: MainViewModel,
 ) {
-    val context = LocalContext.current
-    val app = remember(context) { context.applicationContext as OceanGuardApp }
-    val settings = viewModel.settingsRepository
-    val scope = rememberCoroutineScope()
+    val app = LocalContext.current.applicationContext as OceanGuardApp
+    val scroll = rememberScrollState()
+    val bounds = rememberSpotlightBounds()
+    val tour = rememberSpotlightController(TourDefinitions.SETTINGS)
+    val tourId = TourDefinitions.getScreenId(TourDefinitions.SETTINGS)
+    val tourComplete by app.settingsRepository.isTourComplete(tourId).collectAsStateWithLifecycle(initialValue = true)
+    LaunchedEffect(tourComplete) { if (!tourComplete) tour.start() }
 
-    // User-facing settings
-    val vlmEnabled by settings.vlmEnabled.collectAsStateWithLifecycle(
-        initialValue = SettingsRepository.DEFAULT_VLM_ENABLED
-    )
-    val confirmCapture by settings.confirmCapture.collectAsStateWithLifecycle(
-        initialValue = SettingsRepository.DEFAULT_CONFIRM_CAPTURE
-    )
-    val language by settings.language.collectAsStateWithLifecycle(
-        initialValue = SettingsRepository.DEFAULT_LANGUAGE
-    )
-    val reportAudience by settings.reportAudience.collectAsStateWithLifecycle(
-        initialValue = SettingsRepository.DEFAULT_REPORT_AUDIENCE
-    )
-    val darkMode by settings.darkMode.collectAsStateWithLifecycle(
-        initialValue = SettingsRepository.DEFAULT_DARK_MODE
-    )
-    val devModeEnabled by settings.devModeEnabled.collectAsStateWithLifecycle(
-        initialValue = false
-    )
-
-    // Developer-only settings
-    val confidenceThreshold by settings.confidenceThreshold.collectAsStateWithLifecycle(
-        initialValue = SettingsRepository.DEFAULT_CONFIDENCE_THRESHOLD
-    )
-
-    // BioDex online enrichment
-    val speciesOnlineEnrichmentEnabled by settings.speciesOnlineEnrichmentEnabled
-        .collectAsStateWithLifecycle(initialValue = false)
-
-    // Research contribution settings
-    val contributeConsentGiven by settings.contributeConsentGiven.collectAsStateWithLifecycle(
-        initialValue = false
-    )
-    val contributeWifiOnly by settings.contributeWifiOnly.collectAsStateWithLifecycle(
-        initialValue = true
-    )
-    val contributePending by app.contributionRepository.getPendingCountFlow()
-        .collectAsStateWithLifecycle(initialValue = 0)
-    val contributeDone by app.contributionRepository.getDoneCountFlow()
-        .collectAsStateWithLifecycle(initialValue = 0)
-    val contributeFailed by app.contributionRepository.getFailedCountFlow()
-        .collectAsStateWithLifecycle(initialValue = 0)
-    var showContributeConsentDialog by remember { mutableStateOf(false) }
-
-    val settingsScrollState = rememberScrollState()
-    val boundsMap = rememberSpotlightBounds()
-    val tourController = rememberSpotlightController(TourDefinitions.SETTINGS)
-    val tourComplete by app.settingsRepository
-        .isTourComplete(TourDefinitions.getScreenId(TourDefinitions.SETTINGS))
-        .collectAsStateWithLifecycle(initialValue = true)
-    val guidedTourActive by app.settingsRepository.guidedTourActive
-        .collectAsStateWithLifecycle(initialValue = false)
-    var showTransitionDialog by remember { mutableStateOf(false) }
-
-    LaunchedEffect(tourComplete) {
-        if (!tourComplete) tourController.start()
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_cd_back))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(settingsScrollState, enabled = !tourController.isActive)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            // ---------------------------------------------------------------
-            // Detection Settings (user-facing)
-            // ---------------------------------------------------------------
-            SettingsSection(
-                title = stringResource(R.string.settings_section_detection),
-                icon = Icons.Filled.Tune,
-                modifier = Modifier.spotlightTarget("settings_confidence", boundsMap),
-            ) {
-                // TODO: Deep Analysis toggle hidden until vision pipeline is implemented
-                // (LlamaVisionEngine + mmproj wiring to DetectionOrchestrator)
-
-                // Confirm capture toggle
-                SettingsToggleRow(
-                    title = stringResource(R.string.settings_label_confirm_capture),
-                    description = stringResource(R.string.settings_desc_confirm_capture),
-                    checked = confirmCapture,
-                    onCheckedChange = { scope.launch { settings.setConfirmCapture(it) } },
+    Box(Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.settings_title)) },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
                 )
-            }
-
-            // ---------------------------------------------------------------
-            // App Language + Report Language (grouped under single spotlight)
-            // ---------------------------------------------------------------
-            Column(
-                modifier = Modifier.spotlightTarget("settings_language", boundsMap),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                AppLanguageSection(settings = settings, scope = scope)
-                SettingsSection(
-                    title = stringResource(R.string.settings_section_reports),
-                    icon = Icons.Filled.Language,
-                ) {
-                Text(
-                    text = stringResource(R.string.settings_label_report_language),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    text = stringResource(R.string.settings_desc_report_language),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                LanguageDropdown(
-                    options = SettingsRepository.SUPPORTED_LANGUAGES,
-                    selected = language,
-                    onSelect = { scope.launch { settings.setLanguage(it) } },
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.settings_label_report_audience),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    text = stringResource(R.string.settings_desc_report_audience),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                val audienceOptions = mapOf(
-                    "scientific" to stringResource(R.string.audience_scientific),
-                    "ngo"        to stringResource(R.string.audience_ngo),
-                    "citizen"    to stringResource(R.string.audience_citizen),
-                )
-                LanguageDropdown(
-                    options = audienceOptions,
-                    selected = reportAudience,
-                    onSelect = { scope.launch { settings.setReportAudience(it) } },
-                )
-            }
-            } // end settings_language spotlight Column
-
-            // ---------------------------------------------------------------
-            // Display Settings
-            // ---------------------------------------------------------------
-            SettingsSection(
-                title = stringResource(R.string.settings_section_display),
-                icon = Icons.Filled.DarkMode,
-                modifier = Modifier.spotlightTarget("settings_theme", boundsMap),
-            ) {
-                SettingsToggleRow(
-                    title = stringResource(R.string.settings_label_dark_mode),
-                    description = stringResource(R.string.settings_desc_dark_mode),
-                    checked = darkMode,
-                    onCheckedChange = { scope.launch { settings.setDarkMode(it) } },
-                )
-            }
-
-            // ---------------------------------------------------------------
-            // Data Management
-            // ---------------------------------------------------------------
-            SettingsSection(
-                title = stringResource(R.string.settings_section_data),
-                icon = Icons.Filled.DeleteForever,
-                modifier = Modifier.spotlightTarget("settings_data", boundsMap),
-            ) {
-                DataManagementContent(viewModel = viewModel)
-            }
-
-            // ---------------------------------------------------------------
-            // Guided Tours
-            // ---------------------------------------------------------------
-            SettingsSection(
-                title = stringResource(R.string.settings_section_guided_tours),
-                icon = Icons.Filled.Explore,
-                modifier = Modifier.spotlightTarget("settings_tours", boundsMap),
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_desc_guided_tours),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = {
-                        app.launchTourReset()
-                        navController.navigate("home") {
-                            popUpTo("home") { inclusive = true }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.settings_btn_replay_tours))
-                }
-            }
-
-            // ---------------------------------------------------------------
-            // Developer Settings (hidden until easter egg is activated)
-            // ---------------------------------------------------------------
-            if (devModeEnabled) {
-                DeveloperSettingsSection(
-                    settings = settings,
-                    scope = scope,
-                    vlmModelManager = app.vlmModelManager,
-                    onDownloadTier = { tier, variant -> app.launchVlmDownload(tier, variant) },
-                )
-            }
-
-            // ---------------------------------------------------------------
-            // Research Contribution
-            // ---------------------------------------------------------------
-            SettingsSection(
-                title = stringResource(R.string.contribute_section_title),
-                icon = Icons.Filled.CloudUpload,
-                modifier = Modifier.spotlightTarget("settings_contribution", boundsMap),
-            ) {
-                SettingsToggleRow(
-                    title = stringResource(R.string.contribute_toggle_label),
-                    description = if (contributeConsentGiven)
-                        stringResource(R.string.contribute_consent_given_desc)
-                    else
-                        stringResource(R.string.contribute_toggle_desc),
-                    checked = contributeConsentGiven,
-                    onCheckedChange = { enabled ->
-                        if (enabled && !contributeConsentGiven) {
-                            showContributeConsentDialog = true
-                        } else {
-                            scope.launch {
-                                settings.setContributeConsentGiven(enabled)
-                                if (!enabled) app.contributionRepository.clearPendingQueue()
-                            }
-                        }
-                    },
-                )
-                AnimatedVisibility(visible = contributeConsentGiven) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        SettingsToggleRow(
-                            title = stringResource(R.string.contribute_wifi_only_label),
-                            description = stringResource(R.string.contribute_wifi_only_desc),
-                            checked = contributeWifiOnly,
-                            onCheckedChange = { scope.launch { settings.setContributeWifiOnly(it) } },
-                        )
-                        // Upload status summary
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column {
-                                    if (contributeDone > 0 || contributePending > 0 || contributeFailed > 0) {
-                                        Text(
-                                            text = stringResource(R.string.contribute_stats_uploaded, contributeDone),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                        )
-                                        if (contributePending > 0) {
-                                            Text(
-                                                text = stringResource(R.string.contribute_stats_pending, contributePending),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                        if (contributeFailed > 0) {
-                                            Text(
-                                                text = stringResource(R.string.contribute_stats_failed, contributeFailed),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.error,
-                                            )
-                                        }
-                                    } else {
-                                        Text(
-                                            text = stringResource(R.string.contribute_all_synced),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                                if (contributePending > 0) {
-                                    TextButton(
-                                        onClick = { app.contributionRepository.scheduleImmediateUpload() },
-                                    ) {
-                                        Text(stringResource(R.string.contribute_upload_now_btn))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (showContributeConsentDialog) {
-                AlertDialog(
-                    onDismissRequest = { showContributeConsentDialog = false },
-                    title = { Text(stringResource(R.string.contribute_consent_title)) },
-                    text = { Text(stringResource(R.string.contribute_consent_body)) },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            scope.launch { settings.setContributeConsentGiven(true) }
-                            showContributeConsentDialog = false
-                        }) { Text(stringResource(R.string.contribute_consent_accept)) }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showContributeConsentDialog = false }) {
-                            Text(stringResource(R.string.contribute_consent_dismiss))
-                        }
-                    },
-                )
-            }
-
-            // ---------------------------------------------------------------
-            // BioDex: Online species enrichment (privacy opt-in)
-            // ---------------------------------------------------------------
-            SettingsSection(
-                title = stringResource(R.string.biodex_title),
-                icon = Icons.Filled.Public,
-            ) {
-                SettingsToggleRow(
-                    title = stringResource(R.string.settings_species_enrichment_title),
-                    description = stringResource(R.string.settings_species_enrichment_subtitle),
-                    checked = speciesOnlineEnrichmentEnabled,
-                    onCheckedChange = {
-                        scope.launch { settings.setSpeciesOnlineEnrichmentEnabled(it) }
-                    },
-                )
-            }
-
-            // ---------------------------------------------------------------
-            // About
-            // ---------------------------------------------------------------
-            AboutSection(
-                devModeEnabled = devModeEnabled,
-                onDevModeActivated = { scope.launch { settings.setDevModeEnabled(true) } },
-                onDevModeDeactivated = { scope.launch { settings.setDevModeEnabled(false) } },
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-    }
-
-        SpotlightOverlay(
-            controller = tourController,
-            targetBounds = boundsMap,
-            onComplete = {
-                scope.launch {
-                    app.settingsRepository.markTourComplete(
-                        TourDefinitions.getScreenId(TourDefinitions.SETTINGS)
-                    )
-                    if (guidedTourActive) {
-                        showTransitionDialog = true
-                    } else {
-                        app.launchDemoCleanupIfComplete()
-                    }
-                }
             },
-            scrollState = settingsScrollState,
-            isGuidedTour = guidedTourActive,
-            onSkipTutorial = {
+            containerColor = MaterialTheme.colorScheme.background,
+        ) { padding ->
+            SettingsBody(app, viewModel, navController, bounds, scroll, tour.isActive, Modifier.padding(padding))
+        }
+        SettingsTour(app, navController, tour, bounds, scroll, tourId)
+    }
+}
+
+@Composable
+private fun SettingsBody(
+    app: OceanGuardApp,
+    viewModel: MainViewModel,
+    navController: NavController,
+    bounds: androidx.compose.runtime.snapshots.SnapshotStateMap<String, androidx.compose.ui.geometry.Rect>,
+    scroll: androidx.compose.foundation.ScrollState,
+    scrollLocked: Boolean,
+    modifier: Modifier,
+) {
+    val scope = rememberCoroutineScope()
+    val advanced by app.settingsRepository.devModeEnabled.collectAsStateWithLifecycle(initialValue = false)
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(scroll, enabled = !scrollLocked)
+            .padding(SCREEN_PADDING),
+        verticalArrangement = Arrangement.spacedBy(GROUP_GAP),
+    ) {
+        ModelsEntryCard(
+            app = app,
+            onOpen = { navController.navigate(ModelsRoutes.MODELS) },
+            modifier = Modifier.spotlightTarget("settings_confidence", bounds),
+        )
+        Column(Modifier.spotlightTarget("settings_language", bounds), verticalArrangement = Arrangement.spacedBy(GROUP_GAP)) {
+            GeneralGroup(app, scope, bounds)
+            ReportsGroup(app, scope)
+        }
+        PrivacyGroup(app, viewModel, scope, bounds)
+        MoreGroup(app, navController, advanced, bounds)
+    }
+}
+
+@Composable
+private fun MoreGroup(
+    app: OceanGuardApp,
+    navController: NavController,
+    advanced: Boolean,
+    bounds: androidx.compose.runtime.snapshots.SnapshotStateMap<String, androidx.compose.ui.geometry.Rect>,
+) {
+    val scope = rememberCoroutineScope()
+    SettingsGroup(stringResource(R.string.settings_group_more)) {
+        ToursBlock(
+            onReplay = {
+                app.launchTourReset()
+                navController.navigate("home") { popUpTo("home") { inclusive = true } }
+            },
+            modifier = Modifier.spotlightTarget("settings_tours", bounds),
+        )
+        AboutBlock(
+            advancedEnabled = advanced,
+            onActivate = { scope.launch { app.settingsRepository.setDevModeEnabled(true) } },
+            onDeactivate = { scope.launch { app.settingsRepository.setDevModeEnabled(false) } },
+        )
+    }
+}
+
+/** The spotlight overlay and the dialog that closes a guided tour, as they were. */
+@Composable
+private fun SettingsTour(
+    app: OceanGuardApp,
+    navController: NavController,
+    tour: com.oceanguard.ai.ui.components.spotlight.SpotlightController,
+    bounds: androidx.compose.runtime.snapshots.SnapshotStateMap<String, androidx.compose.ui.geometry.Rect>,
+    scroll: androidx.compose.foundation.ScrollState,
+    tourId: String,
+) {
+    val scope = rememberCoroutineScope()
+    val guided by app.settingsRepository.guidedTourActive.collectAsStateWithLifecycle(initialValue = false)
+    var transition by remember { mutableStateOf(false) }
+    SpotlightOverlay(
+        controller = tour,
+        targetBounds = bounds,
+        onComplete = {
+            scope.launch {
+                app.settingsRepository.markTourComplete(tourId)
+                if (guided) transition = true else app.launchDemoCleanupIfComplete()
+            }
+        },
+        scrollState = scroll,
+        isGuidedTour = guided,
+        onSkipTutorial = {
+            scope.launch { app.settingsRepository.markAllGuidedToursComplete() }
+            app.launchDemoCleanup()
+        },
+    )
+    if (transition) {
+        GuidedTourTransitionDialog(
+            screenId = "settings",
+            onContinue = {
+                transition = false
                 scope.launch {
-                    app.settingsRepository.markAllGuidedToursComplete()
+                    app.achievementChecker.checkTutorialComplete()
+                    app.settingsRepository.setGuidedTourActive(false)
                 }
+                app.launchDemoCleanup()
+                navController.navigate("home") { popUpTo("home") { inclusive = true } }
+            },
+            onSkipTutorial = {
+                transition = false
+                scope.launch { app.settingsRepository.markAllGuidedToursComplete() }
                 app.launchDemoCleanup()
             },
         )
-
-        if (showTransitionDialog) {
-            GuidedTourTransitionDialog(
-                screenId = "settings",
-                onContinue = {
-                    showTransitionDialog = false
-                    scope.launch {
-                        app.achievementChecker.checkTutorialComplete()
-                        app.settingsRepository.setGuidedTourActive(false)
-                    }
-                    app.launchDemoCleanup()
-                    navController.navigate("home") {
-                        popUpTo("home") { inclusive = true }
-                    }
-                },
-                onSkipTutorial = {
-                    showTransitionDialog = false
-                    scope.launch {
-                        app.settingsRepository.markAllGuidedToursComplete()
-                    }
-                    app.launchDemoCleanup()
-                },
-            )
-        }
-    } // end Box
-}
-
-// ---------------------------------------------------------------------------
-// Reusable toggle row
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun SettingsToggleRow(
-    title: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
-}
-
-// ---------------------------------------------------------------------------
-// Data Management
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun DataManagementContent(viewModel: MainViewModel) {
-    var showClearDialog by remember { mutableStateOf(false) }
-
-    if (showClearDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearDialog = false },
-            title = { Text(stringResource(R.string.settings_dialog_clear_title)) },
-            text = { Text(stringResource(R.string.settings_dialog_clear_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = { viewModel.clearAllData(); showClearDialog = false },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                ) { Text(stringResource(R.string.settings_dialog_clear_confirm)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
-        )
-    }
-
-    Text(stringResource(R.string.settings_label_reset_all_data), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-    Text(stringResource(R.string.settings_desc_reset_all_data), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Spacer(modifier = Modifier.height(4.dp))
-    OutlinedButton(
-        onClick = { showClearDialog = true },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-    ) {
-        Text(stringResource(R.string.settings_btn_reset_all_data))
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Developer settings (hidden behind easter egg)
-// ---------------------------------------------------------------------------
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DeveloperSettingsSection(
-    settings: SettingsRepository,
-    scope: CoroutineScope,
-    vlmModelManager: VlmModelManager,
-    onDownloadTier: (TextModelTier, TextModelVariant) -> Unit,
-) {
-    val devContext = LocalContext.current
-    val confidenceThreshold by settings.confidenceThreshold.collectAsStateWithLifecycle(
-        initialValue = SettingsRepository.DEFAULT_CONFIDENCE_THRESHOLD
-    )
-    val detectorPrecision by settings.detectorPrecision.collectAsStateWithLifecycle(
-        initialValue = SettingsRepository.DEFAULT_DETECTOR_PRECISION
-    )
-    val vlmModelTierKey by settings.vlmModelTier.collectAsStateWithLifecycle(
-        initialValue = SettingsRepository.DEFAULT_VLM_MODEL_TIER
-    )
-    val vlmModelVariantKey by settings.vlmModelVariant.collectAsStateWithLifecycle(
-        initialValue = SettingsRepository.DEFAULT_VLM_MODEL_VARIANT
-    )
-    val installedFinetunedVersion by settings.installedFinetunedVersion
-        .collectAsStateWithLifecycle(initialValue = "")
-    val downloadState by vlmModelManager.downloadState.collectAsStateWithLifecycle(
-        initialValue = VlmDownloadState.Idle
-    )
-    val detectorModeKey by settings.detectorMode.collectAsStateWithLifecycle(
-        initialValue = SettingsRepository.DEFAULT_DETECTOR_MODE
-    )
-    val refineWithGemma by settings.refineWithGemma.collectAsStateWithLifecycle(
-        initialValue = SettingsRepository.DEFAULT_REFINE_WITH_GEMMA
-    )
-
-    SettingsSection(
-        title = stringResource(R.string.settings_section_developer),
-        icon = Icons.Filled.Build,
-    ) {
-        // Confidence threshold slider
-        Text(
-            text = stringResource(R.string.settings_label_confidence_threshold),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Medium,
-        )
-        Text(
-            text = stringResource(R.string.settings_desc_confidence_threshold),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Slider(
-                value = confidenceThreshold,
-                onValueChange = { scope.launch { settings.setConfidenceThreshold(it) } },
-                valueRange = 0f..1f,
-                steps = 19,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-            ) {
-                Text(
-                    text = "%.0f%%".format(confidenceThreshold * 100),
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            }
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-        // Detector precision selector
-        var precisionExpanded by remember { mutableStateOf(false) }
-        var showRestartHint by remember { mutableStateOf(false) }
-        val precisionLabel = SettingsRepository.DETECTOR_PRECISIONS[detectorPrecision]
-            ?: detectorPrecision
-
-        Text(
-            text = stringResource(R.string.settings_label_detector_precision),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Medium,
-        )
-        Text(
-            text = stringResource(R.string.settings_desc_detector_precision),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-
-        ExposedDropdownMenuBox(
-            expanded = precisionExpanded,
-            onExpandedChange = { precisionExpanded = it },
-        ) {
-            OutlinedTextField(
-                value = precisionLabel,
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = precisionExpanded) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                shape = RoundedCornerShape(12.dp),
-            )
-            ExposedDropdownMenu(
-                expanded = precisionExpanded,
-                onDismissRequest = { precisionExpanded = false },
-            ) {
-                SettingsRepository.DETECTOR_PRECISIONS.forEach { (key, label) ->
-                    DropdownMenuItem(
-                        text = { Text(text = label) },
-                        onClick = {
-                            scope.launch { settings.setDetectorPrecision(key) }
-                            precisionExpanded = false
-                            if (key != detectorPrecision) showRestartHint = true
-                        },
-                    )
-                }
-            }
-        }
-
-        if (showRestartHint) {
-            Text(
-                text = stringResource(R.string.settings_hint_restart),
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-        // Detector mode selector (RT-DETRv2 / Gemma 4 Vision)
-        var detectorModeExpanded by remember { mutableStateOf(false) }
-        val currentDetectorType = DetectorType.fromKey(detectorModeKey)
-
-        Text(
-            text = stringResource(R.string.settings_label_detector_mode),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Medium,
-        )
-        Text(
-            text = stringResource(R.string.settings_desc_detector_mode),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-
-        ExposedDropdownMenuBox(
-            expanded = detectorModeExpanded,
-            onExpandedChange = { detectorModeExpanded = it },
-        ) {
-            OutlinedTextField(
-                value = currentDetectorType.displayLabel,
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = detectorModeExpanded) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                shape = RoundedCornerShape(12.dp),
-            )
-            ExposedDropdownMenu(
-                expanded = detectorModeExpanded,
-                onDismissRequest = { detectorModeExpanded = false },
-            ) {
-                listOf(DetectorType.RT_DETR_V2, DetectorType.GEMMA4_VISION).forEach { type ->
-                    DropdownMenuItem(
-                        text = { Text(type.displayLabel) },
-                        onClick = {
-                            scope.launch { settings.setDetectorMode(type.key) }
-                            detectorModeExpanded = false
-                            (devContext.applicationContext as? OceanGuardApp)?.applyDetectorMode()
-                        },
-                    )
-                }
-            }
-        }
-
-        if (currentDetectorType == DetectorType.RT_DETR_V2) {
-            Spacer(modifier = Modifier.height(8.dp))
-            SettingsToggleRow(
-                title = stringResource(R.string.settings_label_refine_gemma),
-                description = stringResource(R.string.settings_desc_refine_gemma),
-                checked = refineWithGemma,
-                onCheckedChange = { enabled ->
-                    scope.launch {
-                        settings.setRefineWithGemma(enabled)
-                        (devContext.applicationContext as? OceanGuardApp)?.applyDetectorMode()
-                    }
-                },
-            )
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-        // VLM provider selector (Qwen 3.5 / Gemma 4)
-        val vlmProviderKey by settings.vlmProvider.collectAsStateWithLifecycle(
-            initialValue = SettingsRepository.DEFAULT_VLM_PROVIDER
-        )
-        var providerExpanded by remember { mutableStateOf(false) }
-        val currentProvider = VlmProvider.fromKey(vlmProviderKey)
-
-        Text(
-            text = stringResource(R.string.settings_label_vlm_provider),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Medium,
-        )
-        Text(
-            text = stringResource(R.string.settings_desc_vlm_provider),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-
-        ExposedDropdownMenuBox(
-            expanded = providerExpanded,
-            onExpandedChange = { providerExpanded = it },
-        ) {
-            OutlinedTextField(
-                value = currentProvider.displayLabel,
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = providerExpanded) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                shape = RoundedCornerShape(12.dp),
-            )
-            ExposedDropdownMenu(
-                expanded = providerExpanded,
-                onDismissRequest = { providerExpanded = false },
-            ) {
-                VlmProvider.entries.forEach { provider ->
-                    DropdownMenuItem(
-                        text = { Text(provider.displayLabel) },
-                        onClick = {
-                            scope.launch {
-                                settings.setVlmProvider(provider.key)
-                                // Auto-select best tier for the new provider
-                                val bestTier = TextModelTier.forProvider(provider).firstOrNull()
-                                if (bestTier != null) {
-                                    settings.setVlmModelTier(bestTier.name.lowercase())
-                                }
-                            }
-                            providerExpanded = false
-                        },
-                    )
-                }
-            }
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-        // VLM model tier selector (filtered by selected provider)
-        var tierExpanded by remember { mutableStateOf(false) }
-        val currentTier = TextModelTier.fromKey(vlmModelTierKey)
-        val providerTiers = TextModelTier.forProvider(currentProvider)
-
-        Text(
-            text = stringResource(R.string.settings_label_vlm_tier),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Medium,
-        )
-        Text(
-            text = stringResource(R.string.settings_desc_vlm_tier),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-
-        val currentAvailable = vlmModelManager.isAnyVariantAvailable(currentTier)
-        val notDownloaded = stringResource(R.string.settings_vlm_not_downloaded)
-        val isDownloading = downloadState is VlmDownloadState.Downloading ||
-            downloadState is VlmDownloadState.Preparing ||
-            downloadState is VlmDownloadState.Installing
-
-        ExposedDropdownMenuBox(
-            expanded = tierExpanded,
-            onExpandedChange = { tierExpanded = it },
-        ) {
-            OutlinedTextField(
-                value = "${currentTier.displayName} - ${currentTier.sizeLabel}" +
-                    if (!currentAvailable) " ($notDownloaded)" else "",
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = tierExpanded) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                shape = RoundedCornerShape(12.dp),
-            )
-            ExposedDropdownMenu(
-                expanded = tierExpanded,
-                onDismissRequest = { tierExpanded = false },
-            ) {
-                providerTiers.forEach { tier ->
-                    val tierAvailable = vlmModelManager.isAnyVariantAvailable(tier)
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text("${tier.displayName} - ${tier.sizeLabel}")
-                                if (!tierAvailable) {
-                                    Text(
-                                        text = notDownloaded,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        },
-                        onClick = {
-                            scope.launch { settings.setVlmModelTier(tier.name.lowercase()) }
-                            tierExpanded = false
-                        },
-                    )
-                }
-            }
-        }
-
-        // Model variant selector — visible only for Gemma 4 (the only provider with a fine-tuned variant)
-        val currentVariant = TextModelVariant.fromKey(vlmModelVariantKey)
-        if (currentProvider == VlmProvider.GEMMA4 && currentTier.supportsFinetuned &&
-            VlmModelManager.FINETUNED_LITERTLM_PUBLISHED) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.settings_label_vlm_variant),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Medium,
-            )
-            Text(
-                text = stringResource(R.string.settings_desc_vlm_variant),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-
-            var variantExpanded by remember { mutableStateOf(false) }
-            val variantAvailable = vlmModelManager.isModelAvailable(currentTier, currentVariant)
-
-            ExposedDropdownMenuBox(
-                expanded = variantExpanded,
-                onExpandedChange = { variantExpanded = it },
-            ) {
-                OutlinedTextField(
-                    value = currentVariant.displayLabel +
-                        if (!variantAvailable) " ($notDownloaded)" else "",
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = variantExpanded)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                    shape = RoundedCornerShape(12.dp),
-                )
-                ExposedDropdownMenu(
-                    expanded = variantExpanded,
-                    onDismissRequest = { variantExpanded = false },
-                ) {
-                    TextModelVariant.entries.forEach { variant ->
-                        val vAvailable = vlmModelManager.isModelAvailable(currentTier, variant)
-                        DropdownMenuItem(
-                            text = {
-                                Column {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Text(variant.displayLabel)
-                                        if (variant == TextModelVariant.FINETUNED) {
-                                            val bestVersion = vlmModelManager.bestModelVersion()
-                                            val badge = finetunedBadge(
-                                                available = vAvailable,
-                                                installedVersion = installedFinetunedVersion,
-                                                bestVersion = bestVersion,
-                                                notDownloaded = notDownloaded,
-                                            )
-                                            if (badge.isNotBlank()) {
-                                                Text(
-                                                    text = badge,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                )
-                                            }
-                                        } else if (!vAvailable) {
-                                            Text(
-                                                text = notDownloaded,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                    }
-                                    if (variant == TextModelVariant.FINETUNED) {
-                                        Text(
-                                            text = stringResource(R.string.vlm_variant_finetuned_metric),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            },
-                            onClick = {
-                                scope.launch { settings.setVlmModelVariant(variant.key) }
-                                variantExpanded = false
-                            },
-                        )
-                    }
-                }
-            }
-
-            if (!variantAvailable && !isDownloading) {
-                Spacer(modifier = Modifier.height(4.dp))
-                OutlinedButton(
-                    onClick = { onDownloadTier(currentTier, currentVariant) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text(
-                        "Download ${currentVariant.displayLabel} " +
-                            if (currentVariant == TextModelVariant.FINETUNED) "(~5.0 GB)"
-                            else "(${currentTier.sizeLabel})"
-                    )
-                }
-            }
-        }
-
-        if (!currentAvailable) {
-            Spacer(modifier = Modifier.height(4.dp))
-            if (isDownloading) {
-                val progress = (downloadState as? VlmDownloadState.Downloading)?.progress
-                if (progress != null) {
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Text(
-                        text = "${(progress * 100).toInt()}%  ${currentTier.sizeLabel}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                }
-            } else {
-                OutlinedButton(
-                    onClick = { onDownloadTier(currentTier, TextModelVariant.BASE) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text("Download ${currentTier.displayName} (${currentTier.sizeLabel})")
-                }
-            }
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-        // LiteRT-LM Benchmark (temporary spike)
-        var benchmarkRunning by remember { mutableStateOf(false) }
-        var benchmarkStatus by remember { mutableStateOf<String?>(null) }
-        var benchmarkResult by remember { mutableStateOf<String?>(null) }
-        val liteRTAvailable = vlmModelManager.isLiteRTModelAvailable()
-
-        Text(
-            text = "LiteRT-LM Benchmark",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Medium,
-        )
-        Text(
-            text = if (liteRTAvailable)
-                "Gemma 4 E2B ready. Run text + vision benchmark."
-            else
-                "Gemma 4 E2B .litertlm (~2.6 GB) will be downloaded first.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        if (benchmarkRunning) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            benchmarkStatus?.let { status ->
-                Text(
-                    text = status,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            OutlinedButton(
-                onClick = {
-                    benchmarkRunning = true
-                    benchmarkResult = null
-                    scope.launch {
-                        try {
-                            // Download if not present
-                            if (!vlmModelManager.isLiteRTModelAvailable()) {
-                                benchmarkStatus = "Downloading Gemma 4 E2B .litertlm (~2.6 GB)…"
-                                vlmModelManager.downloadLiteRTModel()
-                            }
-
-                            benchmarkStatus = "Running benchmark…"
-                            val modelsDir = vlmModelManager.getModelDirectory()
-                            val cacheDir = java.io.File(modelsDir, "litert-cache").apply { mkdirs() }
-                            val results = com.oceanguard.ai.inference.LiteRTBenchmark.runAll(
-                                modelPath = vlmModelManager.getLiteRTModelPath(),
-                                cacheDir = cacheDir.absolutePath,
-                            )
-                            benchmarkResult = results.joinToString("\n") { it.toString() }
-                        } catch (e: Exception) {
-                            benchmarkResult = "ERROR: ${e.message}"
-                            android.util.Log.e("LiteRTBenchmark", "Benchmark failed", e)
-                        } finally {
-                            benchmarkRunning = false
-                            benchmarkStatus = null
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text(
-                    if (liteRTAvailable) "Run LiteRT-LM Benchmark"
-                    else "Download & Run Benchmark (~2.6 GB)"
-                )
-            }
-        }
-        benchmarkResult?.let { result ->
-            Spacer(modifier = Modifier.height(4.dp))
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-            ) {
-                Text(
-                    text = result,
-                    modifier = Modifier.padding(8.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                )
-            }
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-        // llama.cpp Benchmark (temporary spike)
-        var llamaBenchRunning by remember { mutableStateOf(false) }
-        var llamaBenchStatus by remember { mutableStateOf<String?>(null) }
-        var llamaBenchResult by remember { mutableStateOf<String?>(null) }
-
-        Text(
-            text = "llama.cpp Benchmark",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Medium,
-        )
-        Text(
-            text = "Benchmark the active VLM tier with llama.cpp (current backend).",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        if (llamaBenchRunning) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            llamaBenchStatus?.let { status ->
-                Text(
-                    text = status,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            val currentTier = com.oceanguard.ai.inference.TextModelTier.fromKey(vlmModelTierKey)
-            val tierAvailable = vlmModelManager.isModelAvailable(currentTier)
-            OutlinedButton(
-                onClick = {
-                    llamaBenchRunning = true
-                    llamaBenchResult = null
-                    scope.launch {
-                        try {
-                            val tier = com.oceanguard.ai.inference.TextModelTier.fromKey(vlmModelTierKey)
-                            if (!vlmModelManager.isModelAvailable(tier)) {
-                                llamaBenchStatus = "Downloading ${tier.displayName}…"
-                                vlmModelManager.downloadModel(tier)
-                            }
-                            llamaBenchStatus = "Running llama.cpp benchmark (${tier.displayName})…"
-                            val modelDir = vlmModelManager.getModelDirectory()
-                            val modelFile = java.io.File(modelDir, tier.filename)
-                            val result = com.oceanguard.ai.inference.LlamaCppBenchmark.run(
-                                modelPath = modelFile.absolutePath,
-                                tier = tier,
-                            )
-                            llamaBenchResult = result.toString()
-                        } catch (e: Exception) {
-                            llamaBenchResult = "ERROR: ${e.message}"
-                            android.util.Log.e("LlamaCppBenchmark", "Benchmark failed", e)
-                        } finally {
-                            llamaBenchRunning = false
-                            llamaBenchStatus = null
-                        }
-                    }
-                },
-                enabled = tierAvailable,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text(
-                    if (tierAvailable) "Run llama.cpp Benchmark (${currentTier.displayName})"
-                    else "Model not downloaded"
-                )
-            }
-        }
-        llamaBenchResult?.let { result ->
-            Spacer(modifier = Modifier.height(4.dp))
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-            ) {
-                Text(
-                    text = result,
-                    modifier = Modifier.padding(8.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                )
-            }
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-        // RT-DETRv2 Detector Benchmark
-        var detectorBenchRunning by remember { mutableStateOf(false) }
-        var detectorBenchResult by remember { mutableStateOf<String?>(null) }
-
-        Text(
-            text = "RT-DETRv2 Detector Benchmark",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Medium,
-        )
-        Text(
-            text = "FP16, NNAPI + XNNPACK. 5 warmup + 50 runs. Results logged: adb logcat -s RTDETRBenchmark:I",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        if (detectorBenchRunning) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            Text(
-                text = "Running benchmark (5 warmup + 50 runs x 2 delegates)...",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            OutlinedButton(
-                onClick = {
-                    detectorBenchRunning = true
-                    detectorBenchResult = null
-                    scope.launch {
-                        try {
-                            val results = com.oceanguard.ai.inference.RTDETRBenchmarkRunner.runAll(devContext)
-                            detectorBenchResult = results.joinToString("\n") { r ->
-                                "${r.modelLabel}: p50=${r.p50Ms}ms p95=${r.p95Ms}ms mean=${r.meanMs}ms [${r.delegateLabel}]"
-                            }
-                            Toast.makeText(
-                                devContext,
-                                "Detector p50: ${results.firstOrNull()?.p50Ms ?: "--"}ms (see logcat)",
-                                Toast.LENGTH_LONG,
-                            ).show()
-                        } catch (e: Exception) {
-                            detectorBenchResult = "ERROR: ${e.message}"
-                            android.util.Log.e("RTDETRBenchmark", "Benchmark failed", e)
-                        } finally {
-                            detectorBenchRunning = false
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text("Run Detector Benchmark")
-            }
-        }
-        detectorBenchResult?.let { result ->
-            Spacer(modifier = Modifier.height(4.dp))
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-            ) {
-                Text(
-                    text = result,
-                    modifier = Modifier.padding(8.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                )
-            }
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-        // Technical info
-        val techLabel = "RT-DETRv2 + VLM (llama.cpp)"
-        Text(
-            text = techLabel,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = stringResource(R.string.settings_about_powered_by),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-// ---------------------------------------------------------------------------
-// About section with easter egg
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun AboutSection(
-    devModeEnabled: Boolean,
-    onDevModeActivated: () -> Unit,
-    onDevModeDeactivated: () -> Unit,
-) {
-    val context = LocalContext.current
-    var tapCount by remember { mutableIntStateOf(0) }
-
-    SettingsSection(title = stringResource(R.string.settings_section_about), icon = Icons.Filled.Info) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.logo),
-                contentDescription = stringResource(R.string.settings_cd_logo),
-                modifier = Modifier
-                    .size(48.dp)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() },
-                    ) {
-                        tapCount++
-                        val remaining = DEV_MODE_TAP_TARGET - tapCount
-                        when {
-                            tapCount >= DEV_MODE_TAP_TARGET && !devModeEnabled -> {
-                                onDevModeActivated()
-                                tapCount = 0
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.settings_dev_mode_activated),
-                                    Toast.LENGTH_LONG,
-                                ).show()
-                            }
-                            remaining in 1..5 -> {
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.settings_dev_mode_countdown, remaining),
-                                    Toast.LENGTH_SHORT,
-                                ).show()
-                            }
-                        }
-                    },
-            )
-            Column {
-                Text(
-                    text = "OceanGuard AI",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = "v${com.oceanguard.ai.BuildConfig.VERSION_NAME}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-        Text(
-            text = stringResource(R.string.settings_about_description),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        // Developer mode toggle (only visible when already activated)
-        if (devModeEnabled) {
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            OutlinedButton(
-                onClick = onDevModeDeactivated,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text(stringResource(R.string.settings_dev_mode_disable))
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Shared components
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun SettingsSection(
-    title: String,
-    icon: ImageVector? = null,
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-            Text(
-                text = title.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = 1.sp,
-            )
-        }
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                content()
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun LanguageDropdown(
-    options: Map<String, String>,
-    selected: String,
-    onSelect: (String) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val displayName = options[selected] ?: selected
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-    ) {
-        OutlinedTextField(
-            value = displayName,
-            onValueChange = {},
-            readOnly = true,
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-            shape = RoundedCornerShape(12.dp),
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            options.forEach { (code, name) ->
-                DropdownMenuItem(
-                    text = { Text(name) },
-                    onClick = {
-                        onSelect(code)
-                        expanded = false
-                    },
-                )
-            }
-        }
-    }
-}
-
-private val APP_LANGUAGES = mapOf(
-    "" to "System Default",
-    "en" to "English",
-    "es" to "Espa\u00f1ol",
-    "fr" to "Fran\u00e7ais",
-    "de" to "Deutsch",
-    "it" to "Italiano",
-    "pt" to "Portugu\u00eas",
-)
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AppLanguageSection(
-    settings: SettingsRepository,
-    scope: CoroutineScope,
-) {
-    val appLanguage by settings.appLanguage.collectAsStateWithLifecycle(initialValue = "")
-
-    SettingsSection(title = stringResource(R.string.settings_section_app_language), icon = Icons.Filled.Language) {
-        Text(
-            text = stringResource(R.string.settings_label_interface_language),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Medium,
-        )
-        Text(
-            text = stringResource(R.string.settings_desc_interface_language),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-
-        var expanded by remember { mutableStateOf(false) }
-        val displayName = APP_LANGUAGES[appLanguage] ?: appLanguage
-
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = it },
-        ) {
-            OutlinedTextField(
-                value = displayName,
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                shape = RoundedCornerShape(12.dp),
-            )
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-            ) {
-                APP_LANGUAGES.forEach { (code, name) ->
-                    DropdownMenuItem(
-                        text = { Text(name) },
-                        onClick = {
-                            expanded = false
-                            scope.launch { settings.setAppLanguage(code) }
-                            val locales = if (code.isEmpty()) {
-                                LocaleListCompat.getEmptyLocaleList()
-                            } else {
-                                LocaleListCompat.forLanguageTags(code)
-                            }
-                            AppCompatDelegate.setApplicationLocales(locales)
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Returns the version badge string for the FINETUNED variant label.
- * States: not downloaded | up-to-date | update available.
- */
-private fun finetunedBadge(
-    available: Boolean,
-    installedVersion: String,
-    bestVersion: String?,
-    notDownloaded: String,
-): String = when {
-    !available && bestVersion != null -> "v$bestVersion — $notDownloaded"
-    !available                        -> notDownloaded
-    bestVersion != null && installedVersion.isNotBlank() && installedVersion != bestVersion ->
-        "v$installedVersion → v$bestVersion"
-    installedVersion.isNotBlank()     -> "v$installedVersion"
-    bestVersion != null               -> "v$bestVersion"
-    else                              -> ""
 }

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="analysis_mode_fast">Rapide</string>
+    <string name="analysis_mode_fast_desc">RT-DETRv2, inclus dans l\'application.</string>
+    <string name="analysis_mode_detailed">Détaillée</string>
+    <string name="analysis_mode_detailed_desc">Gemma 4 décrit chaque objet. Les cadres apparaissent à la fin.</string>
+    <string name="analysis_mode_tuned">Affinée OceanGuard</string>
+    <string name="analysis_mode_tuned_desc">Gemma 4 entraîné par OceanGuard sur les déchets marins.</string>
+    <string name="analysis_mode_refined">Ajouter type et matériau</string>
+    <string name="analysis_mode_refined_desc">RT-DETRv2 détecte et Gemma 4 ajoute le type et le matériau.</string>
+    <string name="analysis_mode_title">Mode d\'analyse</string>
+    <string name="analysis_mode_current_cd">Mode d\'analyse : %1$s. Touchez pour le changer.</string>
+    <string name="analysis_mode_seconds">~%1$d s par photo</string>
+    <string name="analysis_mode_time_unknown">Temps pas encore mesuré</string>
+    <string name="analysis_mode_included">Inclus</string>
+    <string name="analysis_mode_download">Téléchargement de ~%1$s Go</string>
+    <string name="analysis_mode_not_published">Pas encore disponible</string>
+    <string name="analysis_mode_offline_note">Tout s\'exécute sur ce téléphone.</string>
+    <string name="sonar_undo">Annuler</string>
+    <string name="sonar_item_deleted">Supprimé</string>
+    <string name="sonar_percent">%1$d %%</string>
+    <string name="advanced_options_show">Afficher les options avancées</string>
+    <string name="advanced_options_notice_title">Options avancées</string>
+    <string name="advanced_options_notice_body">Réglages techniques pour tester les modèles : seuil, fournisseur, précision et benchmarks. Certains téléchargent plusieurs Go et peuvent dégrader les résultats.</string>
+    <string name="advanced_options_notice_confirm">Les afficher</string>
+</resources>

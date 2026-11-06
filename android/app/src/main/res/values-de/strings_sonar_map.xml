@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings of the map and history screens. -->
+<resources>
+    <string name="map_style_light">Hell</string>
+    <string name="map_style_dark">Dunkel</string>
+    <string name="map_style_terrain">Gelände</string>
+    <plurals name="map_cluster_cd">
+        <item quantity="one">%1$d Foto in dieser Zone. Zum Heranzoomen tippen.</item>
+        <item quantity="other">%1$d Fotos in dieser Zone. Zum Heranzoomen tippen.</item>
+    </plurals>
+    <string name="map_pin_cd">Foto, Zustand %1$d. Für Details tippen.</string>
+    <string name="map_pin_open_detail">Analyse öffnen</string>
+    <string name="map_pin_fix_location">Standort korrigieren</string>
+    <string name="map_offline_title">Keine Verbindung</string>
+    <string name="map_offline_message">Die Basiskarte braucht Internet zum Laden. Deine Funde bleiben hier und erscheinen, sobald sie geladen ist.</string>
+    <string name="map_load_failed_title">Die Karte konnte nicht geladen werden</string>
+    <string name="map_load_failed_message">Die Basiskarte wurde nicht heruntergeladen. Prüfe deine Verbindung und versuche es erneut.</string>
+    <string name="map_empty_action_scan">Müll scannen</string>
+    <plurals name="map_subtitle_sessions">
+        <item quantity="one">%1$d Analyse</item>
+        <item quantity="other">%1$d Analysen</item>
+    </plurals>
+    <plurals name="map_subtitle_zones">
+        <item quantity="one">%1$d Zone</item>
+        <item quantity="other">%1$d Zonen</item>
+    </plurals>
+    <string name="history_select">Auswählen</string>
+    <string name="history_group_today">Heute</string>
+    <string name="history_group_yesterday">Gestern</string>
+    <string name="history_no_results_title">Keine Treffer</string>
+    <string name="history_no_results_message">Versuche eine andere Suche oder entferne die Filter.</string>
+    <string name="history_clear_filters">Filter entfernen</string>
+    <plurals name="history_video_unique_debris">
+        <item quantity="one">%1$d einzelnes Müllobjekt</item>
+        <item quantity="other">%1$d einzelne Müllobjekte</item>
+    </plurals>
+    <string name="history_video_summary">Video, %1$d s, %2$d Frames</string>
+    <string name="history_risk_low">Niedrig</string>
+    <string name="history_risk_moderate">Mäßig</string>
+    <string name="history_risk_high">Hoch</string>
+    <string name="history_risk_critical">Kritisch</string>
+    <string name="history_quality_good">Gut</string>
+    <string name="history_quality_fair">Mittel</string>
+    <string name="history_quality_poor">Schlecht</string>
+    <string name="history_state_selected">Ausgewählt</string>
+    <string name="history_state_not_selected">Nicht ausgewählt</string>
+</resources>

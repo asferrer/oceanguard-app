@@ -1,7 +1,5 @@
 package com.oceanguard.ai.ui.theme
 
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -76,8 +74,8 @@ val GlassSurface = Color(0x12FFFFFF)         // 7% white
 val GlassBorder  = Color(0x33FFFFFF)         // 20% white
 
 /** Shimmer placeholder colors for dark mode */
-val ShimmerBase      = Color(0xFF112C47)     // = Neutral30
-val ShimmerHighlight = Color(0xFF1A3449)
+val ShimmerBase      = Color(0xFF123349)     // = hull2
+val ShimmerHighlight = Color(0xFF1E4660)     // = line
 
 // ---------------------------------------------------------------------------
 // Accent gradients for premium card effects
@@ -104,11 +102,11 @@ val GlassHighlight = Color(0x1AFFFFFF)
 // ---------------------------------------------------------------------------
 
 /** Primary text — 91% luminance, for headings and key values */
-val TextPrimary = Color(0xFFE8F0F8)
+val TextPrimary = Color(0xFFE9F3F8)
 /** Secondary text — 68% luminance, for body and descriptions */
-val TextSecondary = Color(0xFFA0BCC8)
+val TextSecondary = Color(0xFFA9C4D2)
 /** Tertiary text — 45% luminance, for captions and metadata */
-val TextTertiary = Color(0xFF6B8A9E)
+val TextTertiary = Color(0xFF8FB0C2)
 
 // ---------------------------------------------------------------------------
 // Accent glow and bioluminescent highlights
@@ -124,9 +122,9 @@ val BioluminescentCyan = Color(0xFF00E5FF)
 // ---------------------------------------------------------------------------
 
 /** Hero gradient: ultra-deep start (matches landing --bg-primary #0a0e1a) */
-val GradientHeroStart = Color(0xFF0A0E1A)
+val GradientHeroStart = Color(0xFF04121D)
 /** Hero gradient: deep ocean end (matches landing --bg-secondary #0d1225) */
-val GradientHeroEnd = Color(0xFF0D1225)
+val GradientHeroEnd = Color(0xFF071B2B)
 /** Hero gradient (light mode): pale sky for sunlit beach legibility */
 val GradientHeroStartLight = Color(0xFFE0F4FA)
 /** Hero gradient (light mode): clear-water end */
@@ -164,16 +162,16 @@ val SplashSubtitleLight = Color(0xFF42525E)
 // ---------------------------------------------------------------------------
 
 /** Active tab indicator pill colour */
-val NavIndicatorColor = Color(0xFF00A896)     // = OceanGreen
+val NavIndicatorColor = Color(0xFF3CE8C4)     // = trace
 
 // ---------------------------------------------------------------------------
 // Surface gradients for elevated cards
 // ---------------------------------------------------------------------------
 
 /** Card gradient start — matches Neutral20 */
-val CardGradientStart = Color(0xFF0D2137)
+val CardGradientStart = Color(0xFF0C2639)
 /** Card gradient end — matches Neutral30 */
-val CardGradientEnd   = Color(0xFF112C47)
+val CardGradientEnd   = Color(0xFF0F2D43)
 
 // ---------------------------------------------------------------------------
 // Ambient shadow / highlight edge for depth
@@ -221,134 +219,6 @@ fun materialColor(material: DebrisMaterial): Color = when (material) {
 }
 
 // ---------------------------------------------------------------------------
-// Material 3 neutral surfaces — deep-ocean dark mode
-// ---------------------------------------------------------------------------
-
-private val Neutral10 = Color(0xFF0A1929)  // deepest ocean background
-private val Neutral20 = Color(0xFF0D2137)
-private val Neutral30 = Color(0xFF112C47)
-private val Neutral80 = Color(0xFFB0C8D4)
-private val Neutral90 = Color(0xFFCCDDE8)
-private val Neutral95 = Color(0xFFE5EFF5)
-private val Neutral99 = Color(0xFFF5FAFC)
-
-private val NeutralVariant30 = Color(0xFF1A3549)
-private val NeutralVariant50 = Color(0xFF4A6880)
-private val NeutralVariant80 = Color(0xFFA0BCC8)
-
-private val ErrorBase = Color(0xFFCF6679)
-private val ErrorContainer = Color(0xFF93000A)
-
-// ---------------------------------------------------------------------------
-// Dark colour scheme — default for underwater use
-// High contrast on dark backgrounds mirrors diving conditions.
-// ---------------------------------------------------------------------------
-
-val OceanDarkColorScheme = darkColorScheme(
-    // Primary: ocean blue
-    primary = OceanBlueLight,
-    onPrimary = Color(0xFF00293D),
-    primaryContainer = OceanBlueDark,
-    onPrimaryContainer = Color(0xFFC9E6FF),
-
-    // Secondary: teal / bioluminescent
-    secondary = OceanGreenLight,
-    onSecondary = Color(0xFF003730),
-    secondaryContainer = OceanGreenDark,
-    onSecondaryContainer = Color(0xFFA8F5E8),
-
-    // Tertiary: coral accent for alerts
-    tertiary = CoralRed,
-    onTertiary = Color(0xFF4A0000),
-    tertiaryContainer = Color(0xFF6B1E1E),
-    onTertiaryContainer = Color(0xFFFFDAD5),
-
-    // Error
-    error = ErrorBase,
-    onError = Color(0xFF690005),
-    errorContainer = ErrorContainer,
-    onErrorContainer = Color(0xFFFFDAD6),
-
-    // Backgrounds — deep ocean dark
-    background = Neutral10,
-    onBackground = Neutral90,
-
-    // Surface hierarchy
-    surface = Neutral20,
-    onSurface = Neutral90,
-    surfaceVariant = NeutralVariant30,
-    onSurfaceVariant = NeutralVariant80,
-
-    // Outlines
-    outline = NeutralVariant50,
-    outlineVariant = NeutralVariant30,
-
-    // Inverse (used for snackbars, tooltips)
-    inverseSurface = Neutral90,
-    inverseOnSurface = Neutral20,
-    inversePrimary = OceanBlue,
-
-    // Scrim for modal dialogs
-    scrim = Color(0xFF000000),
-
-    // Surface containers — used by cards, bottom sheets, etc.
-    surfaceContainerLowest = Color(0xFF060F18),
-    surfaceContainerLow = Neutral10,
-    surfaceContainer = Neutral20,
-    surfaceContainerHigh = Neutral30,
-    surfaceContainerHighest = Color(0xFF1A3449),
-)
-
-// ---------------------------------------------------------------------------
-// Light colour scheme — for surface environments / post-dive review
-// ---------------------------------------------------------------------------
-
-val OceanLightColorScheme = lightColorScheme(
-    primary = OceanBlue,
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFC9E6FF),
-    onPrimaryContainer = Color(0xFF001E30),
-
-    secondary = OceanGreen,
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFA8F5E8),
-    onSecondaryContainer = Color(0xFF002019),
-
-    tertiary = Color(0xFFC0392B),
-    onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFFFDAD5),
-    onTertiaryContainer = Color(0xFF410002),
-
-    error = Color(0xFFBA1A1A),
-    onError = Color(0xFFFFFFFF),
-    errorContainer = Color(0xFFFFDAD6),
-    onErrorContainer = Color(0xFF410002),
-
-    background = Neutral99,
-    onBackground = Color(0xFF1A1C1E),
-
-    surface = Neutral99,
-    onSurface = Color(0xFF1A1C1E),
-    surfaceVariant = Color(0xFFDCE3EB),
-    onSurfaceVariant = Color(0xFF42484F),
-
-    outline = Color(0xFF72787E),
-    outlineVariant = Color(0xFFC2C8CE),
-
-    inverseSurface = Color(0xFF2F3133),
-    inverseOnSurface = Neutral95,
-    inversePrimary = OceanBlueLight,
-
-    scrim = Color(0xFF000000),
-
-    surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceContainerLow = Color(0xFFF5FAFE),
-    surfaceContainer = Color(0xFFEFF4F8),
-    surfaceContainerHigh = Color(0xFFE9EFF3),
-    surfaceContainerHighest = Color(0xFFE3E9ED),
-)
-
-// ---------------------------------------------------------------------------
 // Theme-aware helpers — read LocalIsDarkTheme to swap palettes between the
 // underwater dark hero and the sunlit-beach light hero. Keeps every screen
 // free from `if (isDark) ... else ...` plumbing.
@@ -376,11 +246,11 @@ fun heroGradientBrush(): Brush =
 
 @Composable
 fun glassSurfaceColor(): Color =
-    if (LocalIsDarkTheme.current) Color(0x800F172A) else GlassSurfaceLight
+    if (LocalIsDarkTheme.current) Color(0x800C2639) else GlassSurfaceLight
 
 @Composable
 fun glassBorderColor(): Color =
-    if (LocalIsDarkTheme.current) Color(0x1A94A3B8) else GlassBorderLight
+    if (LocalIsDarkTheme.current) Color(0xFF1E4660) else GlassBorderLight
 
 @Composable
 fun bubbleColor(): Color =

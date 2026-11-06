@@ -11,10 +11,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.species.SpeciesObservation
-import com.oceanguard.ai.ui.components.LottieEmptyState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOff
+import com.oceanguard.ai.ui.components.sonar.SonarEmptyState
 import com.oceanguard.ai.ui.screens.map.MapStyles
 import com.oceanguard.ai.ui.theme.LocalIsDarkTheme
-import com.oceanguard.ai.ui.theme.OceanGreen
+import com.oceanguard.ai.ui.theme.SonarTheme
 import org.json.JSONArray
 import org.json.JSONObject
 import org.maplibre.compose.camera.CameraPosition
@@ -87,6 +89,8 @@ fun SpeciesObservationMap(
 
             SpeciesObservationCircleLayer(
                 source = source,
+                pinColor = SonarTheme.colors.echo,
+                outlineColor = SonarTheme.colors.abyss,
                 onObservationClick = onObservationClick,
             )
         }
@@ -100,12 +104,14 @@ fun SpeciesObservationMap(
 @Composable
 private fun SpeciesObservationCircleLayer(
     source: org.maplibre.compose.sources.GeoJsonSource,
+    pinColor: androidx.compose.ui.graphics.Color,
+    outlineColor: androidx.compose.ui.graphics.Color,
     onObservationClick: (Long) -> Unit,
 ) {
     CircleLayer(
         id = "species-obs-points",
         source = source,
-        color = const(OceanGreen),
+        color = const(pinColor),
         radius = interpolate(
             type = linear(),
             input = zoom(),
@@ -114,7 +120,7 @@ private fun SpeciesObservationCircleLayer(
             14 to const(14.dp),
         ),
         strokeWidth = const(2.dp),
-        strokeColor = const(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f)),
+        strokeColor = const(outlineColor),
         onClick = { features ->
             val obsId = features.firstOrNull()
                 ?.properties
@@ -202,7 +208,8 @@ private fun SpeciesMapEmptyState(hasObservations: Boolean, modifier: Modifier = 
         stringResource(R.string.biodex_map_empty_no_obs)
     }
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        LottieEmptyState(
+        SonarEmptyState(
+            icon = Icons.Filled.LocationOff,
             title = stringResource(R.string.biodex_detail_tab_map),
             message = message,
             modifier = Modifier.padding(horizontal = 32.dp),

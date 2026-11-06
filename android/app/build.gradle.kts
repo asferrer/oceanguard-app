@@ -168,6 +168,11 @@ android {
     }
 }
 
+// Exported Room schemas: reviewed history of the database and input of the migration test.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 kotlin {
     jvmToolchain(21)
     compilerOptions {
@@ -198,7 +203,6 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.ui:ui-text-google-fonts:1.7.6")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
 
@@ -278,6 +282,8 @@ dependencies {
     // Mockito 5 (inline mock maker by default) — used to mock final android.* stub
     // classes such as Bitmap in pure-JVM unit tests (no Robolectric needed).
     testImplementation("org.mockito:mockito-core:5.14.2")
+    // Real SQLite on the JVM so Room migrations are tested without a device.
+    testImplementation("org.xerial:sqlite-jdbc:3.46.1.3")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation(composeBom)

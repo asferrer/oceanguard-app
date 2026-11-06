@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home strings. -->
+<resources>
+    <string name="home_target_debris">Rifiuti</string>
+    <string name="home_target_species">Specie</string>
+    <string name="home_scan_action">Scansiona</string>
+    <string name="home_scan_preparing">Preparazione</string>
+    <string name="home_scan_cd_debris">Scansiona i rifiuti con la fotocamera</string>
+    <string name="home_scan_cd_species">Identifica le specie con la fotocamera</string>
+    <string name="home_pick_photos">Scegli foto</string>
+    <string name="home_status_not_loaded">Non ancora caricato</string>
+    <string name="home_status_needs_download">Non scaricato · ~%1$s GB</string>
+    <string name="home_status_reports_ready">Report: modello pronto</string>
+    <string name="home_status_reports_missing">Report: modello non scaricato (%1$s)</string>
+    <string name="home_download_title">Scarica il modello</string>
+    <string name="home_download_message">La modalità %1$s richiede un download una tantum di circa %2$s GB. Meglio con il Wi-Fi. Scaricarlo ora?</string>
+    <string name="home_achievements_button_cd">Traguardi: %1$d di %2$d sbloccati</string>
+    <string name="welcome_models_title">Cosa vuoi scaricare?</string>
+    <string name="welcome_models_intro">Il rilevamento rapido funziona subito: è già nell\'app. Gli altri modi descrivono ogni oggetto in modo più dettagliato ma richiedono prima un download.</string>
+    <string name="welcome_models_note">Potrai cambiarlo in seguito da Home o da Modelli e IA. Il download continua in background.</string>
+    <string name="welcome_option_included">Incluso, niente da scaricare</string>
+    <string name="welcome_option_download">Download di ~%1$s GB</string>
+    <string name="welcome_option_unavailable">Non ancora disponibile</string>
+    <string name="welcome_tour_title">Facciamo un giro veloce?</string>
+    <string name="welcome_tour_body">Un breve percorso guidato mostra le schermate principali, una alla volta. Puoi ripeterlo in qualsiasi momento dalle Impostazioni.</string>
+    <string name="welcome_tour_start">Inizia il percorso</string>
+    <string name="welcome_tour_later">Non ora</string>
+    <string name="welcome_page_cd">Pagina %1$d di %2$d</string>
+</resources>

@@ -55,7 +55,8 @@ enum class AchievementCategory(@param:StringRes val labelRes: Int) {
 }
 
 /**
- * All 21 achievement definitions.
+ * Every achievement definition, grouped by category: 6 first steps, 5 explorer, 5 collector,
+ * 3 impact, 4 research and 2 elite, [ACHIEVEMENT_TOTAL] in all.
  */
 val ALL_ACHIEVEMENTS: List<AchievementDef> = listOf(
     // --- First Steps (6) ---
@@ -92,10 +93,13 @@ val ALL_ACHIEVEMENTS: List<AchievementDef> = listOf(
     AchievementDef("contribute_100", R.string.achievement_name_contribute_100, R.string.achievement_desc_contribute_100, 100, Icons.Filled.Rocket,      AchievementCategory.RESEARCH),
 
     // --- Elite (2) ---
-    // Target 24: 25 total achievements - 1 (all_achievements itself) = 24
+    // Target = total - 1: it counts every achievement except itself (see ACHIEVEMENT_TOTAL).
     AchievementDef("all_achievements", R.string.achievement_name_all_achievements, R.string.achievement_desc_all_achievements, 24, Icons.Filled.WorkspacePremium, AchievementCategory.ELITE),
     AchievementDef("report_10", R.string.achievement_name_report_10, R.string.achievement_desc_report_10, 10, Icons.Filled.EmojiEvents, AchievementCategory.ELITE),
 )
+
+/** Number of achievements the user can unlock. The UI must show this, never a literal. */
+val ACHIEVEMENT_TOTAL: Int = ALL_ACHIEVEMENTS.size
 
 /** Quick lookup by id. */
 val ACHIEVEMENT_DEF_MAP: Map<String, AchievementDef> = ALL_ACHIEVEMENTS.associateBy { it.id }

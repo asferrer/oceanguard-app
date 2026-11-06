@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home strings. -->
+<resources>
+    <string name="home_target_debris">Debris</string>
+    <string name="home_target_species">Species</string>
+    <string name="home_scan_action">Scan</string>
+    <string name="home_scan_preparing">Getting ready</string>
+    <string name="home_scan_cd_debris">Scan debris with the camera</string>
+    <string name="home_scan_cd_species">Identify species with the camera</string>
+    <string name="home_pick_photos">Choose photos</string>
+    <string name="home_status_not_loaded">Not loaded yet</string>
+    <string name="home_status_needs_download">Not downloaded · ~%1$s GB</string>
+    <string name="home_status_reports_ready">Reports: model ready</string>
+    <string name="home_status_reports_missing">Reports: model not downloaded (%1$s)</string>
+    <string name="home_download_title">Download model</string>
+    <string name="home_download_message">%1$s mode needs a one-time download of about %2$s GB. It is better over Wi-Fi. Download it now?</string>
+    <string name="home_achievements_button_cd">Achievements: %1$d of %2$d unlocked</string>
+    <string name="welcome_models_title">What do you want to download?</string>
+    <string name="welcome_models_intro">Fast detection works right now: it is already in the app. The other modes describe each object in more detail but need a download first.</string>
+    <string name="welcome_models_note">You can change this later from Home or Models &amp; AI. A download keeps going in the background.</string>
+    <string name="welcome_option_included">Included, nothing to download</string>
+    <string name="welcome_option_download">Download of ~%1$s GB</string>
+    <string name="welcome_option_unavailable">Not available yet</string>
+    <string name="welcome_tour_title">Take a quick tour?</string>
+    <string name="welcome_tour_body">A short guided tour shows the main screens, one by one. You can replay it at any time from Settings.</string>
+    <string name="welcome_tour_start">Start the tour</string>
+    <string name="welcome_tour_later">Not now</string>
+    <string name="welcome_page_cd">Page %1$d of %2$d</string>
+</resources>

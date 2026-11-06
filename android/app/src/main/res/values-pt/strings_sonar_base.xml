@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="analysis_mode_fast">Rápida</string>
+    <string name="analysis_mode_fast_desc">RT-DETRv2, incluído na app.</string>
+    <string name="analysis_mode_detailed">Detalhada</string>
+    <string name="analysis_mode_detailed_desc">O Gemma 4 descreve cada objeto. As caixas aparecem no final.</string>
+    <string name="analysis_mode_tuned">Afinada OceanGuard</string>
+    <string name="analysis_mode_tuned_desc">Gemma 4 treinado pela OceanGuard com resíduos marinhos.</string>
+    <string name="analysis_mode_refined">Adicionar tipo e material</string>
+    <string name="analysis_mode_refined_desc">O RT-DETRv2 deteta e o Gemma 4 adiciona o tipo e o material.</string>
+    <string name="analysis_mode_title">Modo de análise</string>
+    <string name="analysis_mode_current_cd">Modo de análise: %1$s. Toque para o mudar.</string>
+    <string name="analysis_mode_seconds">~%1$d s por foto</string>
+    <string name="analysis_mode_time_unknown">Tempo ainda não medido</string>
+    <string name="analysis_mode_included">Incluído</string>
+    <string name="analysis_mode_download">Transferência de ~%1$s GB</string>
+    <string name="analysis_mode_not_published">Ainda não disponível</string>
+    <string name="analysis_mode_offline_note">Tudo é executado neste telemóvel.</string>
+    <string name="sonar_undo">Anular</string>
+    <string name="sonar_item_deleted">Eliminado</string>
+    <string name="sonar_percent">%1$d%%</string>
+    <string name="advanced_options_show">Mostrar opções avançadas</string>
+    <string name="advanced_options_notice_title">Opções avançadas</string>
+    <string name="advanced_options_notice_body">Definições técnicas para testar modelos: limiar, fornecedor, precisão e benchmarks. Algumas transferem vários GB e podem piorar os resultados.</string>
+    <string name="advanced_options_notice_confirm">Mostrá-las</string>
+</resources>

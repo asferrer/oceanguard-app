@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Environmental impact of each debris type: persistence, main risk and yearly volume -->
+    <string name="impact_degradation_450">Más de 450 años</string>
+    <string name="impact_degradation_600">Más de 600 años</string>
+    <string name="impact_degradation_200">Más de 200 años</string>
+    <string name="impact_degradation_100">Más de 100 años</string>
+    <string name="impact_degradation_2000">Más de 2000 años</string>
+    <string name="impact_degradation_200_500">200-500 años</string>
+    <string name="impact_degradation_1_200">1-200+ años</string>
+    <string name="impact_degradation_million">Más de 1.000.000 de años</string>
+    <string name="impact_degradation_variable">Variable</string>
+    <string name="impact_risk_ingestion_fragmentation">Riesgo de ingestión, fragmentación en microplásticos</string>
+    <string name="impact_risk_sharp_toxic">Bordes afilados, lixiviación de sustancias tóxicas</string>
+    <string name="impact_risk_ghost_fishing">Pesca fantasma, enredo de fauna marina</string>
+    <string name="impact_risk_ingestion_release">Riesgo de ingestión, liberación de microplásticos</string>
+    <string name="impact_risk_entanglement_small">Enredo de pequeños organismos marinos</string>
+    <string name="impact_risk_sharp_habitat">Bordes afilados, lixiviación química, alteración del hábitat</string>
+    <string name="impact_risk_plastic_fragmentation">Fragmentación en microplásticos, ingestión por fauna marina</string>
+    <string name="impact_risk_toxic_chemicals">Sustancias tóxicas (zinc, cadmio, metales pesados)</string>
+    <string name="impact_risk_microfiber">Liberación de microfibras, enredo</string>
+    <string name="impact_risk_physical_injury">Lesiones físicas a la fauna marina</string>
+    <string name="impact_risk_unknown">Impacto ambiental no determinado</string>
+    <string name="impact_volume_1m">~1 M de toneladas/año</string>
+    <string name="impact_volume_500k">~500 mil toneladas/año</string>
+    <string name="impact_volume_640k">~640 mil toneladas/año</string>
+    <string name="impact_volume_8m">~8 M de toneladas/año</string>
+    <string name="overlay_no_image">No hay imagen disponible</string>
+    <string name="overlay_image_cd">Imagen capturada con los residuos detectados</string>
+</resources>

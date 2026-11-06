@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Environmental impact of each debris type: persistence, main risk and yearly volume -->
+    <string name="impact_degradation_450">Plus de 450 ans</string>
+    <string name="impact_degradation_600">Plus de 600 ans</string>
+    <string name="impact_degradation_200">Plus de 200 ans</string>
+    <string name="impact_degradation_100">Plus de 100 ans</string>
+    <string name="impact_degradation_2000">Plus de 2000 ans</string>
+    <string name="impact_degradation_200_500">200-500 ans</string>
+    <string name="impact_degradation_1_200">1-200+ ans</string>
+    <string name="impact_degradation_million">Plus de 1 000 000 d\'ans</string>
+    <string name="impact_degradation_variable">Variable</string>
+    <string name="impact_risk_ingestion_fragmentation">Risque d\'ingestion, fragmentation en microplastiques</string>
+    <string name="impact_risk_sharp_toxic">Bords tranchants, lixiviation de substances toxiques</string>
+    <string name="impact_risk_ghost_fishing">Pêche fantôme, enchevêtrement de la faune marine</string>
+    <string name="impact_risk_ingestion_release">Risque d\'ingestion, libération de microplastiques</string>
+    <string name="impact_risk_entanglement_small">Enchevêtrement de petits organismes marins</string>
+    <string name="impact_risk_sharp_habitat">Bords tranchants, lixiviation chimique, perturbation de l\'habitat</string>
+    <string name="impact_risk_plastic_fragmentation">Fragmentation en microplastiques, ingestion par la faune marine</string>
+    <string name="impact_risk_toxic_chemicals">Substances toxiques (zinc, cadmium, métaux lourds)</string>
+    <string name="impact_risk_microfiber">Libération de microfibres, enchevêtrement</string>
+    <string name="impact_risk_physical_injury">Blessures physiques à la faune marine</string>
+    <string name="impact_risk_unknown">Impact environnemental indéterminé</string>
+    <string name="impact_volume_1m">~1 M de tonnes/an</string>
+    <string name="impact_volume_500k">~500 000 tonnes/an</string>
+    <string name="impact_volume_640k">~640 000 tonnes/an</string>
+    <string name="impact_volume_8m">~8 M de tonnes/an</string>
+    <string name="overlay_no_image">Aucune image disponible</string>
+    <string name="overlay_image_cd">Image capturée avec les déchets détectés</string>
+</resources>

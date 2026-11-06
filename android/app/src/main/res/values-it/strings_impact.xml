@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Environmental impact of each debris type: persistence, main risk and yearly volume -->
+    <string name="impact_degradation_450">Oltre 450 anni</string>
+    <string name="impact_degradation_600">Oltre 600 anni</string>
+    <string name="impact_degradation_200">Oltre 200 anni</string>
+    <string name="impact_degradation_100">Oltre 100 anni</string>
+    <string name="impact_degradation_2000">Oltre 2000 anni</string>
+    <string name="impact_degradation_200_500">200-500 anni</string>
+    <string name="impact_degradation_1_200">1-200+ anni</string>
+    <string name="impact_degradation_million">Oltre 1.000.000 di anni</string>
+    <string name="impact_degradation_variable">Variabile</string>
+    <string name="impact_risk_ingestion_fragmentation">Rischio di ingestione, frammentazione in microplastiche</string>
+    <string name="impact_risk_sharp_toxic">Bordi taglienti, rilascio di sostanze tossiche</string>
+    <string name="impact_risk_ghost_fishing">Pesca fantasma, intrappolamento della fauna marina</string>
+    <string name="impact_risk_ingestion_release">Rischio di ingestione, rilascio di microplastiche</string>
+    <string name="impact_risk_entanglement_small">Intrappolamento di piccoli organismi marini</string>
+    <string name="impact_risk_sharp_habitat">Bordi taglienti, rilascio chimico, alterazione dell\'habitat</string>
+    <string name="impact_risk_plastic_fragmentation">Frammentazione in microplastiche, ingestione da fauna marina</string>
+    <string name="impact_risk_toxic_chemicals">Sostanze tossiche (zinco, cadmio, metalli pesanti)</string>
+    <string name="impact_risk_microfiber">Rilascio di microfibre, intrappolamento</string>
+    <string name="impact_risk_physical_injury">Lesioni fisiche alla fauna marina</string>
+    <string name="impact_risk_unknown">Impatto ambientale indeterminato</string>
+    <string name="impact_volume_1m">~1 Mln di tonnellate/anno</string>
+    <string name="impact_volume_500k">~500.000 tonnellate/anno</string>
+    <string name="impact_volume_640k">~640.000 tonnellate/anno</string>
+    <string name="impact_volume_8m">~8 Mln di tonnellate/anno</string>
+    <string name="overlay_no_image">Nessuna immagine disponibile</string>
+    <string name="overlay_image_cd">Immagine acquisita con i rifiuti rilevati</string>
+</resources>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MarineDex, BioDex and achievements. -->
+<resources>
+    <string name="achievement_replay_action">Revoir l\'animation de déverrouillage</string>
+    <string name="achievement_locked">Verrouillé</string>
+    <string name="achievements_cd_collapse">Réduire %1$s</string>
+    <string name="achievements_cd_expand">Développer %1$s</string>
+    <string name="dex_card_cd_discovered">%1$s, vu %2$d fois</string>
+    <string name="dex_card_cd_locked">%1$s, pas encore découvert</string>
+    <string name="dex_card_open_label">Ouvrir %1$s</string>
+    <string name="dex_progress_caption">%1$d / %2$d découverts</string>
+    <string name="dex_debris_bottle">Bouteille</string>
+    <string name="dex_debris_can">Canette</string>
+    <string name="dex_debris_fishing_net">Filet de pêche</string>
+    <string name="dex_debris_glove">Gant</string>
+    <string name="dex_debris_mask">Masque</string>
+    <string name="dex_debris_metal_debris">Débris métallique</string>
+    <string name="dex_debris_plastic_debris">Débris plastique</string>
+    <string name="dex_debris_tire">Pneu</string>
+    <string name="dex_debris_fabric_debris">Débris textile</string>
+    <string name="dex_debris_glass_debris">Débris de verre</string>
+    <string name="dex_debris_other">Autre</string>
+    <string name="dex_map_empty_title">Aucun lieu</string>
+    <string name="dex_map_empty_no_location">Aucune de vos photos de %1$s n\'a de position. Autorisez la localisation avant de photographier pour voir des repères ici.</string>
+    <string name="dex_map_empty_no_captures">Aucun élément « %1$s » détecté pour l\'instant. Analysez une photo qui en contient pour remplir cette carte.</string>
+    <string name="dex_gallery_empty_title">Pas encore de photos</string>
+    <string name="dex_gallery_empty_message">Analysez une photo contenant « %1$s » et elle apparaîtra ici.</string>
+    <string name="dex_gallery_cd_session">Photo analysée avec %1$s</string>
+    <string name="biodex_iucn_badge">UICN : %1$s</string>
+    <string name="species_batch_more">+%1$d de plus</string>
+</resources>

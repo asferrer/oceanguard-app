@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Camera, analysis and continuous scan. -->
+<resources>
+    <string name="sonar_camera_target_debris">Débris</string>
+    <string name="sonar_camera_target_species">Espèces</string>
+    <string name="sonar_camera_capture_failed">La photo n\'a pas pu être prise. Réessayez.</string>
+    <string name="sonar_camera_continuous_loading">Le scan continu sera prêt une fois le détecteur chargé</string>
+    <string name="sonar_camera_flash_off">Flash désactivé</string>
+    <string name="sonar_camera_flash_on">Flash activé</string>
+    <string name="sonar_camera_flash_auto">Flash automatique</string>
+    <string name="sonar_camera_grid_on">Grille affichée</string>
+    <string name="sonar_camera_grid_off">Grille masquée</string>
+    <string name="sonar_analysis_status_warming">Chargement du modèle. La première fois prend plus de temps</string>
+    <string name="sonar_analysis_status_refining">Ajout du type et du matériau</string>
+    <string name="sonar_analysis_photos_sent">photos envoyées sur Internet</string>
+    <string name="sonar_analysis_contributing">Analysée sur votre téléphone. En attente d\'envoi, car vous avez choisi de contribuer.</string>
+    <string name="sonar_analysis_error_message">Cette photo n\'a pas pu être analysée. Réessayez.</string>
+    <string name="sonar_live_engine">%1$s sur votre téléphone</string>
+    <string name="sonar_live_cadence">Toutes les %1$s s</string>
+    <string name="sonar_live_cadence_measuring">Mesure de la cadence…</string>
+    <string name="sonar_live_latency">Inférence %1$s s</string>
+    <string name="sonar_live_full_analysis">Analyse complète</string>
+    <string name="sonar_stage_preparing">Préparation</string>
+    <string name="sonar_stage_detecting">Détection</string>
+    <string name="sonar_stage_deep">Analyse approfondie</string>
+</resources>

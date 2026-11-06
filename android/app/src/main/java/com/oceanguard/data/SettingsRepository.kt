@@ -30,6 +30,12 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
  */
 class SettingsRepository(private val context: Context) {
 
+    /**
+     * For the settings of one feature: add them as extensions in `data/settings/<Feature>Settings.kt`
+     * instead of growing this file.
+     */
+    internal val store: DataStore<Preferences> get() = context.dataStore
+
     private object Keys {
         val CONFIDENCE_THRESHOLD = floatPreferencesKey("confidence_threshold")
         val LANGUAGE = stringPreferencesKey("language")
@@ -478,6 +484,33 @@ class SettingsRepository(private val context: Context) {
     fun getRefineWithGemmaSync(): Boolean {
         val prefs = runBlocking { context.dataStore.data.first() }
         return prefs[Keys.REFINE_WITH_GEMMA] ?: DEFAULT_REFINE_WITH_GEMMA
+    }
+
+    // -----------------------------------------------------------------------
+    // Analysis mode
+    // -----------------------------------------------------------------------
+
+    private fun analysisModeOf(prefs: Preferences): AnalysisMode = AnalysisMode.fromSettings(
+        detectorMode = prefs[Keys.DETECTOR_MODE] ?: DEFAULT_DETECTOR_MODE,
+        refineWithGemma = prefs[Keys.REFINE_WITH_GEMMA] ?: DEFAULT_REFINE_WITH_GEMMA,
+        variant = prefs[Keys.VLM_MODEL_VARIANT] ?: DEFAULT_VLM_MODEL_VARIANT,
+    )
+
+    /** Chosen mode, derived from the keys inference reads (see [AnalysisMode]). */
+    val analysisMode: Flow<AnalysisMode> = context.dataStore.data.map(::analysisModeOf)
+
+    fun getAnalysisModeSync(): AnalysisMode =
+        analysisModeOf(runBlocking { context.dataStore.data.first() })
+
+    /** Saves the five keys of [mode] in one transaction. Prefer `OceanGuardApp.applyAnalysisMode`. */
+    suspend fun setAnalysisMode(mode: AnalysisMode) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.DETECTOR_MODE] = mode.detector.key
+            prefs[Keys.REFINE_WITH_GEMMA] = mode.refineWithGemma
+            prefs[Keys.VLM_PROVIDER] = mode.provider.key
+            prefs[Keys.VLM_MODEL_TIER] = mode.tier.name.lowercase()
+            prefs[Keys.VLM_MODEL_VARIANT] = mode.variant.key
+        }
     }
 
     // -----------------------------------------------------------------------

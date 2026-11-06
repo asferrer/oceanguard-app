@@ -1,10 +1,5 @@
 package com.oceanguard.ai.ui.components
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,9 +11,18 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.valentinilk.shimmer.shimmer
+import com.oceanguard.ai.ui.motion.LocalReducedMotion
+import com.oceanguard.ai.ui.motion.rememberOceanLoop
 import com.oceanguard.ai.ui.theme.ShimmerBase
 
 private val ShimmerShape = RoundedCornerShape(14.dp)
+
+private const val PULSE_PERIOD_MS = 2_400
+private const val PULSE_MIN_ALPHA = 0.6f
+
+/** Triangle wave over one loop: opacity goes from 0.6 up to 1 and back. */
+internal fun shimmerPulseAlphaAt(phase: Float): Float =
+    PULSE_MIN_ALPHA + (1f - PULSE_MIN_ALPHA) * (1f - kotlin.math.abs(2f * phase - 1f))
 
 /**
  * Single shimmer placeholder block with wave-wash effect and subtle pulse.
@@ -31,16 +35,8 @@ fun ShimmerCard(
     modifier: Modifier = Modifier,
     height: Dp = 120.dp,
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "shimmerPulse")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.6f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "pulseAlpha",
-    )
+    val phase by rememberOceanLoop(PULSE_PERIOD_MS)
+    val pulseAlpha = if (LocalReducedMotion.current) 1f else shimmerPulseAlphaAt(phase)
 
     Box(
         modifier = modifier

@@ -1,5 +1,6 @@
 package com.oceanguard.ai.ui.components
 
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
@@ -8,6 +9,7 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -19,7 +21,7 @@ import com.oceanguard.ai.R
 
 /**
  * Contextual top bar displayed when the user has entered multi-select mode
- * on the History screen.
+ * on the History screen, by the Select button or a long press.
  *
  * Shows the number of currently selected sessions and provides bulk-action
  * shortcuts for date editing, location editing, deletion, and select-all.
@@ -30,6 +32,7 @@ import com.oceanguard.ai.R
  * @param onEditLocation Called when the user taps the location icon to bulk-edit locations.
  * @param onDelete      Called when the user taps the delete icon to bulk-delete sessions.
  * @param onSelectAll   Called when the user taps the select-all icon.
+ * @param actionsEnabled False while nothing is selected, when editing or deleting has no target.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +43,7 @@ fun SelectionTopBar(
     onEditLocation: () -> Unit,
     onDelete: () -> Unit,
     onSelectAll: () -> Unit,
+    actionsEnabled: Boolean = true,
 ) {
     TopAppBar(
         navigationIcon = {
@@ -56,33 +60,7 @@ fun SelectionTopBar(
                 style = MaterialTheme.typography.titleLarge,
             )
         },
-        actions = {
-            IconButton(onClick = onEditDate) {
-                Icon(
-                    imageVector = Icons.Filled.CalendarMonth,
-                    contentDescription = stringResource(R.string.cd_edit_date),
-                )
-            }
-            IconButton(onClick = onEditLocation) {
-                Icon(
-                    imageVector = Icons.Filled.LocationOn,
-                    contentDescription = stringResource(R.string.cd_edit_location),
-                )
-            }
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Filled.Delete,
-                    contentDescription = stringResource(R.string.cd_delete_session),
-                    tint = MaterialTheme.colorScheme.error,
-                )
-            }
-            IconButton(onClick = onSelectAll) {
-                Icon(
-                    imageVector = Icons.Filled.DoneAll,
-                    contentDescription = stringResource(R.string.bulk_select_all),
-                )
-            }
-        },
+        actions = { SelectionActions(onEditDate, onEditLocation, onDelete, onSelectAll, actionsEnabled) },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -90,4 +68,30 @@ fun SelectionTopBar(
             actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         ),
     )
+}
+
+@Composable
+private fun RowScope.SelectionActions(
+    onEditDate: () -> Unit,
+    onEditLocation: () -> Unit,
+    onDelete: () -> Unit,
+    onSelectAll: () -> Unit,
+    enabled: Boolean,
+) {
+    IconButton(onClick = onEditDate, enabled = enabled) {
+        Icon(Icons.Filled.CalendarMonth, stringResource(R.string.cd_edit_date))
+    }
+    IconButton(onClick = onEditLocation, enabled = enabled) {
+        Icon(Icons.Filled.LocationOn, stringResource(R.string.cd_edit_location))
+    }
+    IconButton(onClick = onDelete, enabled = enabled) {
+        Icon(
+            imageVector = Icons.Filled.Delete,
+            contentDescription = stringResource(R.string.cd_delete_session),
+            tint = if (enabled) MaterialTheme.colorScheme.error else LocalContentColor.current,
+        )
+    }
+    IconButton(onClick = onSelectAll) {
+        Icon(Icons.Filled.DoneAll, stringResource(R.string.bulk_select_all))
+    }
 }

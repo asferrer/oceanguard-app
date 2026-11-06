@@ -15,6 +15,9 @@ interface ObjectDetector {
     /** Human-readable name for logs and UI (e.g. "PicoDet-S 320", "RT-DETRv2 FP16"). */
     val displayName: String
 
+    /** Name saved with each analysis (see [com.oceanguard.ai.data.AnalysisModels]). */
+    val modelName: String get() = displayName
+
     /** Model input resolution in pixels (e.g. 320, 640). */
     val inputSize: Int
 

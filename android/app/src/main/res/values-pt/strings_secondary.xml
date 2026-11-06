@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Seleção do modo de análise (Início) -->
-    <string name="scan_mode_title">O que queres analisar?</string>
-    <string name="scan_mode_debris_title">Detetar resíduos</string>
-    <string name="scan_mode_debris_desc">Encontra e classifica o lixo marinho</string>
-    <string name="scan_mode_species_title">Identificar espécies</string>
-    <string name="scan_mode_species_desc">Reconhece a vida marinha e adiciona-a ao teu BioDex</string>
     <string name="biodex_download_pack">Transferir pacote de espécies</string>
 
     <!-- ================================================================== -->
@@ -21,10 +16,7 @@
     <string name="session_detail_cd_annotated_image">Imagem de detecção anotada</string>
     <string name="session_detail_empty">Análise não encontrada</string>
     <string name="session_detail_label_total_debris">Total de Resíduos</string>
-    <string name="session_detail_label_processing">Processamento</string>
     <string name="session_detail_label_quality">Qualidade</string>
-    <string name="session_detail_section_material_breakdown">Composição de Materiais</string>
-    <string name="session_detail_section_detected_objects">Objetos Detectados</string>
     <string name="session_detail_location_add">Adicionar Localização</string>
     <string name="session_detail_cd_edit_location_inline">Editar localização</string>
     <string name="session_detail_cd_edit_date">Editar data da análise</string>
@@ -67,7 +59,6 @@
 
     <!-- Filtros do mapa -->
     <string name="map_filter_debris_type">Tipo de resíduo</string>
-    <string name="map_filter_date_range">Período</string>
 
     <!-- Painel inferior de zona -->
     <string name="zone_sheet_stat_dives">Mergulhos</string>
@@ -80,7 +71,6 @@
 
     <!-- Filtros de relatório -->
     <string name="report_filter_location">Localização</string>
-    <string name="report_filter_date_range">Período</string>
     <string name="report_filter_sessions_selected">%1$d de %2$d análises</string>
 
     <!-- Filtros avançados do histórico -->
@@ -93,7 +83,6 @@
     <!-- ================================================================== -->
     <string name="report_title">Relatórios</string>
     <string name="report_cd_go_back">Voltar</string>
-    <string name="report_cd_share">Compartilhar relatório</string>
     <string name="report_dialog_delete_title">Excluir Relatório</string>
     <string name="report_dialog_delete_message">Tem certeza de que deseja excluir este relatório? Esta ação não pode ser desfeita.</string>
     <string name="report_btn_delete">Excluir</string>
@@ -115,18 +104,11 @@
     <string name="report_card_cd_ai">Gerado por IA</string>
     <string name="report_card_cd_template">Modelo</string>
     <string name="report_card_delete_cd">Excluir relatório</string>
-    <string name="report_loading_engine">Carregando mecanismo de análise…</string>
     <string name="report_verifying_detections">Verificando deteções… %1$d / %2$d</string>
     <string name="report_header_ai_generated">Relatório Gerado por IA</string>
     <string name="report_header_template">Relatório Modelo</string>
     <string name="report_template_banner_text">Relatório modelo gerado. Implante o modelo de IA para análise assistida.</string>
     <string name="report_error_title">Falha na Geração do Relatório</string>
-    <string name="report_btn_retry">Tentar novamente</string>
-    <string name="report_btn_back_to_list">Voltar à Lista</string>
-    <string name="report_btn_share">Compartilhar</string>
-    <string name="report_snackbar_export_error">Não foi possível criar o arquivo de exportação. Verifique as permissões de armazenamento.</string>
-    <string name="report_cd_download_pdf">Baixar PDF</string>
-    <string name="report_snackbar_pdf_error">Não foi possível criar o PDF.</string>
     <string name="report_images_title">Imagens analisadas</string>
 
     <!-- ================================================================== -->
@@ -136,13 +118,12 @@
     <string name="settings_cd_back">Voltar</string>
 
     <!-- Seção de Detecção -->
-    <string name="settings_section_detection">Detecção</string>
     <string name="settings_label_confidence_threshold">Limiar de Confiança</string>
     <string name="settings_desc_confidence_threshold">Mostrar apenas detecções com confiança acima deste valor</string>
     <string name="settings_label_detector_precision">Precisão do Detector</string>
     <string name="settings_desc_detector_precision">INT8 foi removido: a versão FP16 é a única incluída. Pesos FP16, cálculo em FP32.</string>
     <string name="settings_hint_restart">Reinicie o aplicativo para aplicar a nova precisão do modelo</string>
-    <string name="settings_label_detector_mode">Motor de detecao</string>
+    <string name="settings_label_detector_mode">Motor de detecção</string>
     <string name="settings_desc_detector_mode">RT-DETRv2 detecta na CPU (padrão); o Gemma 4 escreve depois o relatório. O Gemma 4 Vision como detector é mais lento por imagem.</string>
     <string name="settings_label_refine_gemma">Refinar com Gemma 4</string>
     <string name="settings_desc_refine_gemma">Após o RT-DETRv2, o Gemma 4 acrescenta subtipo e material a cada caixa (mais lento por foto; requer o Gemma 4 baixado)</string>
@@ -152,7 +133,6 @@
     <string name="settings_desc_confirm_capture">Pré-visualizar a foto antes de enviar para detecção</string>
 
     <!-- Seção de Idioma do Aplicativo -->
-    <string name="settings_section_app_language">Idioma do Aplicativo</string>
     <string name="settings_label_interface_language">Idioma da interface</string>
     <string name="settings_desc_interface_language">Altera toda a interface do aplicativo. Entra em vigor imediatamente.</string>
 
@@ -167,12 +147,10 @@
     <string name="audience_citizen">Cidadão</string>
 
     <!-- Seção de Exibição -->
-    <string name="settings_section_display">Exibição</string>
     <string name="settings_label_dark_mode">Modo Escuro</string>
     <string name="settings_desc_dark_mode">Usar tema escuro para visibilidade subaquática</string>
 
     <!-- Seção de Dados -->
-    <string name="settings_section_data">Dados</string>
     <string name="settings_label_reset_all_data">Redefinir Todos os Dados</string>
     <string name="settings_desc_reset_all_data">Remover todas as análises, entradas do MarineDex e conquistas para começar do zero</string>
     <string name="settings_btn_reset_all_data">Redefinir Todos os Dados</string>
@@ -186,12 +164,10 @@
     <string name="settings_btn_replay_tours">Repetir Visitas Guiadas</string>
 
     <!-- Seção Programador (easter egg: toque no logo 21 vezes) -->
-    <string name="settings_section_developer">Programador</string>
     <string name="settings_dev_mode_activated">Modo programador ativado!</string>
     <string name="settings_dev_mode_countdown">Mais %1$d toques…</string>
     <string name="settings_dev_mode_disable">Desativar modo programador</string>
     <string name="settings_label_vlm_provider">Fornecedor VLM</string>
-    <string name="settings_desc_vlm_provider">Família de modelos para relatórios e análise profunda. Gemma 4 adiciona visão nativa.</string>
     <string name="settings_label_vlm_tier">Modelo de texto VLM</string>
     <string name="settings_desc_vlm_tier">Modelo preferido para geração de relatórios. Usa o melhor disponível se o escolhido não estiver descarregado.</string>
     <string name="settings_vlm_not_downloaded">não descarregado</string>
@@ -204,11 +180,9 @@
     <string name="settings_desc_gemma4_mmproj">Descarregue o projetor de visão para ativar a análise de imagens com Gemma 4.</string>
 
     <!-- Seção Sobre -->
-    <string name="settings_section_about">Sobre</string>
     <string name="settings_cd_logo">Logo do OceanGuard</string>
     <string name="settings_about_version">v1.0.0</string>
     <string name="settings_about_description">Deteção offline de resíduos marinhos com IA. Proteger os nossos oceanos, uma digitalização de cada vez.</string>
-    <string name="settings_about_powered_by">Desenvolvido com llama.cpp &amp; TensorFlow Lite</string>
     <!-- NOTA: "Dual pipeline: RT-DETRv2 + Gemma 3n VLM" é mantido intencionalmente
          hardcoded em SettingsScreen.kt conforme instruções da tarefa. -->
 
@@ -223,9 +197,6 @@
     <string name="marinedex_stat_favorites">Favoritos</string>
     <string name="marinedex_stat_detections">Detecções</string>
     <!-- descrição de conteúdo do cartão criada no código via formatDebrisName() -->
-    <string name="marinedex_card_cd_discovered">%1$s, detectado %2$d vezes</string>
-    <string name="marinedex_card_cd_locked">%s, ainda não descoberto</string>
-    <string name="marinedex_card_click_label">Ver detalhes de %s</string>
 
     <!-- ================================================================== -->
     <!-- Tela de Detalhes do MarineDex                                       -->
@@ -293,7 +264,7 @@
 
     <!-- Descrições das conquistas -->
     <string name="achievement_desc_first_scan">Conclua sua primeira análise</string>
-    <string name="achievement_desc_first_live">Use a detecção ao vivo pela primeira vez</string>
+    <string name="achievement_desc_first_live">Use a digitalização contínua pela primeira vez</string>
     <string name="achievement_desc_first_report">Gere seu primeiro relatório de IA</string>
     <string name="achievement_desc_first_batch">Processe seu primeiro lote de imagens</string>
     <string name="achievement_desc_first_dex_entry">Descubra seu primeiro tipo de resíduo</string>
@@ -373,9 +344,9 @@
 
     <!-- Tour da tela inicial -->
     <string name="tour_home_scan_title">Iniciar Análise</string>
-    <string name="tour_home_scan_desc">Use a câmara para capturar, ou toque em "Digitalizar da Galeria" para escolher da Galeria ou Ficheiros. Suporta imagens e vídeos - a app deteta o tipo e processa cada ficheiro automaticamente.</string>
+    <string name="tour_home_scan_desc">Escolha Resíduos ou Espécies e toque em Analisar para abrir a câmara. Escolher fotos usa imagens ou vídeos da galeria ou de ficheiros, e o modo muda a forma como são analisadas.</string>
     <string name="tour_home_model_status_title">Status da IA</string>
-    <string name="tour_home_model_status_desc">Mostra se o motor de deteção e o modelo de análise profunda estão carregados e prontos.</string>
+    <string name="tour_home_model_status_desc">Mostra que modelo analisa as suas fotos e se está pronto, a carregar ou por transferir. Indica também se o modelo de relatórios está instalado.</string>
     <string name="tour_home_stats_title">Seu Impacto</string>
     <string name="tour_home_stats_desc">Acompanhe as suas análises totais, resíduos encontrados e pontuação média de saúde oceânica.</string>
     <string name="tour_home_marinedex_title">MarineDex</string>
@@ -390,12 +361,12 @@
     <string name="tour_camera_grid_desc">Use a grade de terços para enquadrar sua foto.</string>
 
     <!-- Tour de detecção ao vivo -->
-    <string name="tour_live_detection_viewfinder_title">Detecção em Tempo Real</string>
-    <string name="tour_live_detection_viewfinder_desc">Aponte a câmera para resíduos - as detecções aparecem como caixas delimitadoras ao vivo.</string>
-    <string name="tour_live_detection_fps_title">Desempenho</string>
-    <string name="tour_live_detection_fps_desc">Exibe quadros por segundo e latência de inferência.</string>
-    <string name="tour_live_detection_capture_title">Capturar Quadro</string>
-    <string name="tour_live_detection_capture_desc">Toque para salvar a detecção atual para análise.</string>
+    <string name="tour_live_detection_viewfinder_title">Digitalização contínua</string>
+    <string name="tour_live_detection_viewfinder_desc">Aponte a câmera para resíduos. O RT-DETRv2 analisa em segundo plano e as caixas ficam até a próxima passagem.</string>
+    <string name="tour_live_detection_fps_title">Cadência medida</string>
+    <string name="tour_live_detection_fps_desc">Com que frequência uma passagem termina no seu telefone e quanto tempo o modelo leva.</string>
+    <string name="tour_live_detection_capture_title">Análise completa</string>
+    <string name="tour_live_detection_capture_desc">Tira uma foto e a analisa com o seu modo atual.</string>
 
     <!-- Tour de resultados -->
     <string name="tour_results_image_title">Resultados da Detecção</string>
@@ -419,7 +390,7 @@
     <string name="tour_history_filters_title">Filtros Avançados</string>
     <string name="tour_history_filters_desc">Filtre por tipo de resíduo, local ou intervalo de datas. Combine filtros para encontrar exatamente o que precisa.</string>
     <string name="tour_history_card_title">Cartão de Análise</string>
-    <string name="tour_history_card_desc">Toque para ver detalhes. Deslize para a esquerda para eliminar. Toque longo para seleção múltipla.</string>
+    <string name="tour_history_card_desc">Toque para ver detalhes. Deslize para a esquerda para eliminar, com Anular se mudar de ideias. Use Selecionar, ou toque longo, para ações em massa.</string>
 
     <!-- Tour de detalhes da sessão -->
     <string name="tour_session_detail_image_title">Imagem Anotada</string>
@@ -431,16 +402,16 @@
 
     <!-- Tour do mapa -->
     <string name="tour_map_view_title">Mapa de Detecções</string>
-    <string name="tour_map_view_desc">Todas as suas análises no mapa. Os clusters agrupam deteções próximas - toque num cluster para ver detalhes e tendências da zona.</string>
+    <string name="tour_map_view_desc">Todas as suas análises na posição real. Cada grupo indica quantas fotos tem: toque nele e o mapa voa até lá e abre-o num marcador por foto.</string>
     <string name="tour_map_heatmap_title">Mapa de Calor</string>
-    <string name="tour_map_heatmap_desc">Alterne entre mapa de calor e pins para ver padrões de densidade de resíduos.</string>
+    <string name="tour_map_heatmap_desc">O botão da chama alterna entre pins e um mapa de calor que mostra onde há mais resíduos.</string>
     <string name="tour_map_style_title">Estilo do Mapa</string>
-    <string name="tour_map_style_desc">Alterne entre os estilos Positron (claro), Escuro e Liberty (terreno).</string>
+    <string name="tour_map_style_desc">Abra o menu de camadas para escolher Claro, Escuro ou Terreno.</string>
 
     <string name="tour_map_filters_title">Filtros do Mapa</string>
     <string name="tour_map_filters_desc">Filtre os marcadores por tipo de resíduo ou intervalo de datas para focar em dados específicos.</string>
     <string name="tour_map_fit_all_title">Mostrar Tudo</string>
-    <string name="tour_map_fit_all_desc">Ajuste o zoom do mapa para ver todos os seus marcadores de deteção de uma vez.</string>
+    <string name="tour_map_fit_all_desc">O botão da moldura ajusta o zoom para ver todas as suas deteções ao mesmo tempo.</string>
 
     <!-- Tour de relatórios -->
     <string name="tour_reports_generate_title">Gerar Relatório</string>
@@ -451,8 +422,8 @@
     <string name="tour_reports_zone_desc">Selecione um local de observação para gerar um relatório ambiental por zona. As zonas são detetadas automaticamente a partir dos dados GPS.</string>
 
     <!-- Tour de configurações -->
-    <string name="tour_settings_confidence_title">Configurações de Deteção</string>
-    <string name="tour_settings_confidence_desc">Escolha se deseja pré-visualizar as fotos antes da análise. As opções avançadas (limiar de confiança, precisão do modelo) estão disponíveis no modo desenvolvedor.</string>
+    <string name="tour_settings_confidence_title">Modelos e IA</string>
+    <string name="tour_settings_confidence_desc">Escolha como as fotos são analisadas, veja quais modelos estão instalados e quanto espaço resta. As opções avançadas também estão aqui, atrás de um interruptor.</string>
     <string name="tour_settings_deep_analysis_title">Análise Profunda</string>
     <string name="tour_settings_deep_analysis_desc">Ative o motor VLM para análises ambientais mais detalhadas e relatórios gerados por IA.</string>
     <string name="tour_settings_theme_title">Modo Escuro</string>
@@ -525,7 +496,6 @@
     <string name="report_zone_preview_trend_stable">Estável</string>
     <string name="report_btn_generate_zone">Gerar relatório da zona</string>
     <string name="report_btn_generate_vision">Relatório Visual</string>
-    <string name="report_no_zones_message">Nenhuma localização com dados GPS encontrada</string>
     <string name="zone_name_unknown">Zona de estudo</string>
     <string name="report_zone_fallback">Zona %d</string>
     <string name="report_snackbar_generated">Relatório gerado com sucesso</string>
@@ -560,7 +530,7 @@
 
     <!-- Camera mode toggle -->
     <string name="camera_mode_capture">Captura</string>
-    <string name="camera_mode_live">Ao vivo</string>
+    <string name="camera_mode_live">Digitalização contínua</string>
 
     <!-- Live detection saved frame count -->
     <string name="live_saved_count">%1$d guardados</string>
@@ -607,9 +577,6 @@
     <string name="report_notif_querying">Consultando %1$s…</string>
     <string name="report_notif_complete">Relatório pronto!</string>
     <string name="report_notif_error">Falha na geração do relatório</string>
-    <string name="report_querying_tool">Consultando %1$s…</string>
-    <string name="report_querying_tool_progress">(%1$d/%2$d) Consultando %3$s…</string>
-    <string name="report_phase2_composing">Redigindo o relatório…</string>
 
     <string name="tool_per_session_details">detalhes por imagem</string>
     <string name="tool_debris_summary">resumo dos resíduos</string>
@@ -625,7 +592,6 @@
     <string name="vlm_download_dialog_title">Baixar modelo de IA</string>
     <string name="vlm_download_dialog_message">O modelo de análise profunda (%1$s) ainda não está instalado. Baixar agora por Wi-Fi?</string>
     <string name="vlm_download_dialog_confirm">Baixar</string>
-    <string name="vlm_download_banner_title">Baixando modelo de IA…</string>
     <string name="vlm_download_complete_snackbar">Modelo de IA pronto!</string>
     <string name="vlm_download_error_snackbar">Falha no download: %1$s</string>
     <string name="vlm_download_notif_title">Baixando modelo de IA</string>
@@ -747,7 +713,6 @@
     <string name="biodex_result_done">Concluído</string>
     <string name="species_identifying">A identificar espécie…</string>
 
-    <string name="species_result_auto_return">Nova análise em %1$d s…</string>
     <string name="species_result_btn_new_scan">Nova análise</string>
     <string name="species_result_btn_view_biodex">BioDex</string>
     <string name="biodex_result_none_short">Sem espécies</string>
@@ -757,4 +722,7 @@
     <string name="species_batch_btn_new_batch">Novo lote</string>
     <string name="species_batch_btn_view_biodex">Ver BioDex</string>
 
+    <string name="report_cd_session_thumbnail">Ver os detalhes da sessão</string>
+    <string name="tour_session_detail_location_title">Localização</string>
+    <string name="tour_session_detail_location_desc">Coordenadas GPS onde esta imagem foi captada. Toque em editar para as corrigir.</string>
 </resources>

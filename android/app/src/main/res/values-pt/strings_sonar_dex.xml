@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MarineDex, BioDex and achievements. -->
+<resources>
+    <string name="achievement_replay_action">Rever a animação de desbloqueio</string>
+    <string name="achievement_locked">Bloqueado</string>
+    <string name="achievements_cd_collapse">Recolher %1$s</string>
+    <string name="achievements_cd_expand">Expandir %1$s</string>
+    <string name="dex_card_cd_discovered">%1$s, visto %2$d vezes</string>
+    <string name="dex_card_cd_locked">%1$s, ainda não descoberto</string>
+    <string name="dex_card_open_label">Abrir %1$s</string>
+    <string name="dex_progress_caption">%1$d / %2$d descobertos</string>
+    <string name="dex_debris_bottle">Garrafa</string>
+    <string name="dex_debris_can">Lata</string>
+    <string name="dex_debris_fishing_net">Rede de pesca</string>
+    <string name="dex_debris_glove">Luva</string>
+    <string name="dex_debris_mask">Máscara</string>
+    <string name="dex_debris_metal_debris">Resíduo metálico</string>
+    <string name="dex_debris_plastic_debris">Resíduo plástico</string>
+    <string name="dex_debris_tire">Pneu</string>
+    <string name="dex_debris_fabric_debris">Resíduo têxtil</string>
+    <string name="dex_debris_glass_debris">Resíduo de vidro</string>
+    <string name="dex_debris_other">Outro</string>
+    <string name="dex_map_empty_title">Sem localizações</string>
+    <string name="dex_map_empty_no_location">Nenhuma das suas fotos de %1$s tem localização. Permita o acesso à localização antes de fotografar para ver marcadores aqui.</string>
+    <string name="dex_map_empty_no_captures">Ainda não foi detetado «%1$s». Analise uma foto que o contenha para preencher este mapa.</string>
+    <string name="dex_gallery_empty_title">Ainda sem fotos</string>
+    <string name="dex_gallery_empty_message">Analise uma foto que contenha «%1$s» e ela aparecerá aqui.</string>
+    <string name="dex_gallery_cd_session">Foto analisada com %1$s</string>
+    <string name="biodex_iucn_badge">UICN: %1$s</string>
+    <string name="species_batch_more">+%1$d mais</string>
+</resources>

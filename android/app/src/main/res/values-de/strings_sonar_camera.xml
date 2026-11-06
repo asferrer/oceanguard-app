@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Camera, analysis and continuous scan. -->
+<resources>
+    <string name="sonar_camera_target_debris">Müll</string>
+    <string name="sonar_camera_target_species">Arten</string>
+    <string name="sonar_camera_capture_failed">Das Foto konnte nicht aufgenommen werden. Versuchen Sie es erneut.</string>
+    <string name="sonar_camera_continuous_loading">Der Dauerscan ist bereit, sobald der Detektor geladen ist</string>
+    <string name="sonar_camera_flash_off">Blitz aus</string>
+    <string name="sonar_camera_flash_on">Blitz an</string>
+    <string name="sonar_camera_flash_auto">Automatischer Blitz</string>
+    <string name="sonar_camera_grid_on">Raster eingeblendet</string>
+    <string name="sonar_camera_grid_off">Raster ausgeblendet</string>
+    <string name="sonar_analysis_status_warming">Modell wird geladen. Beim ersten Mal dauert es länger</string>
+    <string name="sonar_analysis_status_refining">Typ und Material werden ergänzt</string>
+    <string name="sonar_analysis_photos_sent">Fotos ins Internet gesendet</string>
+    <string name="sonar_analysis_contributing">Auf Ihrem Telefon analysiert. Zum Hochladen vorgemerkt, weil Sie beitragen möchten.</string>
+    <string name="sonar_analysis_error_message">Dieses Foto konnte nicht analysiert werden. Versuchen Sie es erneut.</string>
+    <string name="sonar_live_engine">%1$s auf Ihrem Telefon</string>
+    <string name="sonar_live_cadence">Alle %1$s s</string>
+    <string name="sonar_live_cadence_measuring">Takt wird gemessen…</string>
+    <string name="sonar_live_latency">Inferenz %1$s s</string>
+    <string name="sonar_live_full_analysis">Vollständige Analyse</string>
+    <string name="sonar_stage_preparing">Vorbereitung</string>
+    <string name="sonar_stage_detecting">Erkennung</string>
+    <string name="sonar_stage_deep">Tiefenanalyse</string>
+</resources>

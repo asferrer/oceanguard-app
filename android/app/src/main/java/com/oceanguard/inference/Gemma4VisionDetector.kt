@@ -3,6 +3,7 @@ package com.oceanguard.ai.inference
 import android.graphics.Bitmap
 import android.util.Log
 import com.google.gson.JsonParser
+import com.oceanguard.ai.data.AnalysisModels
 import com.oceanguard.ai.data.DebrisMaterial
 import com.oceanguard.ai.data.DebrisType
 import kotlin.math.max
@@ -31,9 +32,8 @@ class Gemma4VisionDetector(
         private const val TAG = "Gemma4VisionDetector"
 
         /**
-         * Detection prompt tuned for underwater capture. Kept short on purpose
-         * — closed-class lists,
-         * chain-of-thought, negative rules and verbose disclaimers degrade
+         * Detection prompt tuned for underwater capture. Kept short on purpose:
+         * closed-class lists, chain-of-thought, negative rules and verbose disclaimers degrade
          * Gemma 4 E2B output and inflate prefill latency on Exynos 2200 CPU
          * sampling.
          *
@@ -345,6 +345,9 @@ If no debris is found, output: []
     }
 
     override val displayName = "Gemma 4 E2B Vision"
+
+    override val modelName: String
+        get() = AnalysisModels.forGemmaFile(textEngine.loadedModelPath)
     // 448 keeps LiteRT-LM on the vision_140 path (4 tiles) instead of vision_280
     // (16 tiles). On Exynos 2200 this makes the encoder pass much cheaper (figures pending measurement)
     // with no measurable recall loss for the canonical 11 debris classes.

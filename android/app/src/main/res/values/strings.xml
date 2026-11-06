@@ -31,9 +31,7 @@
     <!-- Home screen                                                          -->
     <!-- ================================================================== -->
     <string name="home_header_subtitle">Offline Marine Debris Detection</string>
-    <string name="home_btn_take_photo">Start Scanning</string>
     <string name="home_btn_live_detection">Batch Analysis</string>
-    <string name="home_btn_select_gallery">Scan from Gallery</string>
     <!-- Home: Top 3 debris types this week card (replaces HealthTrendChart) -->
     <string name="home_top_debris_title">Top debris this week</string>
     <string name="home_top_debris_subtitle">Last 7 days</string>
@@ -48,13 +46,11 @@
     <string name="home_btn_batch_analysis">Batch Analysis</string>
 
     <!-- Model status -->
-    <string name="home_model_ready">Detection ready \u2022 100% Offline</string>
     <string name="home_model_loading">Loading...</string>
     <string name="home_model_warming_up">Warming up...</string>
     <string name="home_model_status_ready">Ready</string>
     <string name="home_model_status_failed">Failed to load</string>
     <string name="home_model_status_on_demand">Available on demand</string>
-    <string name="home_model_status_not_downloaded">Not downloaded</string>
     <string name="home_model_name_detection">AI Detection</string>
     <string name="home_model_name_deep_analysis">Deep Analysis</string>
     <string name="home_model_download_preparing">Preparing download…</string>
@@ -74,8 +70,6 @@
     <string name="cd_view_marinedex">View MarineDex</string>
 
     <!-- Latest Achievement card -->
-    <string name="home_achievement_label">Latest Achievement</string>
-    <string name="cd_view_achievements">View Achievements</string>
 
     <!-- FAB -->
     <string name="cd_new_scan">New Scan</string>
@@ -89,7 +83,7 @@
 
     <!-- Page 2 -->
     <string name="onboarding_page2_title">Detect Marine\nDebris</string>
-    <string name="onboarding_page2_desc">Point your camera at any underwater scene. Our AI detector classifies debris in real-time with 90%+ accuracy.</string>
+    <string name="onboarding_page2_desc">Point your camera at any underwater scene, or pick photos from your gallery. The detector classifies the debris in each image.</string>
 
     <!-- Page 3 -->
     <string name="onboarding_page3_title">AI-Powered\nAnalysis</string>
@@ -101,7 +95,7 @@
 
     <!-- Page 5 -->
     <string name="onboarding_page5_title">Earn\nAchievements</string>
-    <string name="onboarding_page5_desc">Unlock badges by scanning with your camera or real-time mode. Batch uploads don\'t count \u2014 get out in the field to earn your rank!</string>
+    <string name="onboarding_page5_desc">Unlock badges as you scan with the camera. Photos picked from your gallery or files do not count, so get out in the field to earn your rank!</string>
 
     <!-- Page 6 – Research Contribution -->
     <string name="onboarding_contribute_title">Help Improve Detection</string>
@@ -109,7 +103,6 @@
     <string name="onboarding_contribute_toggle">Contribute my images</string>
 
     <!-- Buttons -->
-    <string name="onboarding_btn_get_started">Get Started</string>
     <string name="onboarding_btn_continue">Continue</string>
     <string name="onboarding_btn_skip">Skip</string>
 
@@ -135,21 +128,16 @@
     <!-- Camera Result screen (immersive in-photo overlay flow)               -->
     <!-- ================================================================== -->
     <!-- Format: "Found 3 so far" — shown while inference is still running -->
-    <string name="camera_result_live_count">Found %1$d so far</string>
     <string name="camera_result_no_debris">No debris detected</string>
     <string name="camera_result_summary_debris">debris</string>
     <string name="camera_result_summary_health">health</string>
     <string name="camera_result_btn_new_scan">New Scan</string>
     <string name="camera_result_btn_view_details">View Details</string>
     <!-- Format: "Scanning again in 5 s…" — countdown shown after analysis completes -->
-    <string name="camera_result_auto_return">Scanning again in %1$d s…</string>
 
     <!-- ================================================================== -->
     <!-- Live Detection screen                                                -->
     <!-- ================================================================== -->
-    <string name="live_permission_required">Camera permission is required for live detection.</string>
-    <string name="live_btn_grant_permission">Grant Camera Permission</string>
-    <string name="live_hint_tap_to_analyze">Tap to capture &amp; analyze</string>
 
     <!-- Content descriptions -->
     <string name="cd_capture_and_analyze">Capture and analyze</string>
@@ -181,7 +169,6 @@
     <string name="results_label_material_breakdown">Material Breakdown</string>
     <string name="results_label_detected_objects">Detected Objects</string>
     <string name="results_stat_total_debris">Total Debris</string>
-    <string name="results_stat_processing">Processing</string>
     <string name="results_stat_deep_analysis">Deep Analysis</string>
     <string name="results_stat_yes">Yes</string>
     <string name="results_stat_no">No</string>
@@ -193,7 +180,6 @@
 
     <!-- Error state -->
     <string name="results_error_title">Analysis Failed</string>
-    <string name="results_btn_retry_analysis">Retry Analysis</string>
 
     <!-- ================================================================== -->
     <!-- Batch Results screen                                                 -->
@@ -216,14 +202,8 @@
     <string name="batch_summary_total_time">Total Time</string>
     <string name="batch_summary_success_rate">Success Rate</string>
     <!-- Format: "Overall ocean health: Good" -->
-    <string name="batch_summary_ocean_health">Overall ocean health: %1$s</string>
 
     <!-- Health labels used in batch summary -->
-    <string name="batch_health_excellent">Excellent</string>
-    <string name="batch_health_good">Good</string>
-    <string name="batch_health_fair">Fair</string>
-    <string name="batch_health_poor">Poor</string>
-    <string name="batch_health_critical">Critical</string>
 
     <!-- Action buttons -->
     <string name="batch_btn_new_batch">New Batch</string>
@@ -318,7 +298,6 @@
     <!-- ================================================================== -->
 
     <!-- Settings section -->
-    <string name="contribute_section_title">Research Contribution</string>
     <string name="contribute_toggle_label">Contribute images for model training</string>
     <string name="contribute_toggle_desc">Opt in to share your analyzed images with OceanGuard research</string>
     <string name="contribute_consent_given_desc">Images are queued for upload after each analysis</string>

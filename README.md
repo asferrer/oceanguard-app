@@ -33,8 +33,9 @@ ReportValidator -> Markdown / PDF / CSV / GeoJSON
   methods (debris summary, material and type breakdown, risk assessment, collection waypoints, survey statistics,
   ecological impacts, temporal trend), so every number in a report is computed in Kotlin and not written by the model.
   `ReportValidator` scores the result with 12+ checks.
-- **Other features.** Offline map (MapLibre, OpenFreeMap), GPS from EXIF or device, hotspot clustering, MarineDex
-  collection, six languages (EN, ES, FR, DE, IT, PT).
+- **Other features.** Continuous scan with RT-DETRv2 (about one pass every 4 s on the reference phone, not real time),
+  map with the real location of each analysis (MapLibre, OpenFreeMap), GPS from EXIF or device, hotspot clustering,
+  MarineDex and BioDex collections, achievements, and six languages (EN, ES, FR, DE, IT, PT).
 - **Alternative engines.** A llama.cpp path for the fine-tuned Gemma 4 (GGUF) and for Qwen 3.5 text models.
 
 ## Results of the detector

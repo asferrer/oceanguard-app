@@ -1,12 +1,7 @@
 package com.oceanguard.ai.ui.components
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.oceanguard.ai.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,17 +18,16 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.oceanguard.ai.ui.theme.GlassBorder
+import com.oceanguard.ai.ui.motion.LocalReducedMotion
+import com.oceanguard.ai.ui.motion.rememberOceanLoop
+import com.oceanguard.ai.ui.theme.SonarTheme
 import com.oceanguard.ai.ui.theme.GlassHighlight
 import com.oceanguard.ai.ui.theme.GlassInnerGlow
-import com.oceanguard.ai.ui.theme.GlassSurface
-import com.oceanguard.ai.ui.theme.OceanBlue
-import com.oceanguard.ai.ui.theme.OceanBlueLight
-import com.oceanguard.ai.ui.theme.OceanGreen
 import kotlin.math.cos
 import kotlin.math.sin
 
 private val CardShape = RoundedCornerShape(20.dp)
+private const val BORDER_LOOP_MS = 8_000
 
 /**
  * Premium glassmorphism card with animated gradient border.
@@ -51,36 +45,20 @@ fun GlassCard(
     animate: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
 
     // Theme-aware border colors
-    val borderColors = if (isDark) {
-        listOf(
-            OceanBlueLight.copy(alpha = 0.5f),
-            OceanGreen.copy(alpha = 0.3f),
-            GlassBorder,
-            Color.Transparent,
-        )
-    } else {
-        listOf(
-            OceanBlue.copy(alpha = 0.3f),
-            OceanGreen.copy(alpha = 0.2f),
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
-            Color.Transparent,
-        )
-    }
+    val borderColors = listOf(
+        SonarTheme.colors.trace.copy(alpha = 0.45f),
+        SonarTheme.colors.line,
+        SonarTheme.colors.line,
+        Color.Transparent,
+    )
 
     // --- Animated border rotation ---
-    val borderBrush = if (animate) {
-        val infiniteTransition = rememberInfiniteTransition(label = "glassBorder")
-        val angle by infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 8000, easing = LinearEasing),
-            ),
-            label = "borderAngle",
-        )
+    val borderBrush = if (animate && !LocalReducedMotion.current) {
+        val phase by rememberOceanLoop(BORDER_LOOP_MS)
+        val angle = phase * 360f
         val rad = Math.toRadians(angle.toDouble())
         Brush.linearGradient(
             colors = borderColors,
@@ -94,12 +72,12 @@ fun GlassCard(
             ),
         )
     } else {
-        val staticColor = if (isDark) GlassBorder else MaterialTheme.colorScheme.outlineVariant
+        val staticColor = MaterialTheme.colorScheme.outlineVariant
         Brush.linearGradient(colors = listOf(staticColor, Color.Transparent))
     }
 
     // Theme-aware container color
-    val containerColor = if (isDark) GlassSurface else MaterialTheme.colorScheme.surfaceContainerLow
+    val containerColor = MaterialTheme.colorScheme.surface
 
     Card(
         modifier = modifier

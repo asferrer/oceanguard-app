@@ -38,11 +38,8 @@ import coil3.compose.AsyncImage
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.species.SpeciesCatalog
 import com.oceanguard.ai.data.species.SpeciesObservation
-import com.oceanguard.ai.ui.components.GlassCard
-import com.oceanguard.ai.ui.components.pressableScale
-import com.oceanguard.ai.ui.theme.CoralRed
-import com.oceanguard.ai.ui.theme.OceanBlueLight
-import com.oceanguard.ai.ui.theme.OceanGreen
+import com.oceanguard.ai.ui.components.sonar.SonarCard
+import com.oceanguard.ai.ui.theme.SonarTheme
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -90,10 +87,7 @@ fun SpeciesObservationDetailScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.biodex_obs_detail_title)) },
                 navigationIcon = {
-                    IconButton(
-                        onClick = onNavigateBack,
-                        modifier = Modifier.pressableScale(),
-                    ) {
+                    IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.biodex_obs_detail_cd_go_back),
@@ -177,14 +171,14 @@ private fun ObservationBadgesRow(observation: SpeciesObservation) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ObsBadge(
             text = observation.idSource,
-            containerColor = OceanBlueLight.copy(alpha = 0.18f),
-            contentColor = OceanBlueLight,
+            containerColor = SonarTheme.colors.traceContainer,
+            contentColor = SonarTheme.colors.onTraceContainer,
         )
         if (observation.outOfRange) {
             ObsBadge(
                 text = stringResource(R.string.biodex_obs_detail_badge_out_of_range),
-                containerColor = CoralRed.copy(alpha = 0.18f),
-                contentColor = CoralRed,
+                containerColor = SonarTheme.colors.alertContainer,
+                contentColor = SonarTheme.colors.onAlertContainer,
             )
         }
         if (observation.uncatalogued) {
@@ -219,15 +213,15 @@ private fun ObservationMetaCard(observation: SpeciesObservation) {
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy · HH:mm", Locale.getDefault()) }
     val confidencePct = (observation.confidence * 100).toInt()
     val confColor = when {
-        confidencePct >= 75 -> OceanGreen
-        confidencePct >= 50 -> OceanBlueLight
-        else -> CoralRed
+        confidencePct >= 75 -> SonarTheme.colors.trace
+        confidencePct >= 50 -> SonarTheme.colors.echo
+        else -> SonarTheme.colors.alert
     }
 
-    GlassCard(animate = false) {
+    SonarCard {
         MetaRow(
             label = stringResource(R.string.biodex_obs_detail_label_confidence),
-            value = "$confidencePct%",
+            value = stringResource(R.string.sonar_percent, confidencePct),
             valueColor = confColor,
         )
         Spacer(modifier = Modifier.height(10.dp))
@@ -277,7 +271,7 @@ private fun MetaRow(
 
 @Composable
 private fun ObservationDescriptionCard(description: String) {
-    GlassCard(animate = false) {
+    SonarCard {
         Text(
             text = stringResource(R.string.biodex_obs_detail_label_description),
             style = MaterialTheme.typography.labelMedium,

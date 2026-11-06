@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Results strings. -->
+<resources>
+    <string name="results_add_location">Add location</string>
+    <string name="results_batch_counts">%1$d with objects · %2$d with no detections</string>
+    <string name="results_batch_failed">%1$d failed</string>
+    <string name="results_batch_per_photo">%1$s s per photo</string>
+    <string name="results_error_message">Something went wrong and it could not be completed. Try again.</string>
+    <string name="results_export">Export</string>
+    <string name="results_export_csv">CSV</string>
+    <string name="results_export_csv_desc">One row per detected object</string>
+    <string name="results_export_error">Could not create the file. Check the storage space.</string>
+    <string name="results_export_geojson">GeoJSON</string>
+    <string name="results_export_geojson_desc">One point per photo with a location</string>
+    <string name="results_export_markdown">Markdown</string>
+    <string name="results_export_markdown_desc">The text of the report</string>
+    <string name="results_export_no_location">None of these photos has a location</string>
+    <string name="results_export_no_photos">This report has no photos to export</string>
+    <string name="results_export_pdf">PDF</string>
+    <string name="results_export_pdf_desc">Report with images</string>
+    <string name="results_figure_health">Average health</string>
+    <string name="results_figure_objects">Objects</string>
+    <string name="results_figure_photos">Photos</string>
+    <string name="results_model_line">Model: %1$s</string>
+    <string name="results_model_unrecorded">Model not recorded</string>
+    <string name="results_no_detections_message">No object was found in this photo, so there is no health score.</string>
+    <string name="results_no_detections_title">No detections</string>
+    <string name="results_period_30">30 days</string>
+    <string name="results_period_7">7 days</string>
+    <string name="results_period_all">All time</string>
+    <string name="results_period_custom">Pick dates…</string>
+    <string name="results_repeated_warning">%1$d objects of type “%2$s” in one photo. It may be the same object counted several times.</string>
+    <string name="results_report_auto_start">When the download finishes, the report starts by itself.</string>
+    <string name="results_report_generate_download">Download and generate</string>
+    <string name="results_report_model_downloading">Downloading the model</string>
+    <string name="results_report_model_downloading_named">Downloading %1$s…</string>
+    <string name="results_report_model_missing">%1$s is not installed (%2$s)</string>
+    <string name="results_report_model_ready">%1$s is ready</string>
+    <string name="results_report_no_gps">These photos have no location, so zones cannot be built. Add a location to a photo to choose a zone.</string>
+    <string name="results_report_steps_title">Writing the report</string>
+    <string name="results_report_written_by">Written by %1$s</string>
+    <string name="results_session_missing">This analysis was deleted or no longer exists.</string>
+    <string name="results_setup_scope">What to include</string>
+    <string name="results_setup_voice">Language and audience</string>
+    <string name="results_share_error">Could not share the photo.</string>
+    <string name="results_share_photo">Share photo</string>
+    <string name="results_step_data">Query the data</string>
+    <string name="results_step_model">Prepare the model</string>
+    <string name="results_step_writing">Write the text</string>
+    <string name="results_time_line">%1$s s of analysis</string>
+</resources>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Camera, analysis and continuous scan. -->
+<resources>
+    <string name="sonar_camera_target_debris">Residuos</string>
+    <string name="sonar_camera_target_species">Especies</string>
+    <string name="sonar_camera_capture_failed">No se pudo hacer la foto. Inténtalo de nuevo.</string>
+    <string name="sonar_camera_continuous_loading">El escaneo continuo estará listo cuando termine de cargar el detector</string>
+    <string name="sonar_camera_flash_off">Flash apagado</string>
+    <string name="sonar_camera_flash_on">Flash encendido</string>
+    <string name="sonar_camera_flash_auto">Flash automático</string>
+    <string name="sonar_camera_grid_on">Cuadrícula visible</string>
+    <string name="sonar_camera_grid_off">Cuadrícula oculta</string>
+    <string name="sonar_analysis_status_warming">Cargando el modelo. La primera vez tarda más</string>
+    <string name="sonar_analysis_status_refining">Añadiendo tipo y material</string>
+    <string name="sonar_analysis_photos_sent">fotos enviadas a internet</string>
+    <string name="sonar_analysis_contributing">Analizada en tu móvil. En cola para subirla, porque elegiste contribuir.</string>
+    <string name="sonar_analysis_error_message">No se pudo analizar esta foto. Inténtalo de nuevo.</string>
+    <string name="sonar_live_engine">%1$s en tu móvil</string>
+    <string name="sonar_live_cadence">Cada %1$s s</string>
+    <string name="sonar_live_cadence_measuring">Midiendo la cadencia…</string>
+    <string name="sonar_live_latency">Inferencia %1$s s</string>
+    <string name="sonar_live_full_analysis">Análisis completo</string>
+    <string name="sonar_stage_preparing">Preparando</string>
+    <string name="sonar_stage_detecting">Detectando</string>
+    <string name="sonar_stage_deep">Análisis profundo</string>
+</resources>

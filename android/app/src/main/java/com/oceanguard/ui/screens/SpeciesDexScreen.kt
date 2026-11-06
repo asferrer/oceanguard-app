@@ -49,7 +49,12 @@ import com.oceanguard.ai.data.species.SpeciesCollectionRepository
 import com.oceanguard.ai.data.species.SpeciesNames
 import com.oceanguard.ai.ui.components.dex.DexCard
 import com.oceanguard.ai.ui.components.dex.DexCollectionHeader
+import com.oceanguard.ai.ui.components.SpeciesSpriteImage
 import com.oceanguard.ai.ui.components.dex.DexItem
+import com.oceanguard.ai.ui.components.dex.DexSpriteSlot
+import com.oceanguard.ai.ui.navigation.OceanSharedKeys
+import com.oceanguard.ai.ui.navigation.oceanSharedElement
+import com.oceanguard.ai.ui.theme.SonarTheme
 
 /**
  * BioDex — Pokédex-style grid of discovered marine species.
@@ -130,6 +135,7 @@ fun SpeciesDexScreen(
                     totalCount = catalogTotal,
                     favoriteCount = favoriteCount,
                     observationCount = dexItems.sumOf { it.count },
+                    caption = stringResource(R.string.dex_progress_caption, discoveredCount, catalogTotal),
                     discoveredLabel = stringResource(R.string.biodex_stat_discovered),
                     favoritesLabel = stringResource(R.string.biodex_stat_favorites),
                     observationsLabel = stringResource(R.string.biodex_stat_observations),
@@ -147,10 +153,26 @@ fun SpeciesDexScreen(
                     item = item,
                     animationIndex = index,
                     onNavigateToDetail = onNavigateToDetail,
+                    sprite = speciesGridSprite(item),
                 )
             }
         }
     }
+}
+
+/** Species sprite of a card; a discovered one is the shared element of the detail header. */
+private fun speciesGridSprite(item: DexItem): DexSpriteSlot = { modifier, size, silhouette ->
+    SpeciesSpriteImage(
+        spritePath = item.spritePath,
+        size = size,
+        silhouette = silhouette,
+        silhouetteColor = SonarTheme.colors.lineStrong,
+        modifier = if (silhouette) {
+            modifier
+        } else {
+            modifier.oceanSharedElement(OceanSharedKeys.speciesSprite(item.key))
+        },
+    )
 }
 
 // ---------------------------------------------------------------------------

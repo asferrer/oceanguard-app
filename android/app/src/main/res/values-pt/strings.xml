@@ -31,9 +31,7 @@
     <!-- Tela inicial                                                         -->
     <!-- ================================================================== -->
     <string name="home_header_subtitle">Detecção Offline de Detritos Marinhos</string>
-    <string name="home_btn_take_photo">Iniciar scan</string>
     <string name="home_btn_live_detection">Análise em lote</string>
-    <string name="home_btn_select_gallery">Escanear da galeria</string>
     <string name="home_top_debris_title">Resíduos mais frequentes</string>
     <string name="home_top_debris_subtitle">Últimos 7 dias</string>
     <string name="home_top_debris_total">Total %1$d</string>
@@ -45,13 +43,11 @@
     <string name="home_btn_batch_analysis">Análise em Lote</string>
 
     <!-- Status do modelo -->
-    <string name="home_model_ready">Detecção pronta \u2022 100% Offline</string>
     <string name="home_model_loading">Carregando...</string>
     <string name="home_model_warming_up">Inicializando...</string>
     <string name="home_model_status_ready">Pronto</string>
     <string name="home_model_status_failed">Falha ao carregar</string>
     <string name="home_model_status_on_demand">Disponível sob demanda</string>
-    <string name="home_model_status_not_downloaded">Não baixado</string>
     <string name="home_model_name_detection">Detecção por IA</string>
     <string name="home_model_name_deep_analysis">Análise Profunda</string>
 
@@ -68,8 +64,6 @@
     <string name="cd_view_marinedex">Ver MarineDex</string>
 
     <!-- Cartão de última conquista -->
-    <string name="home_achievement_label">Última Conquista</string>
-    <string name="cd_view_achievements">Ver Conquistas</string>
 
     <!-- FAB -->
     <string name="cd_new_scan">Nova Análise</string>
@@ -83,7 +77,7 @@
 
     <!-- Página 2 -->
     <string name="onboarding_page2_title">Detecte Detritos\nMarinhos</string>
-    <string name="onboarding_page2_desc">Aponte a câmera para qualquer cena subaquática. Nosso detector de IA classifica resíduos em tempo real com mais de 90% de precisão.</string>
+    <string name="onboarding_page2_desc">Aponte a câmara para qualquer cena subaquática ou escolha fotos da galeria. O detetor classifica os resíduos de cada imagem.</string>
 
     <!-- Página 3 -->
     <string name="onboarding_page3_title">Análise\npor IA</string>
@@ -95,7 +89,7 @@
 
     <!-- Página 5 -->
     <string name="onboarding_page5_title">Conquiste\nrecompensas</string>
-    <string name="onboarding_page5_desc">Desbloqueie emblemas escaneando com a câmera ou em tempo real. Uploads em lote não contam \u2014 vá ao campo para ganhar sua classificação!</string>
+    <string name="onboarding_page5_desc">Desbloqueie emblemas ao analisar com a câmara. As fotos escolhidas da galeria ou de ficheiros não contam: vá para o terreno para ganhar a sua patente!</string>
 
     <!-- Página 6 – Contribuição à Pesquisa -->
     <string name="onboarding_contribute_title">Melhorar a Detecção</string>
@@ -103,7 +97,6 @@
     <string name="onboarding_contribute_toggle">Contribuir minhas imagens</string>
 
     <!-- Botões -->
-    <string name="onboarding_btn_get_started">Começar</string>
     <string name="onboarding_btn_continue">Continuar</string>
     <string name="onboarding_btn_skip">Pular</string>
 
@@ -128,7 +121,6 @@
     <!-- ================================================================== -->
     <!-- Tela de resultado da câmera (sobreposição imersiva na foto)         -->
     <!-- ================================================================== -->
-    <string name="camera_result_live_count">%1$d encontrados até agora</string>
     <string name="camera_result_no_debris">Nenhum resíduo detectado</string>
     <string name="camera_result_summary_debris">resíduos</string>
     <string name="camera_result_summary_health">saúde</string>
@@ -138,9 +130,6 @@
     <!-- ================================================================== -->
     <!-- Tela de detecção ao vivo                                             -->
     <!-- ================================================================== -->
-    <string name="live_permission_required">A permissão da câmera é necessária para detecção ao vivo.</string>
-    <string name="live_btn_grant_permission">Conceder Permissão de Câmera</string>
-    <string name="live_hint_tap_to_analyze">Toque para capturar &amp; analisar</string>
 
     <!-- Descrições de conteúdo -->
     <string name="cd_capture_and_analyze">Capturar e analisar</string>
@@ -167,7 +156,6 @@
     <string name="results_label_material_breakdown">Composição de Materiais</string>
     <string name="results_label_detected_objects">Objetos Detectados</string>
     <string name="results_stat_total_debris">Total de Resíduos</string>
-    <string name="results_stat_processing">Processamento</string>
     <string name="results_stat_deep_analysis">Análise Profunda</string>
     <string name="results_stat_yes">Sim</string>
     <string name="results_stat_no">Não</string>
@@ -179,7 +167,6 @@
 
     <!-- Estado de erro -->
     <string name="results_error_title">Análise Falhou</string>
-    <string name="results_btn_retry_analysis">Repetir Análise</string>
 
     <!-- ================================================================== -->
     <!-- Tela de resultados em lote                                           -->
@@ -202,14 +189,8 @@
     <string name="batch_summary_total_time">Tempo Total</string>
     <string name="batch_summary_success_rate">Taxa de Sucesso</string>
     <!-- Formato: "Saúde geral do oceano: Bom" -->
-    <string name="batch_summary_ocean_health">Saúde geral do oceano: %1$s</string>
 
     <!-- Rótulos de saúde usados no resumo em lote -->
-    <string name="batch_health_excellent">Excelente</string>
-    <string name="batch_health_good">Bom</string>
-    <string name="batch_health_fair">Regular</string>
-    <string name="batch_health_poor">Ruim</string>
-    <string name="batch_health_critical">Crítico</string>
 
     <!-- Botões de ação -->
     <string name="batch_btn_new_batch">Novo Lote</string>
@@ -302,7 +283,6 @@
     <!-- ================================================================== -->
     <!-- Contribuição à Pesquisa                                              -->
     <!-- ================================================================== -->
-    <string name="contribute_section_title">Contribuição à Pesquisa</string>
     <string name="contribute_toggle_label">Contribuir imagens para treinamento do modelo</string>
     <string name="contribute_toggle_desc">Partilhe as suas imagens analisadas com a investigação OceanGuard</string>
     <string name="contribute_consent_given_desc">As imagens são colocadas em fila após cada análise</string>
@@ -339,4 +319,11 @@
     <string name="contribute_privacy_no_location">Sem coordenadas GPS ou dados de localização</string>
     <string name="contribute_privacy_no_personal">Sem identificadores pessoais incluídos</string>
     <string name="contribute_privacy_research_only">Usado exclusivamente para pesquisa do modelo</string>
+    <string name="contribute_prompt_dont_ask_again">Não perguntar novamente</string>
+    <string name="home_model_download_downloading">A transferir o modelo…</string>
+    <string name="home_model_download_installing">A instalar o modelo…</string>
+    <string name="home_model_download_preparing">A preparar a transferência…</string>
+    <string name="results_status_detecting_gemma4">A analisar com o Gemma 4…</string>
+    <string name="results_status_elapsed">Decorrido: %1$d s</string>
+    <string name="results_status_gemma4_subtitle">IA de vocabulário aberto no dispositivo</string>
 </resources>

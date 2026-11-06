@@ -71,13 +71,14 @@ object TourDefinitions {
         SpotlightStep("reports_generate", R.string.tour_reports_generate_title, R.string.tour_reports_generate_desc),
     )
 
+    /** Ordered as the targets sit on the screen, so the tour only ever scrolls down. */
     val SETTINGS = listOf(
         SpotlightStep("settings_confidence", R.string.tour_settings_confidence_title, R.string.tour_settings_confidence_desc),
         SpotlightStep("settings_language", R.string.tour_settings_language_title, R.string.tour_settings_language_desc),
         SpotlightStep("settings_theme", R.string.tour_settings_theme_title, R.string.tour_settings_theme_desc),
+        SpotlightStep("settings_contribution", R.string.tour_settings_contribution_title, R.string.tour_settings_contribution_desc),
         SpotlightStep("settings_data", R.string.tour_settings_data_title, R.string.tour_settings_data_desc),
         SpotlightStep("settings_tours", R.string.tour_settings_tours_title, R.string.tour_settings_tours_desc),
-        SpotlightStep("settings_contribution", R.string.tour_settings_contribution_title, R.string.tour_settings_contribution_desc),
     )
 
     val MARINEDEX = listOf(

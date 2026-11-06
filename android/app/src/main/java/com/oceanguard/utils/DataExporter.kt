@@ -36,7 +36,6 @@ object DataExporter {
 
     private const val TAG = "DataExporter"
 
-    private val DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     private val FILE_TIMESTAMP_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
 
     // -----------------------------------------------------------------------
@@ -44,89 +43,59 @@ object DataExporter {
     // -----------------------------------------------------------------------
 
     /**
-     * Serialises a list of [DetectionSession] objects into a CSV file and
-     * returns a [FileProvider] URI for sharing.
+     * Writes the sessions as CSV (see [sessionsToCsv]) and returns a [FileProvider] URI.
      *
-     * Each row in the CSV corresponds to a single debris item within a
-     * session. Sessions with no detected debris produce a single summary row
-     * with empty debris fields so the session timestamp and health score are
-     * still captured.
-     *
-     * CSV columns:
-     * `session_id, image_name, date, lat, lon, debris_type, material,
-     *  confidence, health_score`
-     *
-     * @param context  Application or activity context for cache dir access.
-     * @param sessions List of sessions to export. Order is preserved.
-     * @return A `content://` [Uri] pointing to the generated CSV file, or
-     *   `null` if the file could not be written.
+     * @return A `content://` [Uri], or `null` if there is nothing to export or the write failed.
      */
     fun exportToCSV(context: Context, sessions: List<DetectionSession>): Uri? {
         if (sessions.isEmpty()) {
             Log.w(TAG, "exportToCSV called with empty session list")
             return null
         }
-
-        val timestamp = FILE_TIMESTAMP_FORMAT.format(Date())
-        val fileName = "oceanguard_export_$timestamp.csv"
-
-        return try {
-            val file = createCacheFile(context, fileName)
-            file.bufferedWriter().use { writer ->
-                // Header row
-                writer.write(
-                    "session_id,image_name,date,lat,lon," +
-                    "debris_type,material,confidence,health_score"
-                )
-                writer.newLine()
-
-                // Data rows
-                sessions.forEach { session ->
-                    val imageName = Uri.parse(session.imageUri).lastPathSegment ?: session.imageUri
-                    val formattedDate = DATE_FORMAT.format(session.timestamp)
-                    val lat = session.location?.latitude?.let { String.format("%.6f", it) } ?: ""
-                    val lon = session.location?.longitude?.let { String.format("%.6f", it) } ?: ""
-
-                    if (session.debrisList.isEmpty()) {
-                        // Session row with no debris
-                        writer.write(
-                            "${session.id}," +
-                            "${escapeCsv(imageName)}," +
-                            "${escapeCsv(formattedDate)}," +
-                            "$lat,$lon," +
-                            ",,," +    // debris_type, material, confidence empty
-                            "${session.healthScore}"
-                        )
-                        writer.newLine()
-                    } else {
-                        // One row per debris item
-                        session.debrisList.forEach { debris ->
-                            writer.write(
-                                "${session.id}," +
-                                "${escapeCsv(imageName)}," +
-                                "${escapeCsv(formattedDate)}," +
-                                "$lat,$lon," +
-                                "${debris.type.name}," +
-                                "${debris.material.name}," +
-                                "${String.format("%.4f", debris.confidence)}," +
-                                "${session.healthScore}"
-                            )
-                            writer.newLine()
-                        }
-                    }
-                }
-            }
-
-            Log.i(TAG, "CSV written: ${file.absolutePath} (${file.length()} bytes)")
-            getFileProviderUri(context, file)
-
-        } catch (e: IOException) {
-            Log.e(TAG, "Failed to write CSV file", e)
-            null
-        } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error during CSV export", e)
-            null
+        return writeTextExport(context, "oceanguard_export_${FILE_TIMESTAMP_FORMAT.format(Date())}.csv") {
+            sessionsToCsv(sessions)
         }
+    }
+
+    /**
+     * Writes the located sessions as a GeoJSON FeatureCollection (see [sessionsToExportGeoJson]).
+     *
+     * @return A `content://` [Uri], or `null` when no session has a location or the write failed.
+     */
+    fun exportToGeoJson(context: Context, sessions: List<DetectionSession>): Uri? {
+        if (sessions.none { it.location != null }) {
+            Log.w(TAG, "exportToGeoJson called without any located session")
+            return null
+        }
+        return writeTextExport(context, "oceanguard_export_${FILE_TIMESTAMP_FORMAT.format(Date())}.geojson") {
+            sessionsToExportGeoJson(sessions)
+        }
+    }
+
+    /**
+     * Copies a photo into the export cache so it can be shared through the [FileProvider].
+     * [source] is a `content://`, `file://` URI or an absolute path.
+     */
+    fun exportImage(context: Context, source: String): Uri? = try {
+        val uri = if (source.startsWith("/")) Uri.fromFile(File(source)) else Uri.parse(source)
+        val file = createCacheFile(context, "oceanguard_photo_${FILE_TIMESTAMP_FORMAT.format(Date())}.jpg")
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            file.outputStream().use { output -> input.copyTo(output) }
+        } ?: throw IOException("Cannot open $source")
+        getFileProviderUri(context, file)
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to copy the photo for sharing", e)
+        null
+    }
+
+    private fun writeTextExport(context: Context, fileName: String, content: () -> String): Uri? = try {
+        val file = createCacheFile(context, fileName)
+        file.writeText(content())
+        Log.i(TAG, "Export written: ${file.absolutePath} (${file.length()} bytes)")
+        getFileProviderUri(context, file)
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to write $fileName", e)
+        null
     }
 
     // -----------------------------------------------------------------------
@@ -304,21 +273,6 @@ object DataExporter {
             Log.e(TAG, "FileProvider URI failed for ${file.absolutePath}. " +
                 "Ensure the exports directory is declared in res/xml/file_paths.xml", e)
             null
-        }
-    }
-
-    /**
-     * Escapes a string value for safe inclusion in a CSV cell.
-     *
-     * - If the value contains a comma, double-quote, or newline it is
-     *   wrapped in double quotes.
-     * - Internal double-quotes are escaped by doubling them (`""`).
-     */
-    private fun escapeCsv(value: String): String {
-        return if (value.contains(',') || value.contains('"') || value.contains('\n')) {
-            "\"${value.replace("\"", "\"\"")}\""
-        } else {
-            value
         }
     }
 

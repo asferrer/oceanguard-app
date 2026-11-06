@@ -159,6 +159,7 @@ class TourDemoDataManager(
             timestamp = Date(now),
             imageQuality = ImageQuality.GOOD,
             processingTimeMs = 5900L,
+            modelName = AnalysisModels.RT_DETR_V2,
             tags = DEMO_TAG,
         )
         repository.saveSession(session, skipAchievements = true)

@@ -3,7 +3,10 @@ package com.oceanguard.ai.inference
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
+import com.oceanguard.ai.data.AnalysisModels
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.nnapi.NnApiDelegate
@@ -17,7 +20,7 @@ import kotlin.math.exp
 /**
  * RT-DETRv2 inference wrapper for fast object detection.
  *
- * Uses TensorFlow Lite with GPU delegate for real-time debris detection.
+ * Uses TensorFlow Lite with GPU delegate for debris detection.
  * The TFLite model exports raw outputs (no postprocessor baked in):
  *   - pred_logits: [1, NUM_QUERIES, NUM_CLASSES] raw logits (apply sigmoid)
  *   - pred_boxes:  [1, NUM_QUERIES, 4] cxcywh normalized [0,1]
@@ -115,6 +118,8 @@ class RTDETRInference(
         internal fun sigmoid(x: Float): Float = 1.0f / (1.0f + exp(-x))
     }
 
+    override val modelName: String = AnalysisModels.RT_DETR_V2
+
     override val displayName: String
         get() = "RT-DETRv2 ${if (modelPath.contains("int8")) "INT8" else "FP16"}"
 
@@ -132,6 +137,8 @@ class RTDETRInference(
     // Flat FloatArray for RGB normalisation — avoids 1.2M ByteBuffer.putFloat() JNI calls
     // by converting the pixel loop to array writes + one FloatBuffer.put(FloatArray) bulk call.
     private var reusableFloatArray: FloatArray? = null
+    /** The interpreter and its reusable buffers serve one pass at a time. */
+    private val inferenceLock = Mutex()
     private var reusableLogitsBuffer: Array<Array<FloatArray>>? = null
     private var reusableBoxesBuffer: Array<Array<FloatArray>>? = null
 
@@ -259,7 +266,7 @@ class RTDETRInference(
     override suspend fun detect(
         bitmap: Bitmap,
         confidenceThreshold: Float,
-    ): List<DetectionResult> = withContext(Dispatchers.Default) {
+    ): List<DetectionResult> = withContext(Dispatchers.Default) { inferenceLock.withLock {
         val interp = interpreter ?: throw IllegalStateException("RT-DETRv2 not initialized")
 
         try {
@@ -297,7 +304,7 @@ class RTDETRInference(
             Log.e(TAG, "Detection failed", e)
             emptyList()
         }
-    }
+    } }
 
     /**
      * Run detection on a bitmap for live detection mode.
@@ -311,7 +318,7 @@ class RTDETRInference(
     suspend fun detectPreResized(
         bitmap: Bitmap,
         confidenceThreshold: Float = DEFAULT_CONFIDENCE_THRESHOLD,
-    ): List<DetectionResult> = withContext(Dispatchers.Default) {
+    ): List<DetectionResult> = withContext(Dispatchers.Default) { inferenceLock.withLock {
         val interp = interpreter ?: throw IllegalStateException("RT-DETRv2 not initialized")
 
         try {
@@ -374,7 +381,7 @@ class RTDETRInference(
                 "Bitmap: ${bitmap.width}x${bitmap.height}, expected: ${INPUT_SIZE}x${INPUT_SIZE}", e)
             emptyList()
         }
-    }
+    } }
 
     /**
      * Preprocess image for RT-DETR: resize to 640x640, normalize to [0,1].

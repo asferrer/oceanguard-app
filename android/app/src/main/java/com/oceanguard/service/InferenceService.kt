@@ -19,6 +19,7 @@ import com.oceanguard.ai.data.VideoAnalysis
 import com.oceanguard.ai.inference.AnalysisState
 import com.oceanguard.ai.inference.VideoProcessor
 import com.oceanguard.ai.ui.MainActivity
+import com.oceanguard.ai.data.AnalysisModels
 import com.oceanguard.ai.utils.BitmapAnnotator
 import com.oceanguard.ai.utils.ExifLocationExtractor
 import com.oceanguard.ai.utils.ImagePersistence
@@ -217,7 +218,7 @@ class InferenceService : LifecycleService() {
                 val exifLocation = try { ExifLocationExtractor.extract(applicationContext, job.uri) } catch (_: Exception) { null }
                 val deviceLocation = try { app.locationProvider.getLastKnownLocation() } catch (_: Exception) { null }
                 val location = exifLocation ?: deviceLocation
-                val annotatedUri = tryAnnotate(job.uri, result.rtdetrDetections)
+                val annotatedUri = tryAnnotate(job.uri, result.rtdetrDetections, result.modelName)
 
                 val session = DetectionSession(
                     imageUri = persistedUri,
@@ -228,6 +229,7 @@ class InferenceService : LifecycleService() {
                     location = location,
                     imageQuality = result.vlmAnalysis.imageQuality,
                     processingTimeMs = result.processingTimeMs,
+                    modelName = result.modelName,
                 )
                 val sessionId = app.repository.saveSession(session)
                 val savedSession = session.copy(id = sessionId)
@@ -302,7 +304,7 @@ class InferenceService : LifecycleService() {
                     val exifLocation = try { ExifLocationExtractor.extract(applicationContext, uri) } catch (_: Exception) { null }
                     val deviceLocation = try { app.locationProvider.getLastKnownLocation() } catch (_: Exception) { null }
                     val location = exifLocation ?: deviceLocation
-                    val annotatedUri = tryAnnotate(uri, result.rtdetrDetections)
+                    val annotatedUri = tryAnnotate(uri, result.rtdetrDetections, result.modelName)
 
                     val session = DetectionSession(
                         imageUri = persistedUri,
@@ -314,6 +316,7 @@ class InferenceService : LifecycleService() {
                         imageQuality = result.vlmAnalysis.imageQuality,
                         processingTimeMs = result.processingTimeMs,
                         tags = "source:batch",
+                        modelName = result.modelName,
                     )
                     val sessionId = app.repository.saveSession(session)
                     val queued = app.contributionRepository.maybeEnqueue(session.copy(id = sessionId))
@@ -469,6 +472,7 @@ class InferenceService : LifecycleService() {
     private fun tryAnnotate(
         uri: Uri,
         detections: List<com.oceanguard.ai.inference.DetectionResult>,
+        modelName: String?,
     ): String? {
         if (detections.isEmpty()) return null
         return try {
@@ -476,6 +480,8 @@ class InferenceService : LifecycleService() {
                 context = applicationContext,
                 imageUri = uri,
                 detections = detections,
+                // Gemma's score is not a model confidence, so its photo carries no percentage.
+                showConfidence = AnalysisModels.hasModelConfidence(modelName),
             )
         } catch (e: Exception) {
             Log.w(TAG, "Annotation failed (non-fatal)", e)

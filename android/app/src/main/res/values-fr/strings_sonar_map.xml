@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings of the map and history screens. -->
+<resources>
+    <string name="map_style_light">Clair</string>
+    <string name="map_style_dark">Sombre</string>
+    <string name="map_style_terrain">Relief</string>
+    <plurals name="map_cluster_cd">
+        <item quantity="one">%1$d photo dans cette zone. Touchez pour zoomer.</item>
+        <item quantity="other">%1$d photos dans cette zone. Touchez pour zoomer.</item>
+    </plurals>
+    <string name="map_pin_cd">Photo, santé %1$d. Touchez pour le détail.</string>
+    <string name="map_pin_open_detail">Ouvrir l’analyse</string>
+    <string name="map_pin_fix_location">Corriger la position</string>
+    <string name="map_offline_title">Pas de connexion</string>
+    <string name="map_offline_message">Le fond de carte a besoin d’internet pour se télécharger. Vos détections restent ici et s’affichent dès son chargement.</string>
+    <string name="map_load_failed_title">La carte n’a pas pu se charger</string>
+    <string name="map_load_failed_message">Le fond de carte n’a pas été téléchargé. Vérifiez votre connexion et réessayez.</string>
+    <string name="map_empty_action_scan">Scanner des déchets</string>
+    <plurals name="map_subtitle_sessions">
+        <item quantity="one">%1$d analyse</item>
+        <item quantity="other">%1$d analyses</item>
+    </plurals>
+    <plurals name="map_subtitle_zones">
+        <item quantity="one">%1$d zone</item>
+        <item quantity="other">%1$d zones</item>
+    </plurals>
+    <string name="history_select">Sélectionner</string>
+    <string name="history_group_today">Aujourd’hui</string>
+    <string name="history_group_yesterday">Hier</string>
+    <string name="history_no_results_title">Aucun résultat</string>
+    <string name="history_no_results_message">Essayez une autre recherche ou retirez les filtres.</string>
+    <string name="history_clear_filters">Retirer les filtres</string>
+    <plurals name="history_video_unique_debris">
+        <item quantity="one">%1$d déchet unique</item>
+        <item quantity="other">%1$d déchets uniques</item>
+    </plurals>
+    <string name="history_video_summary">Vidéo de %1$d s, %2$d images</string>
+    <string name="history_risk_low">Faible</string>
+    <string name="history_risk_moderate">Modéré</string>
+    <string name="history_risk_high">Élevé</string>
+    <string name="history_risk_critical">Critique</string>
+    <string name="history_quality_good">Bonne</string>
+    <string name="history_quality_fair">Moyenne</string>
+    <string name="history_quality_poor">Faible</string>
+    <string name="history_state_selected">Sélectionné</string>
+    <string name="history_state_not_selected">Non sélectionné</string>
+</resources>

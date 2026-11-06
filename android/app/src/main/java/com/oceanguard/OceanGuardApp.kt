@@ -2,6 +2,8 @@ package com.oceanguard.ai
 
 import android.app.Application
 import android.util.Log
+import com.oceanguard.ai.data.AnalysisMode
+import com.oceanguard.ai.data.AnalysisModels
 import com.oceanguard.ai.data.DetectionRepository
 import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.data.GeneratedReport
@@ -874,6 +876,93 @@ class OceanGuardApp : Application() {
     /** Expose best available tier for UI display. */
     fun getBestAvailableTier(): TextModelTier = bestAvailableTier()
 
+    /** Model that wrote a report: the tier of the attempt that worked and the file it loaded. */
+    private fun reportModelName(tier: TextModelTier, engine: VlmTextEngine): String =
+        AnalysisModels.forReportTier(tier, (engine as? LiteRTTextEngine)?.loadedModelPath)
+
+    // -----------------------------------------------------------------------
+    // Analysis modes
+    // -----------------------------------------------------------------------
+
+    /** What analysing a photo would use right now: the truth, not the setting. */
+    fun activeDetectorModelName(): String = detectionOrchestrator.detector.modelName
+
+    /** Whether the file of [tier] and [variant] is on the device. */
+    fun isModelDownloaded(tier: TextModelTier, variant: TextModelVariant): Boolean =
+        vlmModelManager.isModelAvailable(tier, variant)
+
+    /** True while a photo, batch or video is being analysed or a report is being written. */
+    fun isModelBusy(): Boolean {
+        val inference = inferenceServiceState.value
+        val analysing = inference is InferenceServiceState.SingleRunning ||
+            inference is InferenceServiceState.BatchRunning ||
+            inference is InferenceServiceState.VideoRunning
+        val report = reportGenerationState.value
+        val writing = !(report is ReportGenerationState.Idle ||
+            report is ReportGenerationState.Complete || report is ReportGenerationState.Error)
+        return analysing || writing
+    }
+
+    /**
+     * Deletes an installed model. Engines that have the file loaded are released first, so the
+     * app never claims a model whose file is gone, and the detector falls back to what is left.
+     * Returns false, deleting nothing, while [isModelBusy].
+     */
+    fun deleteModelFile(tier: TextModelTier, variant: TextModelVariant): Boolean {
+        if (isModelBusy()) return false
+        val path = vlmModelManager.getTextModelPath(tier, variant)
+        var released = false
+        if (tier.provider.usesLiteRT && sharedLiteRTEngine.loadedModelPath == path) {
+            sharedLiteRTEngine.release()
+            released = true
+            modelLoadingState.update { it.copy(gemma4Vision = ModelStatus.NotLoaded) }
+        } else if (!tier.provider.usesLiteRT && _vlmTextEngineTier == tier) {
+            _vlmTextEngine?.release()
+            released = true
+        }
+        if (released && _vlmTextEngineTier == tier) {
+            modelLoadingState.update { it.copy(qwenText = ModelStatus.Standby, activeTierName = "") }
+        }
+        vlmModelManager.deleteModel(tier, variant)
+        applyDetectorMode()
+        return true
+    }
+
+    /**
+     * Single entry point to change mode from the sheet, Models & AI or onboarding. Saves the five
+     * settings at once and leaves the orchestrator and the shared Gemma engine coherent with them.
+     */
+    suspend fun applyAnalysisMode(mode: AnalysisMode) {
+        settingsRepository.setAnalysisMode(mode)
+        releaseGemmaIfVariantChanged()
+        applyDetectorMode()
+        prewarmGemma4DetectorIfAvailable()
+    }
+
+    /**
+     * The detector skips loading when the shared engine is ready, so going from base to fine-tuned
+     * would keep analysing with the old file while the app says otherwise.
+     */
+    private fun releaseGemmaIfVariantChanged() {
+        val loaded = sharedLiteRTEngine.loadedModelPath ?: return
+        val tier = TextModelTier.GEMMA4_E2B
+        val variant = tier.variantFallback(activeVariant())
+        if (!vlmModelManager.isModelAvailable(tier, variant)) return
+        if (loaded == vlmModelManager.getTextModelPath(tier, variant)) return
+        val state = reportGenerationState.value
+        val idle = state is ReportGenerationState.Idle || state is ReportGenerationState.Complete ||
+            state is ReportGenerationState.Error
+        if (!idle) return
+        val servesReports = _vlmTextEngine === sharedLiteRTEngine
+        sharedLiteRTEngine.release()
+        modelLoadingState.update {
+            it.copy(
+                gemma4Vision = ModelStatus.NotLoaded,
+                qwenText = if (servesReports) ModelStatus.Standby else it.qwenText,
+            )
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Public API — launch report generation
     // -----------------------------------------------------------------------
@@ -956,6 +1045,7 @@ class OceanGuardApp : Application() {
                         usedAi       = true,
                         audience     = audience.name.lowercase(),
                         sessionIds   = sessionIdsCsv,
+                        modelName    = reportModelName(tier, engine),
                     )
                     val id = database.generatedReportDao().insert(report)
                     validateAndPersist(id, reportText, sessions, language)
@@ -1053,6 +1143,7 @@ class OceanGuardApp : Application() {
                         dateRangeEndMs   = input.dateRangeEndMs,
                         audience         = audience.name.lowercase(),
                         sessionIds       = zoneSessionIds,
+                        modelName        = reportModelName(tier, engine),
                     )
                     val id = database.generatedReportDao().insert(report)
                     validateAndPersist(id, reportText, input.sessions, language)

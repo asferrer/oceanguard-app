@@ -1,0 +1,124 @@
+package com.oceanguard.ai.ui.screens.map
+
+import com.oceanguard.ai.data.ZoneCluster
+
+/** Something drawn over the map at a real coordinate. */
+sealed interface MapMarker {
+    /** Stable identity across camera moves, so a marker keeps its state while the map pans. */
+    val key: String
+    val latitude: Double
+    val longitude: Double
+}
+
+/** A zone that has not been opened yet: shows how many photos it holds. */
+data class ClusterMarker(
+    val zoneIndex: Int,
+    override val latitude: Double,
+    override val longitude: Double,
+    val sessionCount: Int,
+    val healthScore: Int,
+) : MapMarker {
+    override val key: String get() = "zone-$zoneIndex"
+}
+
+/** One photo of an opened zone, at the exact coordinate where it was taken. */
+data class PinMarker(
+    val sessionId: Long,
+    val zoneIndex: Int,
+    override val latitude: Double,
+    override val longitude: Double,
+    val imageUri: String,
+    val healthScore: Int,
+) : MapMarker {
+    override val key: String get() = "session-$sessionId"
+}
+
+/** "38.12345, -0.50000": signed decimals with a point, so they can be pasted into any map app. */
+fun formatCoordinates(latitude: Double, longitude: Double): String =
+    java.lang.String.format(java.util.Locale.ROOT, "%.5f, %.5f", latitude, longitude)
+
+/** Camera that shows every zone at once. */
+data class FitTarget(val latitude: Double, val longitude: Double, val zoom: Double)
+
+/**
+ * Decides what the map draws at each zoom: zones collapse into numbered clusters when seen from
+ * far away and open into one photo pin per session when the camera is close.
+ */
+object MapMarkerPlanner {
+
+    /** From this zoom on, zones are shown as photo pins instead of clusters. */
+    const val EXPAND_ZOOM = 13.0
+
+    /** Zoom the camera flies to when a cluster is tapped: close enough to open the zone. */
+    const val FLY_ZOOM = 15.0
+
+    /** Most markers composed at once; the rest are off screen or too crowded to tell apart. */
+    const val MAX_MARKERS = 120
+
+    private const val CLUSTER_MIN_DP = 48
+    private const val CLUSTER_STEP_DP = 8
+    private const val CLUSTER_MAX_DP = 72
+    private const val SINGLE_ZONE_ZOOM = 14.0
+
+    fun isExpanded(zoom: Double): Boolean = zoom >= EXPAND_ZOOM
+
+    fun plan(zones: List<ZoneCluster>, expanded: Boolean): List<MapMarker> =
+        if (expanded) pins(zones) else clusters(zones)
+
+    private fun clusters(zones: List<ZoneCluster>): List<MapMarker> =
+        zones.mapIndexed { index, zone ->
+            ClusterMarker(
+                zoneIndex = index,
+                latitude = zone.centroidLat,
+                longitude = zone.centroidLon,
+                sessionCount = zone.sessions.size,
+                healthScore = zone.aggregateHealthScore,
+            )
+        }
+
+    private fun pins(zones: List<ZoneCluster>): List<MapMarker> =
+        zones.flatMapIndexed { index, zone ->
+            zone.sessions.mapNotNull { session ->
+                val location = session.location ?: return@mapNotNull null
+                PinMarker(
+                    sessionId = session.id,
+                    zoneIndex = index,
+                    latitude = location.latitude,
+                    longitude = location.longitude,
+                    imageUri = session.thumbnailUri ?: session.imageUri,
+                    healthScore = session.healthScore,
+                )
+            }
+        }
+
+    /** Grows one step per digit of the count, so "15" and "150" are told apart at a glance. */
+    fun clusterDiameterDp(count: Int): Int {
+        val digits = count.coerceAtLeast(1).toString().length
+        return (CLUSTER_MIN_DP + CLUSTER_STEP_DP * (digits - 1)).coerceAtMost(CLUSTER_MAX_DP)
+    }
+
+    /** True when a marker centred at ([xDp], [yDp]) can be seen in a [widthDp] by [heightDp] map. */
+    fun isOnScreen(xDp: Float, yDp: Float, widthDp: Float, heightDp: Float, marginDp: Float): Boolean =
+        xDp in -marginDp..(widthDp + marginDp) && yDp in -marginDp..(heightDp + marginDp)
+
+    /** Centre and zoom that frame every zone; null when there is nothing to frame. */
+    fun fitTarget(zones: List<ZoneCluster>): FitTarget? {
+        if (zones.isEmpty()) return null
+        val lats = zones.map { it.centroidLat }
+        val lons = zones.map { it.centroidLon }
+        val zoom = if (zones.size == 1) {
+            SINGLE_ZONE_ZOOM
+        } else {
+            zoomForSpan(maxOf(lats.max() - lats.min(), lons.max() - lons.min()))
+        }
+        return FitTarget(lats.average(), lons.average(), zoom)
+    }
+
+    private fun zoomForSpan(spanDegrees: Double): Double = when {
+        spanDegrees < 0.01 -> 14.0
+        spanDegrees < 0.1 -> 12.0
+        spanDegrees < 1.0 -> 9.0
+        spanDegrees < 10.0 -> 6.0
+        else -> 3.0
+    }
+}

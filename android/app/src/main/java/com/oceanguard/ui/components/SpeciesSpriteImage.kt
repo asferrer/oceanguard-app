@@ -3,10 +3,13 @@ package com.oceanguard.ai.ui.components
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -23,10 +26,9 @@ import java.io.File
  * Falls back to the [R.drawable.dex_species_unknown] placeholder drawable
  * when [spritePath] is null or the file does not exist on disk.
  *
- * NOTE (integration TODO): Add `res/drawable/dex_species_unknown.png`
- * (or equivalent vector drawable). The resource is referenced here but
- * does not exist yet — a compile-time error will surface until the
- * drawable is added by the design/integration step.
+ * Species artwork is not bundled yet, so every species shows the neutral placeholder. With
+ * [silhouette] the image is painted as a flat shape of [silhouetteColor] instead (an entry not
+ * discovered yet).
  *
  * @param spritePath  Relative path as stored in SpeciesCatalogEntry.spritePath.
  *                    May be null for uncatalogued species.
@@ -38,6 +40,8 @@ fun SpeciesSpriteImage(
     spritePath: String?,
     modifier: Modifier = Modifier,
     size: Dp = 64.dp,
+    silhouette: Boolean = false,
+    silhouetteColor: Color = Color.Unspecified,
 ) {
     val context = LocalContext.current
     val spriteFile = spritePath?.let { path ->
@@ -51,7 +55,7 @@ fun SpeciesSpriteImage(
     } else {
         // File absent or spritePath null — fall back to bundled drawable.
         ImageRequest.Builder(context)
-            .data(R.drawable.dex_species_unknown) // TODO(integration): add drawable
+            .data(R.drawable.dex_species_unknown)
             .build()
     }
 
@@ -59,14 +63,14 @@ fun SpeciesSpriteImage(
         model = model,
         contentDescription = null,
         contentScale = ContentScale.Fit,
-        placeholder = painterResource(R.drawable.dex_species_unknown), // TODO(integration): add drawable
-        error = painterResource(R.drawable.dex_species_unknown),       // TODO(integration): add drawable
+        placeholder = painterResource(R.drawable.dex_species_unknown),
+        error = painterResource(R.drawable.dex_species_unknown),
+        colorFilter = if (silhouette && silhouetteColor.isSpecified) {
+            ColorFilter.tint(silhouetteColor, BlendMode.SrcIn)
+        } else {
+            null
+        },
         modifier = modifier.size(size),
     )
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0A1929)
-@Composable
-private fun SpeciesSpriteImagePreview() {
-    SpeciesSpriteImage(spritePath = null, size = 64.dp)
-}

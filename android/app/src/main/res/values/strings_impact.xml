@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Environmental impact of each debris type: persistence, main risk and yearly volume -->
+    <string name="impact_degradation_450">450+ years</string>
+    <string name="impact_degradation_600">600+ years</string>
+    <string name="impact_degradation_200">200+ years</string>
+    <string name="impact_degradation_100">100+ years</string>
+    <string name="impact_degradation_2000">2000+ years</string>
+    <string name="impact_degradation_200_500">200-500 years</string>
+    <string name="impact_degradation_1_200">1-200+ years</string>
+    <string name="impact_degradation_million">1,000,000+ years</string>
+    <string name="impact_degradation_variable">Variable</string>
+    <string name="impact_risk_ingestion_fragmentation">Ingestion risk, microplastic fragmentation</string>
+    <string name="impact_risk_sharp_toxic">Sharp edges, toxic chemical leaching</string>
+    <string name="impact_risk_ghost_fishing">Ghost fishing, entanglement of marine life</string>
+    <string name="impact_risk_ingestion_release">Ingestion risk, microplastic release</string>
+    <string name="impact_risk_entanglement_small">Entanglement of small marine organisms</string>
+    <string name="impact_risk_sharp_habitat">Sharp edges, chemical leaching, habitat disruption</string>
+    <string name="impact_risk_plastic_fragmentation">Microplastic fragmentation, ingestion by marine fauna</string>
+    <string name="impact_risk_toxic_chemicals">Toxic chemicals (zinc, cadmium, heavy metals)</string>
+    <string name="impact_risk_microfiber">Microfiber release, entanglement</string>
+    <string name="impact_risk_physical_injury">Physical injury to marine life</string>
+    <string name="impact_risk_unknown">Unknown environmental impact</string>
+    <string name="impact_volume_1m">~1M tonnes/year</string>
+    <string name="impact_volume_500k">~500K tonnes/year</string>
+    <string name="impact_volume_640k">~640K tonnes/year</string>
+    <string name="impact_volume_8m">~8M tonnes/year</string>
+    <string name="overlay_no_image">No image available</string>
+    <string name="overlay_image_cd">Captured image with detected debris</string>
+</resources>

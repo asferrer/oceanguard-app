@@ -24,6 +24,7 @@ import com.oceanguard.ai.inference.DetectionResult
 import com.oceanguard.ai.inference.VideoProcessor
 import com.oceanguard.ai.service.InferenceService
 import com.oceanguard.ai.service.InferenceServiceState
+import com.oceanguard.ai.data.AnalysisModels
 import com.oceanguard.ai.utils.BitmapAnnotator
 import com.oceanguard.ai.utils.ExifLocationExtractor
 import com.oceanguard.ai.utils.ImagePersistence
@@ -515,6 +516,7 @@ class MainViewModel(
                             context = appContext,
                             imageUri = Uri.parse(imageUri),
                             detections = result.rtdetrDetections,
+                            showConfidence = AnalysisModels.hasModelConfidence(result.modelName),
                         )
                     } catch (e: Exception) {
                         null // Non-fatal: save session without annotated image
@@ -535,6 +537,7 @@ class MainViewModel(
                     location = location,
                     imageQuality = result.vlmAnalysis.imageQuality,
                     processingTimeMs = result.processingTimeMs,
+                    modelName = result.modelName,
                 )
                 repository.saveSession(session)
             } catch (exception: Exception) {

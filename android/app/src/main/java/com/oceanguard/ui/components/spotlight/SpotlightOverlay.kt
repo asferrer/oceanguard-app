@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,8 +46,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.oceanguard.ai.R
-import com.oceanguard.ai.ui.theme.OceanGreen
+import com.oceanguard.ai.ui.motion.LocalReducedMotion
 import kotlinx.coroutines.delay
+
+private const val SCRIM_ALPHA = 0.75f
+private const val RING_ALPHA = 0.6f
 
 /**
  * Full-screen dimming overlay that highlights a target composable and shows
@@ -83,6 +85,7 @@ fun SpotlightOverlay(
     if (!controller.isActive) return
 
     val step = controller.currentStep ?: return
+    val reducedMotion = LocalReducedMotion.current
     val density = LocalDensity.current
     val gapPx = with(density) { 12.dp.toPx() }
     val cutoutPaddingPx = with(density) { 8.dp.toPx() }
@@ -136,9 +139,9 @@ fun SpotlightOverlay(
         // Skip negligible adjustments (< 40 px avoids micro-scroll jitter).
         if (kotlin.math.abs(delta) < 40f) return@LaunchedEffect
 
-        scrollState.animateScrollTo(
-            (scrollState.value + delta.toInt()).coerceIn(0, scrollState.maxValue),
-        )
+        val destination = (scrollState.value + delta.toInt()).coerceIn(0, scrollState.maxValue)
+        // "Remove animations": jump instead of gliding to the target.
+        if (reducedMotion) scrollState.scrollTo(destination) else scrollState.animateScrollTo(destination)
     }
 
     Box(
@@ -230,12 +233,14 @@ private fun SpotlightCanvas(
     step: SpotlightStep,
     bounds: Rect?,
 ) {
+    val scrim = MaterialTheme.colorScheme.scrim.copy(alpha = SCRIM_ALPHA)
+    val ring = MaterialTheme.colorScheme.primary.copy(alpha = RING_ALPHA)
     Canvas(
         modifier = Modifier
             .fillMaxSize()
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen },
     ) {
-        drawRect(color = Color.Black.copy(alpha = 0.75f))
+        drawRect(color = scrim)
 
         if (bounds == null) return@Canvas
 
@@ -257,7 +262,7 @@ private fun SpotlightCanvas(
                     blendMode = BlendMode.Clear,
                 )
                 drawRoundRect(
-                    color = OceanGreen.copy(alpha = 0.6f),
+                    color = ring,
                     topLeft = Offset(cutoutLeft, cutoutTop),
                     size = Size(cutoutWidth, cutoutHeight),
                     cornerRadius = CornerRadius(radius),
@@ -273,7 +278,7 @@ private fun SpotlightCanvas(
                     blendMode = BlendMode.Clear,
                 )
                 drawCircle(
-                    color = OceanGreen.copy(alpha = 0.6f),
+                    color = ring,
                     radius = radius,
                     center = bounds.center,
                     style = Stroke(width = 2.dp.toPx()),
@@ -353,7 +358,6 @@ private fun SpotlightTooltip(
                         controller.next()
                         if (!controller.isActive) onComplete()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = OceanGreen),
                 ) {
                     Text(
                         text = if (isLastStep) {

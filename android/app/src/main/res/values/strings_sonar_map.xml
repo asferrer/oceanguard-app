@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings of the map and history screens. -->
+<resources>
+    <string name="map_style_light">Light</string>
+    <string name="map_style_dark">Dark</string>
+    <string name="map_style_terrain">Terrain</string>
+    <plurals name="map_cluster_cd">
+        <item quantity="one">%1$d photo in this zone. Tap to zoom in.</item>
+        <item quantity="other">%1$d photos in this zone. Tap to zoom in.</item>
+    </plurals>
+    <string name="map_pin_cd">Photo, health %1$d. Tap for details.</string>
+    <string name="map_pin_open_detail">Open analysis</string>
+    <string name="map_pin_fix_location">Correct location</string>
+    <string name="map_offline_title">No connection</string>
+    <string name="map_offline_message">The base map needs internet to download. Your detections stay here and appear as soon as it loads.</string>
+    <string name="map_load_failed_title">The map could not load</string>
+    <string name="map_load_failed_message">The base map did not download. Check your connection and try again.</string>
+    <string name="map_empty_action_scan">Scan debris</string>
+    <plurals name="map_subtitle_sessions">
+        <item quantity="one">%1$d analysis</item>
+        <item quantity="other">%1$d analyses</item>
+    </plurals>
+    <plurals name="map_subtitle_zones">
+        <item quantity="one">%1$d zone</item>
+        <item quantity="other">%1$d zones</item>
+    </plurals>
+    <string name="history_select">Select</string>
+    <string name="history_group_today">Today</string>
+    <string name="history_group_yesterday">Yesterday</string>
+    <string name="history_no_results_title">Nothing matches</string>
+    <string name="history_no_results_message">Try another search or clear the filters.</string>
+    <string name="history_clear_filters">Clear filters</string>
+    <plurals name="history_video_unique_debris">
+        <item quantity="one">%1$d unique debris object</item>
+        <item quantity="other">%1$d unique debris objects</item>
+    </plurals>
+    <string name="history_video_summary">%1$d s video, %2$d frames</string>
+    <string name="history_risk_low">Low</string>
+    <string name="history_risk_moderate">Moderate</string>
+    <string name="history_risk_high">High</string>
+    <string name="history_risk_critical">Critical</string>
+    <string name="history_quality_good">Good</string>
+    <string name="history_quality_fair">Fair</string>
+    <string name="history_quality_poor">Poor</string>
+    <string name="history_state_selected">Selected</string>
+    <string name="history_state_not_selected">Not selected</string>
+</resources>

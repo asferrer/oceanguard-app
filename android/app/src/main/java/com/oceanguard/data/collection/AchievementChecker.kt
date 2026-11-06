@@ -192,7 +192,7 @@ class AchievementChecker(
 
     private suspend fun evaluateMetaAchievement() {
         val unlocked = achievementDao.getUnlockedCount().first()
-        // "all_achievements" itself doesn't count, so 19 others needed
+        // "all_achievements" counts every other achievement, so its target is ACHIEVEMENT_TOTAL - 1
         tryAdvance("all_achievements", unlocked)
     }
 

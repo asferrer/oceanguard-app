@@ -1,7 +1,5 @@
 package com.oceanguard.ai.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,15 +7,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,59 +18,68 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.oceanguard.ai.OceanGuardApp
 import com.oceanguard.ai.R
-import com.oceanguard.ai.data.SessionDatesHelper
-import com.oceanguard.ai.ui.components.DataDotDatePickerDialog
+import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.data.ZoneAggregator
 import com.oceanguard.ai.data.ZoneCluster
 import com.oceanguard.ai.ui.MainViewModel
-import com.oceanguard.ai.ui.components.LottieEmptyState
-import com.oceanguard.ai.ui.components.spotlight.GuidedTourTransitionDialog
-import com.oceanguard.ai.ui.components.spotlight.SpotlightOverlay
+import com.oceanguard.ai.ui.components.DataDotDatePickerDialog
+import com.oceanguard.ai.ui.components.sonar.SonarEmptyState
+import com.oceanguard.ai.ui.components.spotlight.SpotlightController
 import com.oceanguard.ai.ui.components.spotlight.TourDefinitions
 import com.oceanguard.ai.ui.components.spotlight.rememberSpotlightBounds
 import com.oceanguard.ai.ui.components.spotlight.rememberSpotlightController
 import com.oceanguard.ai.ui.components.spotlight.spotlightTarget
+import com.oceanguard.ai.ui.motion.LocalReducedMotion
+import com.oceanguard.ai.ui.navigation.OceanRoutes
+import com.oceanguard.ai.ui.screens.map.MapData
 import com.oceanguard.ai.ui.screens.map.MapFabControls
 import com.oceanguard.ai.ui.screens.map.MapFilterBar
-import com.oceanguard.ai.ui.screens.map.MapFilterState
-import com.oceanguard.ai.ui.screens.map.MapStyles
+import com.oceanguard.ai.ui.screens.map.MapLegend
+import com.oceanguard.ai.ui.screens.map.MapLoadFailed
+import com.oceanguard.ai.ui.screens.map.MapMarkerPlanner
+import com.oceanguard.ai.ui.screens.map.MapMarkersOverlay
+import com.oceanguard.ai.ui.screens.map.MapOfflineBanner
+import com.oceanguard.ai.ui.screens.map.MapPinCard
+import com.oceanguard.ai.ui.screens.map.MapScreenState
+import com.oceanguard.ai.ui.screens.map.MapStyle
+import com.oceanguard.ai.ui.screens.map.MapTourOverlay
 import com.oceanguard.ai.ui.screens.map.OceanGuardMap
+import com.oceanguard.ai.ui.screens.map.ZoneHealthSummary
 import com.oceanguard.ai.ui.screens.map.ZoneMapBottomSheet
-import com.oceanguard.ai.ui.theme.healthScoreColor
-import com.oceanguard.ai.utils.toZoneGeoJson
+import com.oceanguard.ai.ui.screens.map.flyTo
+import com.oceanguard.ai.ui.screens.map.rememberIsOnline
+import com.oceanguard.ai.ui.screens.map.rememberMapCamera
+import com.oceanguard.ai.ui.screens.map.rememberMapData
+import com.oceanguard.ai.ui.screens.map.rememberMapScreenState
 import kotlinx.coroutines.launch
+import org.maplibre.compose.camera.CameraState
 import org.maplibre.spatialk.geojson.Position
+import java.net.URLEncoder
 
-/** Available map styles for cycling via the Layers FAB. */
-private val MAP_STYLE_CYCLE = listOf(
-    MapStyles.POSITRON,
-    MapStyles.DARK,
-    MapStyles.LIBERTY,
-)
+/** A zone counts as the deep-linked one when its centroid is within this many metres. */
+private const val FOCUS_RADIUS_METERS = 1000.0
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Map of every analysis at its real coordinates. Zones start as numbered clusters; tapping one
+ * flies the camera to it and opens it into one photo pin per analysis.
+ */
 @Composable
 fun MapScreen(
     navController: NavController,
@@ -85,423 +87,283 @@ fun MapScreen(
     focusLat: Double? = null,
     focusLon: Double? = null,
 ) {
-    // Collect live data
     val sessions by viewModel.allSessions.collectAsStateWithLifecycle(initialValue = emptyList())
     val darkMode by viewModel.settingsRepository.darkMode.collectAsStateWithLifecycle(initialValue = true)
-
-    val mapContext = LocalContext.current
-    val app = remember(mapContext) { mapContext.applicationContext as OceanGuardApp }
-    val mapScope = rememberCoroutineScope()
+    val state = rememberMapScreenState()
+    val data = rememberMapData(sessions, state.filters)
     val boundsMap = rememberSpotlightBounds()
-    val tourController = rememberSpotlightController(TourDefinitions.MAP)
-    val tourComplete by app.settingsRepository
-        .isTourComplete(TourDefinitions.getScreenId(TourDefinitions.MAP))
-        .collectAsStateWithLifecycle(initialValue = true)
-
-    val guidedTourActive by app.settingsRepository.guidedTourActive
-        .collectAsStateWithLifecycle(initialValue = false)
-    var showTransitionDialog by remember { mutableStateOf(false) }
-
-    LaunchedEffect(tourComplete) {
-        if (!tourComplete) tourController.start()
+    val tour = rememberSpotlightController(TourDefinitions.MAP)
+    val focus = remember(focusLat, focusLon) {
+        if (focusLat != null && focusLon != null) Position(longitude = focusLon, latitude = focusLat) else null
     }
+    FocusZoneEffect(focus, data.zones) { state.selectedZone = it }
 
-    // Sessions with GPS coordinates
-    val locatedSessions = remember(sessions) {
-        sessions.filter { it.location != null }
-    }
-
-    // Map filters
-    var mapFilterState by remember { mutableStateOf(MapFilterState()) }
-    var showDatePicker by remember { mutableStateOf(false) }
-    val datesWithData = remember(sessions) { SessionDatesHelper.datesWithData(sessions) }
-    val detectedTypes = remember(locatedSessions) {
-        locatedSessions.flatMap { s -> s.debrisList.map { it.type } }.distinct().sorted()
-    }
-
-    // Apply filters → cluster → GeoJSON
-    val filteredSessions = remember(locatedSessions, mapFilterState) {
-        mapFilterState.applyTo(locatedSessions)
-    }
-    val zoneClusters = remember(filteredSessions) {
-        ZoneAggregator.cluster(filteredSessions)
-    }
-    val geoJson = remember(zoneClusters) {
-        zoneClusters.toZoneGeoJson()
-    }
-
-    // Map state
-    var showHeatmap by remember { mutableStateOf(false) }
-    var selectedZone by remember { mutableStateOf<ZoneCluster?>(null) }
-    var fitAllTrigger by remember { mutableIntStateOf(0) }
-
-    // Deep-link focus: fly to the hotspot coordinate and open its cluster sheet.
-    val focusPosition = remember(focusLat, focusLon) {
-        if (focusLat != null && focusLon != null) Position(longitude = focusLon, latitude = focusLat)
-        else null
-    }
-    var focusTrigger by remember { mutableIntStateOf(if (focusPosition != null) 1 else 0) }
-    LaunchedEffect(focusPosition, zoneClusters) {
-        val pos = focusPosition ?: return@LaunchedEffect
-        if (zoneClusters.isEmpty()) return@LaunchedEffect
-        val closest = zoneClusters.minByOrNull { zone ->
-            ZoneAggregator.haversineDistance(pos.latitude, pos.longitude, zone.centroidLat, zone.centroidLon)
-        } ?: return@LaunchedEffect
-        val dist = ZoneAggregator.haversineDistance(
-            pos.latitude, pos.longitude,
-            closest.centroidLat, closest.centroidLon,
-        )
-        if (dist < 1000.0) selectedZone = closest
-    }
-
-    // Style: starts from dark mode preference, FAB cycles through all styles
-    val defaultStyle = MapStyles.forDarkMode(darkMode)
-    var styleUrl by remember(darkMode) { mutableStateOf(defaultStyle) }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = stringResource(R.string.map_title),
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                        if (locatedSessions.isNotEmpty()) {
-                            val zoneCount = zoneClusters.size
-                            val subtitle = buildString {
-                                append("${locatedSessions.size} session${if (locatedSessions.size != 1) "s" else ""}")
-                                if (zoneCount > 0) append(" · $zoneCount zone${if (zoneCount != 1) "s" else ""}")
-                            }
-                            Text(
-                                text = subtitle,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.map_cd_go_back),
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                ),
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { paddingValues ->
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-        ) {
-            // Filter bar (only when there are located sessions)
-            if (locatedSessions.isNotEmpty()) {
-                MapFilterBar(
-                    filterState = mapFilterState,
-                    onFilterChanged = { mapFilterState = it },
-                    availableDebrisTypes = detectedTypes,
-                    onDateRangeClick = { showDatePicker = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .spotlightTarget("map_filters", boundsMap),
-                )
-            }
-
-            Box(modifier = Modifier.weight(1f)) {
-                if (locatedSessions.isEmpty()) {
-                    EmptyMapContent(
-                        modifier = Modifier.align(Alignment.Center),
-                        hasAnySessions = sessions.isNotEmpty(),
-                    )
-                } else {
-                    OceanGuardMap(
-                        geoJson = geoJson,
-                        styleUrl = styleUrl,
-                        showHeatmap = showHeatmap,
-                        zoneClusters = zoneClusters,
-                        fitAllTrigger = fitAllTrigger,
-                        onZoneClick = { zoneIndex ->
-                            selectedZone = zoneClusters.getOrNull(zoneIndex)
-                        },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .spotlightTarget("map_view", boundsMap),
-                        focusPosition = focusPosition,
-                        focusTrigger = focusTrigger,
-                    )
-
-                    MapFabControls(
-                        showHeatmap = showHeatmap,
-                        onToggleHeatmap = { showHeatmap = !showHeatmap },
-                        onFitAll = { fitAllTrigger++ },
-                        onToggleStyle = {
-                            val currentIndex = MAP_STYLE_CYCLE.indexOf(styleUrl)
-                            val nextIndex = (currentIndex + 1) % MAP_STYLE_CYCLE.size
-                            styleUrl = MAP_STYLE_CYCLE[nextIndex]
-                        },
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(16.dp),
-                        boundsMap = boundsMap,
-                    )
-
-                    if (zoneClusters.isNotEmpty() && !tourController.isActive) {
-                        ZoneHealthSummary(
-                            clusterCount = zoneClusters.size,
-                            avgScore = zoneClusters.map { it.aggregateHealthScore }.average().toInt(),
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(16.dp)
-                                .spotlightTarget("map_zones", boundsMap),
-                        )
-                    }
-
-                    if (!tourController.isActive) {
-                        MapLegend(
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(16.dp)
-                                .spotlightTarget("map_legend", boundsMap),
-                        )
-                    }
-                }
-            }
-        }
-
-        // Date range picker dialog
-        if (showDatePicker) {
-            DataDotDatePickerDialog(
-                onDismissRequest = { showDatePicker = false },
-                initialStartDateMillis = mapFilterState.dateRangeStartMs,
-                initialEndDateMillis = mapFilterState.dateRangeEndMs,
-                datesWithData = datesWithData,
-                onConfirm = { start, end ->
-                    mapFilterState = mapFilterState.copy(
-                        dateRangeStartMs = start,
-                        dateRangeEndMs = end,
-                    )
-                    showDatePicker = false
-                },
+    Box(Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = { MapTopBar(navController, data) },
+            containerColor = MaterialTheme.colorScheme.background,
+        ) { padding ->
+            MapBody(
+                navController = navController,
+                state = state,
+                data = data,
+                style = state.styleChoice ?: MapStyle.forDarkMode(darkMode),
+                focus = focus,
+                hasAnySessions = sessions.isNotEmpty(),
+                tour = tour,
+                boundsMap = boundsMap,
+                modifier = Modifier.padding(padding),
             )
         }
-
-        // Bottom sheet for selected zone cluster
-        selectedZone?.let { zone ->
-            ZoneMapBottomSheet(
-                zone = zone,
-                onDismiss = { selectedZone = null },
-                onSessionClick = { sessionId ->
-                    selectedZone = null
-                    navController.navigate("session/$sessionId")
-                },
-                onGenerateReport = { lat, lon, name ->
-                    selectedZone = null
-                    val encodedName = java.net.URLEncoder.encode(name, "UTF-8")
-                    navController.navigate("reports?lat=$lat&lon=$lon&name=$encodedName")
-                },
-            )
-        }
+        MapSheets(navController, state)
+        MapTourOverlay(navController, tour, boundsMap)
     }
-
-        SpotlightOverlay(
-            controller = tourController,
-            targetBounds = boundsMap,
-            onComplete = {
-                mapScope.launch {
-                    app.settingsRepository.markTourComplete(
-                        TourDefinitions.getScreenId(TourDefinitions.MAP)
-                    )
-                    if (guidedTourActive) {
-                        showTransitionDialog = true
-                    } else {
-                        app.launchDemoCleanupIfComplete()
-                    }
-                }
-            },
-            isGuidedTour = guidedTourActive,
-            onSkipTutorial = {
-                mapScope.launch { app.settingsRepository.markAllGuidedToursComplete() }
-                app.launchDemoCleanup()
-            },
-        )
-
-        if (showTransitionDialog) {
-            GuidedTourTransitionDialog(
-                screenId = "map",
-                onContinue = {
-                    showTransitionDialog = false
-                    navController.navigate("reports") {
-                        popUpTo("home") { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                onSkipTutorial = {
-                    showTransitionDialog = false
-                    mapScope.launch { app.settingsRepository.markAllGuidedToursComplete() }
-                    app.launchDemoCleanup()
-                },
-            )
-        }
-    } // end Box
 }
 
-/**
- * Compact overlay card showing aggregate zone health for all clusters.
- * Positioned at the top-start of the map so it does not overlap FAB controls.
- */
+/** Deep link: opens the zone nearest to [focus] when it is close enough to be the same place. */
 @Composable
-private fun ZoneHealthSummary(
-    clusterCount: Int,
-    avgScore: Int,
-    modifier: Modifier = Modifier,
-) {
-    val scoreColor = healthScoreColor(avgScore)
+private fun FocusZoneEffect(focus: Position?, zones: List<ZoneCluster>, onZone: (ZoneCluster) -> Unit) {
+    LaunchedEffect(focus, zones) {
+        val target = focus ?: return@LaunchedEffect
+        val closest = zones.minByOrNull { distanceTo(target, it) } ?: return@LaunchedEffect
+        if (distanceTo(target, closest) < FOCUS_RADIUS_METERS) onZone(closest)
+    }
+}
 
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f),
-        shadowElevation = 4.dp,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .background(scoreColor, CircleShape),
-            )
+private fun distanceTo(p: Position, zone: ZoneCluster): Double =
+    ZoneAggregator.haversineDistance(p.latitude, p.longitude, zone.centroidLat, zone.centroidLon)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MapTopBar(navController: NavController, data: MapData) {
+    TopAppBar(
+        title = {
             Column {
-                Text(
-                    text = if (clusterCount != 1) stringResource(R.string.map_zone_count_plural, clusterCount)
-                           else stringResource(R.string.map_zone_count_singular, clusterCount),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = stringResource(R.string.map_zone_avg_health, avgScore),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = scoreColor,
-                )
+                Text(stringResource(R.string.map_title), style = MaterialTheme.typography.titleLarge)
+                if (data.located.isNotEmpty()) MapSubtitle(data.located.size, data.zones.size)
             }
-        }
-    }
-}
-
-/**
- * Collapsible legend showing health score color scale.
- */
-@Composable
-private fun MapLegend(
-    modifier: Modifier = Modifier,
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f),
-        shadowElevation = 4.dp,
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-        ) {
-            Row(
-                modifier = Modifier
-                    .clickable { expanded = !expanded },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Icon(
-                    imageVector = if (expanded) Icons.Filled.ExpandMore else Icons.Filled.ChevronRight,
-                    contentDescription = if (expanded) {
-                        stringResource(R.string.map_legend_cd_collapse)
-                    } else {
-                        stringResource(R.string.map_legend_cd_expand)
-                    },
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = stringResource(R.string.map_legend_title),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+        },
+        navigationIcon = {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.map_cd_go_back))
             }
-
-            if (expanded) {
-                Spacer(modifier = Modifier.height(8.dp))
-                LegendRow(color = Color(0xFF4CAF50), label = stringResource(R.string.map_legend_excellent))
-                LegendRow(color = Color(0xFF8BC34A), label = stringResource(R.string.map_legend_good))
-                LegendRow(color = Color(0xFFFFC107), label = stringResource(R.string.map_legend_moderate))
-                LegendRow(color = Color(0xFFFF9800), label = stringResource(R.string.map_legend_poor))
-                LegendRow(color = Color(0xFFF44336), label = stringResource(R.string.map_legend_critical))
-            }
-        }
-    }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+        ),
+    )
 }
 
 @Composable
-private fun LegendRow(
-    color: Color,
-    label: String,
-) {
-    Row(
-        modifier = Modifier.padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(12.dp)
-                .background(color = color, shape = CircleShape),
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+private fun MapSubtitle(sessionCount: Int, zoneCount: Int) {
+    val sessions = pluralStringResource(R.plurals.map_subtitle_sessions, sessionCount, sessionCount)
+    val text = if (zoneCount > 0) {
+        sessions + " · " + pluralStringResource(R.plurals.map_subtitle_zones, zoneCount, zoneCount)
+    } else {
+        sessions
     }
+    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
-/**
- * Empty state shown when there are no sessions with GPS coordinates.
- */
 @Composable
-private fun EmptyMapContent(
-    modifier: Modifier = Modifier,
+private fun MapBody(
+    navController: NavController,
+    state: MapScreenState,
+    data: MapData,
+    style: MapStyle,
+    focus: Position?,
     hasAnySessions: Boolean,
+    tour: SpotlightController,
+    boundsMap: MutableMap<String, Rect>,
+    modifier: Modifier = Modifier,
 ) {
-    val title = if (hasAnySessions) {
-        stringResource(R.string.map_empty_no_location_title)
-    } else {
-        stringResource(R.string.map_empty_no_sessions_title)
+    val camera = rememberMapCamera()
+    Column(modifier.fillMaxSize()) {
+        MapFilterBar(
+            filterState = state.filters,
+            onFilterChanged = { state.filters = it },
+            availableDebrisTypes = data.debrisTypes,
+            onDateRangeClick = { state.showDatePicker = true },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .spotlightTarget("map_filters", boundsMap),
+        )
+        Box(Modifier.weight(1f)) {
+            MapStage(state, data, style, focus, camera, boundsMap)
+            if (data.located.isEmpty()) {
+                EmptyMapCard(navController, hasAnySessions, Modifier.align(Alignment.Center))
+            } else {
+                MapHud(navController, state, data, style, tour, boundsMap)
+            }
+            MapConnectionStatus(state)
+        }
     }
-    val message = if (hasAnySessions) {
-        stringResource(R.string.map_empty_no_location_message)
-    } else {
-        stringResource(R.string.map_empty_no_sessions_message)
-    }
+    MapDatePicker(state, data)
+}
 
-    LottieEmptyState(
-        title = title,
-        message = message,
-        modifier = modifier.padding(horizontal = 32.dp),
+/** Base map, the zones and photos drawn on it, and the camera that moves them. */
+@Composable
+private fun MapStage(
+    state: MapScreenState,
+    data: MapData,
+    style: MapStyle,
+    focus: Position?,
+    camera: CameraState,
+    boundsMap: MutableMap<String, Rect>,
+) {
+    val scope = rememberCoroutineScope()
+    val reduced = LocalReducedMotion.current
+    val focusTrigger = if (focus != null) 1 else 0
+    key(state.retryKey) {
+        OceanGuardMap(
+            cameraState = camera,
+            geoJson = data.geoJson,
+            styleUrl = style.url,
+            showHeatmap = state.showHeatmap,
+            zoneClusters = data.zones,
+            fitAllTrigger = state.fitAllTrigger,
+            focusPosition = focus,
+            focusTrigger = focusTrigger,
+            onLoadFailed = { state.loadFailed = true },
+            onLoadFinished = { state.loadFailed = false },
+            modifier = Modifier.fillMaxSize().spotlightTarget("map_view", boundsMap),
+        )
+    }
+    if (!state.showHeatmap && !state.loadFailed) {
+        MapMarkersOverlay(
+            cameraState = camera,
+            zones = data.zones,
+            selectedSessionId = state.selectedPinId,
+            onClusterClick = { index ->
+                val zone = data.zones.getOrNull(index) ?: return@MapMarkersOverlay
+                scope.launch {
+                    camera.flyTo(Position(zone.centroidLon, zone.centroidLat), MapMarkerPlanner.FLY_ZOOM, reduced)
+                    state.selectedZone = zone
+                }
+            },
+            onPinClick = { state.selectedPinId = it },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+@Composable
+private fun MapHud(
+    navController: NavController,
+    state: MapScreenState,
+    data: MapData,
+    style: MapStyle,
+    tour: SpotlightController,
+    boundsMap: MutableMap<String, Rect>,
+) {
+    Box(Modifier.fillMaxSize()) {
+        if (data.zones.isNotEmpty() && !tour.isActive) {
+            ZoneHealthSummary(
+                clusterCount = data.zones.size,
+                avgScore = data.avgHealth,
+                modifier = Modifier.align(Alignment.TopStart).padding(16.dp).spotlightTarget("map_zones", boundsMap),
+            )
+        }
+        Column(
+            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                if (!tour.isActive) {
+                    MapLegend(Modifier.spotlightTarget("map_legend", boundsMap))
+                }
+                Spacer(Modifier.weight(1f))
+                MapFabControls(
+                    showHeatmap = state.showHeatmap,
+                    onToggleHeatmap = { state.showHeatmap = !state.showHeatmap },
+                    onFitAll = { state.fitAllTrigger++ },
+                    style = style,
+                    onStyleSelected = { state.styleChoice = it },
+                    boundsMap = boundsMap,
+                )
+            }
+            SelectedPinCard(navController, state, data)
+        }
+    }
+}
+
+@Composable
+private fun SelectedPinCard(navController: NavController, state: MapScreenState, data: MapData) {
+    val session = data.located.firstOrNull { it.id == state.selectedPinId } ?: return
+    MapPinCard(
+        session = session,
+        onOpenDetail = { navController.navigate("session/${session.id}") },
+        onFixLocation = { navController.navigate("location_picker/${session.id}") },
+        onClose = { state.selectedPinId = null },
+    )
+}
+
+/** Over the blank map: the style failed to load, or there is no connection to download it. */
+@Composable
+private fun MapConnectionStatus(state: MapScreenState) {
+    val online by rememberIsOnline()
+    Box(Modifier.fillMaxSize()) {
+        when {
+            state.loadFailed -> MapLoadFailed(state::retryLoad, Modifier.align(Alignment.Center))
+            !online -> MapOfflineBanner(Modifier.align(Alignment.TopCenter).padding(16.dp))
+        }
+    }
+}
+
+/** No analysis has a position yet: the map stays visible, with the reason and the next step. */
+@Composable
+private fun EmptyMapCard(navController: NavController, hasAnySessions: Boolean, modifier: Modifier) {
+    Surface(
+        modifier = modifier.padding(24.dp),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface,
+    ) {
+        SonarEmptyState(
+            icon = Icons.Filled.Map,
+            title = stringResource(
+                if (hasAnySessions) R.string.map_empty_no_location_title else R.string.map_empty_no_sessions_title,
+            ),
+            message = stringResource(
+                if (hasAnySessions) R.string.map_empty_no_location_message else R.string.map_empty_no_sessions_message,
+            ),
+            actionLabel = if (hasAnySessions) null else stringResource(R.string.map_empty_action_scan),
+            onAction = { navController.navigate("${OceanRoutes.CAMERA}?mode=debris") },
+        )
+    }
+}
+
+@Composable
+private fun MapDatePicker(state: MapScreenState, data: MapData) {
+    if (!state.showDatePicker) return
+    DataDotDatePickerDialog(
+        onDismissRequest = { state.showDatePicker = false },
+        initialStartDateMillis = state.filters.dateRangeStartMs,
+        initialEndDateMillis = state.filters.dateRangeEndMs,
+        datesWithData = data.datesWithData,
+        onConfirm = { start, end ->
+            state.filters = state.filters.copy(dateRangeStartMs = start, dateRangeEndMs = end)
+            state.showDatePicker = false
+        },
+    )
+}
+
+/** Sheet of the opened zone: activity by day, with the way to its analyses and to a report. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MapSheets(navController: NavController, state: MapScreenState) {
+    val zone = state.selectedZone ?: return
+    ZoneMapBottomSheet(
+        zone = zone,
+        onDismiss = { state.selectedZone = null },
+        onSessionClick = { sessionId ->
+            state.selectedZone = null
+            navController.navigate("session/$sessionId")
+        },
+        onGenerateReport = { lat, lon, name ->
+            state.selectedZone = null
+            navController.navigate("reports?lat=$lat&lon=$lon&name=${URLEncoder.encode(name, "UTF-8")}")
+        },
     )
 }

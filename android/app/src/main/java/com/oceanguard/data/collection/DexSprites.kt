@@ -11,9 +11,8 @@ import com.oceanguard.ai.data.DebrisType
  * parent via [DebrisType.canonical] before lookup, so they reuse the parent's
  * sprite (e.g. PLASTIC_BAG -> dex_plastic_debris).
  *
- * Replace the placeholder PNGs in `res/drawable/dex_*.png` with pixel art
- * sprites (recommended: 64x64 or 128x128 px PNG with transparent background).
- * The app renders them with [FilterQuality.None] for crispy Game Boy-style pixels.
+ * The pixel art lives in `res/drawable/dex_*.png` (transparent background) and is drawn with
+ * [androidx.compose.ui.graphics.FilterQuality.None] so the pixels stay crisp.
  */
 object DexSprites {
 

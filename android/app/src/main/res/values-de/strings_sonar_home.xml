@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home strings. -->
+<resources>
+    <string name="home_target_debris">Müll</string>
+    <string name="home_target_species">Arten</string>
+    <string name="home_scan_action">Scannen</string>
+    <string name="home_scan_preparing">Vorbereitung</string>
+    <string name="home_scan_cd_debris">Müll mit der Kamera scannen</string>
+    <string name="home_scan_cd_species">Arten mit der Kamera bestimmen</string>
+    <string name="home_pick_photos">Fotos auswählen</string>
+    <string name="home_status_not_loaded">Noch nicht geladen</string>
+    <string name="home_status_needs_download">Nicht heruntergeladen · ~%1$s GB</string>
+    <string name="home_status_reports_ready">Berichte: Modell bereit</string>
+    <string name="home_status_reports_missing">Berichte: Modell nicht heruntergeladen (%1$s)</string>
+    <string name="home_download_title">Modell herunterladen</string>
+    <string name="home_download_message">Der Modus %1$s braucht einen einmaligen Download von etwa %2$s GB. Am besten über WLAN. Jetzt herunterladen?</string>
+    <string name="home_achievements_button_cd">Errungenschaften: %1$d von %2$d freigeschaltet</string>
+    <string name="welcome_models_title">Was möchten Sie herunterladen?</string>
+    <string name="welcome_models_intro">Die schnelle Erkennung funktioniert sofort: Sie ist bereits in der App. Die anderen Modi beschreiben jedes Objekt genauer, benötigen aber zuerst einen Download.</string>
+    <string name="welcome_models_note">Sie können dies später auf der Startseite oder unter Modelle und KI ändern. Ein Download läuft im Hintergrund weiter.</string>
+    <string name="welcome_option_included">Enthalten, kein Download nötig</string>
+    <string name="welcome_option_download">Download von ~%1$s GB</string>
+    <string name="welcome_option_unavailable">Noch nicht verfügbar</string>
+    <string name="welcome_tour_title">Kurze Tour starten?</string>
+    <string name="welcome_tour_body">Eine kurze geführte Tour zeigt Ihnen die wichtigsten Bildschirme nacheinander. Sie können sie jederzeit in den Einstellungen wiederholen.</string>
+    <string name="welcome_tour_start">Tour starten</string>
+    <string name="welcome_tour_later">Jetzt nicht</string>
+    <string name="welcome_page_cd">Seite %1$d von %2$d</string>
+</resources>

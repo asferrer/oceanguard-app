@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -236,6 +237,43 @@ class VlmModelManager(
     }
 
     // -----------------------------------------------------------------------
+    // Storage: size on disk and deletion
+    // -----------------------------------------------------------------------
+
+    /** Bytes the file of [tier] and [variant] takes on disk; 0 when it is not installed. */
+    fun installedBytes(
+        tier: TextModelTier,
+        variant: TextModelVariant = TextModelVariant.BASE,
+    ): Long {
+        if (!isModelAvailable(tier, variant)) return 0L
+        return File(getTextModelPath(tier, variant)).length()
+    }
+
+    /**
+     * Deletes the file of [tier] and [variant] plus any partial download of it. Returns the bytes
+     * freed. A variant that is not what [isModelAvailable] would load (an unpublished fine-tuned
+     * file resolves to the base one) is left alone: it must never delete another model's file.
+     * The caller releases the engine that may have the file loaded.
+     */
+    fun deleteModel(tier: TextModelTier, variant: TextModelVariant = TextModelVariant.BASE): Long {
+        if (tier.variantFallback(variant) != variant) return 0L
+        val file = File(getTextModelPath(tier, variant))
+        val partial = File(file.parent, "${file.name}.tmp")
+        val freed = (if (file.exists()) file.length() else 0L) + partial.length()
+        partial.delete()
+        file.delete()
+        Log.i(TAG, "Deleted ${file.name}: $freed bytes")
+        return freed
+    }
+
+    /** Names of the files that make up the BioDex species pack. */
+    val speciesFileNames: List<String> get() = SPECIES_ASSETS.map { it.first }
+
+    /** Bytes the species pack takes on disk. */
+    fun speciesPackBytes(): Long =
+        speciesFileNames.sumOf { File(getSpeciesDirectory(), it).let { f -> if (f.exists()) f.length() else 0L } }
+
+    // -----------------------------------------------------------------------
     // Human-readable labels for download dialogs
     // -----------------------------------------------------------------------
 
@@ -286,7 +324,7 @@ class VlmModelManager(
                     if (version.isNotBlank()) settings?.setInstalledFinetunedVersion(version)
                 }
             } catch (e: VlmDownloadException) {
-                _downloadState.value = VlmDownloadState.Error(e.message ?: "Download failed")
+                _downloadState.value = VlmDownloadState.Error(e.message ?: "Download failed", e.kind)
                 throw e
             }
         }
@@ -325,7 +363,7 @@ class VlmModelManager(
                 )
             }
         } catch (e: VlmDownloadException) {
-            _downloadState.value = VlmDownloadState.Error(e.message ?: "Download failed")
+            _downloadState.value = VlmDownloadState.Error(e.message ?: "Download failed", e.kind)
             throw e
         }
     }
@@ -349,7 +387,7 @@ class VlmModelManager(
                 filename      = GEMMA4_MMPROJ_FILENAME,
             )
         } catch (e: VlmDownloadException) {
-            _downloadState.value = VlmDownloadState.Error(e.message ?: "Download failed")
+            _downloadState.value = VlmDownloadState.Error(e.message ?: "Download failed", e.kind)
             throw e
         }
     }
@@ -403,7 +441,7 @@ class VlmModelManager(
             }
             _downloadState.value = VlmDownloadState.Complete
         } catch (e: VlmDownloadException) {
-            _downloadState.value = VlmDownloadState.Error(e.message ?: "Species pack download failed")
+            _downloadState.value = VlmDownloadState.Error(e.message ?: "Species pack download failed", e.kind)
             throw e
         }
     }
@@ -429,11 +467,17 @@ class VlmModelManager(
             val responseCode = connection.responseCode
 
             if (responseCode != HttpURLConnection.HTTP_OK) {
-                throw VlmDownloadException("HTTP $responseCode downloading $filename")
+                throw VlmDownloadException(
+                    "HTTP $responseCode downloading $filename",
+                    kind = DownloadFailure.fromHttpStatus(responseCode),
+                )
             }
 
             if (connection.contentType?.contains("text/html", ignoreCase = true) == true) {
-                throw VlmDownloadException("Server returned HTML for $filename — check URL")
+                throw VlmDownloadException(
+                    "Server returned HTML for $filename — check URL",
+                    kind = DownloadFailureKind.NOT_FOUND,
+                )
             }
 
             val contentLength = connection.contentLengthLong
@@ -484,6 +528,10 @@ class VlmModelManager(
                     )
                 }
             }
+        } catch (e: IOException) {
+            // A dropped connection or a full disk: leave no partial file behind and say why.
+            temp.delete()
+            throw VlmDownloadException(e.message ?: "I/O error", e, DownloadFailure.fromIo(e))
         } finally {
             connection.disconnect()
         }
@@ -496,7 +544,10 @@ class VlmModelManager(
 
         if (temp.length() < minValidBytes) {
             temp.delete()
-            throw VlmDownloadException("Downloaded $filename is too small (${temp.length()} bytes)")
+            throw VlmDownloadException(
+                "Downloaded $filename is too small (${temp.length()} bytes)",
+                kind = DownloadFailureKind.INCOMPLETE,
+            )
         }
 
         _downloadState.value = VlmDownloadState.Installing
@@ -546,7 +597,15 @@ sealed class VlmDownloadState {
     ) : VlmDownloadState()
     data object Installing : VlmDownloadState()
     data object Complete : VlmDownloadState()
-    data class Error(val message: String) : VlmDownloadState()
+    /** [message] is for logs; the UI explains the failure from [kind]. */
+    data class Error(
+        val message: String,
+        val kind: DownloadFailureKind = DownloadFailureKind.UNKNOWN,
+    ) : VlmDownloadState()
 }
 
-class VlmDownloadException(message: String, cause: Throwable? = null) : Exception(message, cause)
+class VlmDownloadException(
+    message: String,
+    cause: Throwable? = null,
+    val kind: DownloadFailureKind = DownloadFailureKind.UNKNOWN,
+) : Exception(message, cause)

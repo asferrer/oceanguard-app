@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Results strings. -->
+<resources>
+    <string name="results_add_location">Ort hinzufügen</string>
+    <string name="results_batch_counts">%1$d mit Objekten · %2$d ohne Erkennung</string>
+    <string name="results_batch_failed">%1$d fehlgeschlagen</string>
+    <string name="results_batch_per_photo">%1$s s pro Foto</string>
+    <string name="results_error_message">Etwas ist schiefgelaufen, der Vorgang konnte nicht abgeschlossen werden. Versuche es erneut.</string>
+    <string name="results_export">Exportieren</string>
+    <string name="results_export_csv">CSV</string>
+    <string name="results_export_csv_desc">Eine Zeile pro erkanntem Objekt</string>
+    <string name="results_export_error">Die Datei konnte nicht erstellt werden. Prüfe den Speicherplatz.</string>
+    <string name="results_export_geojson">GeoJSON</string>
+    <string name="results_export_geojson_desc">Ein Punkt pro Foto mit Ort</string>
+    <string name="results_export_markdown">Markdown</string>
+    <string name="results_export_markdown_desc">Der Text des Berichts</string>
+    <string name="results_export_no_location">Keines dieser Fotos hat einen Ort</string>
+    <string name="results_export_no_photos">Dieser Bericht hat keine Fotos zum Exportieren</string>
+    <string name="results_export_pdf">PDF</string>
+    <string name="results_export_pdf_desc">Bericht mit Bildern</string>
+    <string name="results_figure_health">Mittlere Gesundheit</string>
+    <string name="results_figure_objects">Objekte</string>
+    <string name="results_figure_photos">Fotos</string>
+    <string name="results_model_line">Modell: %1$s</string>
+    <string name="results_model_unrecorded">Modell nicht erfasst</string>
+    <string name="results_no_detections_message">In diesem Foto wurde kein Objekt gefunden, daher gibt es keinen Gesundheitswert.</string>
+    <string name="results_no_detections_title">Keine Erkennungen</string>
+    <string name="results_period_30">30 Tage</string>
+    <string name="results_period_7">7 Tage</string>
+    <string name="results_period_all">Alle</string>
+    <string name="results_period_custom">Datum wählen…</string>
+    <string name="results_repeated_warning">%1$d Objekte vom Typ „%2$s“ in einem Foto. Es kann dasselbe Objekt mehrfach gezählt sein.</string>
+    <string name="results_report_auto_start">Nach dem Download startet der Bericht von selbst.</string>
+    <string name="results_report_generate_download">Herunterladen und erstellen</string>
+    <string name="results_report_model_downloading">Modell wird heruntergeladen</string>
+    <string name="results_report_model_downloading_named">%1$s wird heruntergeladen…</string>
+    <string name="results_report_model_missing">%1$s ist nicht installiert (%2$s)</string>
+    <string name="results_report_model_ready">%1$s ist bereit</string>
+    <string name="results_report_no_gps">Diese Fotos haben keinen Ort, daher lassen sich keine Zonen bilden. Füge einem Foto einen Ort hinzu, um eine Zone zu wählen.</string>
+    <string name="results_report_steps_title">Bericht wird erstellt</string>
+    <string name="results_report_written_by">Verfasst von %1$s</string>
+    <string name="results_session_missing">Diese Analyse wurde gelöscht oder existiert nicht mehr.</string>
+    <string name="results_setup_scope">Was einbezogen wird</string>
+    <string name="results_setup_voice">Sprache und Zielgruppe</string>
+    <string name="results_share_error">Das Foto konnte nicht geteilt werden.</string>
+    <string name="results_share_photo">Foto teilen</string>
+    <string name="results_step_data">Daten abfragen</string>
+    <string name="results_step_model">Modell vorbereiten</string>
+    <string name="results_step_writing">Text verfassen</string>
+    <string name="results_time_line">%1$s s Analysezeit</string>
+</resources>

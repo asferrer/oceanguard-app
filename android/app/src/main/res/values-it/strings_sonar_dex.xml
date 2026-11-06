@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MarineDex, BioDex and achievements. -->
+<resources>
+    <string name="achievement_replay_action">Rivedi l\'animazione di sblocco</string>
+    <string name="achievement_locked">Bloccato</string>
+    <string name="achievements_cd_collapse">Comprimi %1$s</string>
+    <string name="achievements_cd_expand">Espandi %1$s</string>
+    <string name="dex_card_cd_discovered">%1$s, visto %2$d volte</string>
+    <string name="dex_card_cd_locked">%1$s, non ancora scoperto</string>
+    <string name="dex_card_open_label">Apri %1$s</string>
+    <string name="dex_progress_caption">%1$d / %2$d scoperti</string>
+    <string name="dex_debris_bottle">Bottiglia</string>
+    <string name="dex_debris_can">Lattina</string>
+    <string name="dex_debris_fishing_net">Rete da pesca</string>
+    <string name="dex_debris_glove">Guanto</string>
+    <string name="dex_debris_mask">Mascherina</string>
+    <string name="dex_debris_metal_debris">Rifiuto metallico</string>
+    <string name="dex_debris_plastic_debris">Rifiuto di plastica</string>
+    <string name="dex_debris_tire">Pneumatico</string>
+    <string name="dex_debris_fabric_debris">Rifiuto tessile</string>
+    <string name="dex_debris_glass_debris">Rifiuto di vetro</string>
+    <string name="dex_debris_other">Altro</string>
+    <string name="dex_map_empty_title">Nessuna posizione</string>
+    <string name="dex_map_empty_no_location">Nessuna delle tue foto di %1$s ha una posizione. Consenti l\'accesso alla posizione prima di scattare per vedere i segnaposto qui.</string>
+    <string name="dex_map_empty_no_captures">Nessun elemento «%1$s» rilevato finora. Analizza una foto che lo contenga per riempire questa mappa.</string>
+    <string name="dex_gallery_empty_title">Ancora nessuna foto</string>
+    <string name="dex_gallery_empty_message">Analizza una foto che contenga «%1$s» e apparirà qui.</string>
+    <string name="dex_gallery_cd_session">Foto analizzata con %1$s</string>
+    <string name="biodex_iucn_badge">IUCN: %1$s</string>
+    <string name="species_batch_more">+%1$d altri</string>
+</resources>

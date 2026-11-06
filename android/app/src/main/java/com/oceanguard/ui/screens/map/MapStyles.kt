@@ -1,5 +1,8 @@
 package com.oceanguard.ai.ui.screens.map
 
+import androidx.annotation.StringRes
+import com.oceanguard.ai.R
+
 /**
  * Map style URLs for MapLibre vector tiles.
  *
@@ -23,4 +26,16 @@ object MapStyles {
 
     /** Returns the appropriate style URL based on dark mode preference. */
     fun forDarkMode(isDark: Boolean): String = if (isDark) DARK else POSITRON
+}
+
+/** The three base maps the user can choose between, named as they appear in the layers menu. */
+enum class MapStyle(val url: String, @StringRes val labelRes: Int) {
+    LIGHT(MapStyles.POSITRON, R.string.map_style_light),
+    DARK(MapStyles.DARK, R.string.map_style_dark),
+    TERRAIN(MapStyles.LIBERTY, R.string.map_style_terrain);
+
+    companion object {
+        /** Style the map opens with, before the user picks one. */
+        fun forDarkMode(isDark: Boolean): MapStyle = if (isDark) DARK else LIGHT
+    }
 }

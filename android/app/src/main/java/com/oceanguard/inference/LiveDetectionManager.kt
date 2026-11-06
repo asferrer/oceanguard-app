@@ -3,7 +3,9 @@ package com.oceanguard.ai.inference
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.SystemClock
 import android.util.Log
+import com.oceanguard.ai.data.AnalysisModels
 import com.oceanguard.ai.data.BoundingBox
 import com.oceanguard.ai.data.Debris
 import com.oceanguard.ai.data.DebrisDetection
@@ -32,8 +34,7 @@ import java.util.Locale
  * Key design choices:
  * - Single inference at a time via Mutex (prevents overlap)
  * - Frame dropping: if inference is in progress, new frames are discarded
- * - Uses RTDETRInference.detectPreResized() to skip redundant resize
- * - FPS calculated over a rolling 1-second window
+ * - Cadence measured between completed passes ([LiveCadenceMeter])
  * - Auto-saves frames with detections to history (throttled)
  */
 class LiveDetectionManager(
@@ -46,6 +47,15 @@ class LiveDetectionManager(
     companion object {
         private const val TAG = "LiveDetectionManager"
         private const val SAVE_INTERVAL_MS = 10_000L
+
+        /**
+         * Shared by every instance: the detector's interpreter is also used by single-photo
+         * analysis, is not thread-safe, and a pass cannot be cancelled once it has started.
+         */
+        private val inferenceMutex = Mutex()
+
+        /** Suspends until no pass is running. Call it before analysing a photo with RT-DETRv2. */
+        suspend fun awaitIdle() = inferenceMutex.withLock { }
     }
 
     data class LiveDetectionState(
@@ -54,21 +64,24 @@ class LiveDetectionManager(
         val frameCount: Long = 0,
         val isProcessing: Boolean = false,
         val inputResolution: Int = 480,
-        val fps: Float = 0f,
+        /** Mean time between completed passes; null until two of them have finished. */
+        val cadenceMs: Long? = null,
         val savedCount: Int = 0,
+        /** Size of the frame the boxes refer to; 0 until the first pass has finished. */
+        val frameWidth: Int = 0,
+        val frameHeight: Int = 0,
     )
 
     private val _state = MutableStateFlow(LiveDetectionState())
     val state: StateFlow<LiveDetectionState> = _state.asStateFlow()
 
-    private val inferenceMutex = Mutex()
-
     @Volatile
     private var isActive = false
 
-    // FPS calculation
-    private var lastFpsTimestamp = 0L
-    private var framesSinceLastFps = 0
+    /** True while a pass runs: lets the caller skip converting a frame that would be dropped. */
+    val isBusy: Boolean get() = inferenceMutex.isLocked
+
+    private val cadenceMeter = LiveCadenceMeter()
 
     // Auto-save throttle
     private var lastSaveTimestamp = 0L
@@ -90,51 +103,7 @@ class LiveDetectionManager(
             _state.value = _state.value.copy(isProcessing = true)
 
             try {
-                val startTime = System.currentTimeMillis()
-
-                val targetSize = detector.inputSize
-                // Resize bitmap to detector's fixed input size
-                val resized = if (bitmap.width != targetSize || bitmap.height != targetSize) {
-                    Bitmap.createScaledBitmap(bitmap, targetSize, targetSize, true)
-                } else {
-                    bitmap
-                }
-
-                // Run inference directly (bypasses orchestrator, no VLM)
-                val detections = detector.detect(resized, confidenceThreshold)
-
-                if (resized !== bitmap) {
-                    resized.recycle()
-                }
-
-                val inferenceTime = System.currentTimeMillis() - startTime
-
-                // Auto-save frames with detections (throttled)
-                if (detections.isNotEmpty() && shouldSave()) {
-                    saveFrameToHistory(bitmap, detections, inferenceTime)
-                }
-
-                // FPS calculation (rolling 1-second window)
-                framesSinceLastFps++
-                val now = System.currentTimeMillis()
-                val fps = if (now - lastFpsTimestamp >= 1000L) {
-                    val calculatedFps = framesSinceLastFps * 1000f / (now - lastFpsTimestamp)
-                    lastFpsTimestamp = now
-                    framesSinceLastFps = 0
-                    calculatedFps
-                } else {
-                    _state.value.fps
-                }
-
-                _state.value = LiveDetectionState(
-                    detections = detections,
-                    inferenceTimeMs = inferenceTime,
-                    frameCount = _state.value.frameCount + 1,
-                    isProcessing = false,
-                    inputResolution = targetSize,
-                    fps = fps,
-                    savedCount = savedCount,
-                )
+                runPass(bitmap)
             } catch (e: Exception) {
                 Log.e(TAG, "Frame processing failed", e)
                 _state.value = _state.value.copy(isProcessing = false)
@@ -142,10 +111,43 @@ class LiveDetectionManager(
         }
     }
 
+    /** Runs inference directly (no orchestrator, no VLM) and publishes the result. */
+    private suspend fun runPass(bitmap: Bitmap) {
+        val startTime = System.currentTimeMillis()
+
+        // The model has a fixed input size.
+        val targetSize = detector.inputSize
+        val resized = if (bitmap.width != targetSize || bitmap.height != targetSize) {
+            Bitmap.createScaledBitmap(bitmap, targetSize, targetSize, true)
+        } else {
+            bitmap
+        }
+        val detections = detector.detect(resized, confidenceThreshold)
+        if (resized !== bitmap) {
+            resized.recycle()
+        }
+
+        val inferenceTime = System.currentTimeMillis() - startTime
+        if (detections.isNotEmpty() && shouldSave()) {
+            saveFrameToHistory(bitmap, detections, inferenceTime)
+        }
+
+        _state.value = LiveDetectionState(
+            detections = detections,
+            inferenceTimeMs = inferenceTime,
+            frameCount = _state.value.frameCount + 1,
+            isProcessing = false,
+            inputResolution = targetSize,
+            cadenceMs = cadenceMeter.record(SystemClock.elapsedRealtime()),
+            savedCount = savedCount,
+            frameWidth = bitmap.width,
+            frameHeight = bitmap.height,
+        )
+    }
+
     fun start() {
         isActive = true
-        lastFpsTimestamp = System.currentTimeMillis()
-        framesSinceLastFps = 0
+        cadenceMeter.reset()
         savedCount = 0
         lastSaveTimestamp = 0L
         _state.value = LiveDetectionState()
@@ -175,65 +177,26 @@ class LiveDetectionManager(
 
         withContext(Dispatchers.IO) {
             try {
-                // 1. Save original frame to file
                 val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
                     .format(System.currentTimeMillis())
-                val photoFile = File(
-                    ctx.getExternalFilesDir(null),
-                    "OceanGuard_Live_$timestamp.jpg",
-                )
+                val photoFile = File(ctx.getExternalFilesDir(null), "OceanGuard_Live_$timestamp.jpg")
                 FileOutputStream(photoFile).use { out ->
                     originalBitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
                 }
-                val imageUri = Uri.fromFile(photoFile)
-
-                // 2. Create annotated thumbnail
-                val annotated = BitmapAnnotator.annotate(originalBitmap, detections)
-                val thumbDir = File(ctx.filesDir, "annotated").also { it.mkdirs() }
-                val thumbFile = File(thumbDir, "annotated_live_$timestamp.jpg")
-                FileOutputStream(thumbFile).use { out ->
-                    annotated.compress(Bitmap.CompressFormat.JPEG, 85, out)
-                }
-                annotated.recycle()
-                val thumbnailUri = Uri.fromFile(thumbFile).toString()
-
-                // 3. Convert DetectionResult → Debris
-                val imgW = originalBitmap.width.toFloat()
-                val imgH = originalBitmap.height.toFloat()
-                val debrisList = detections.map { det ->
-                    Debris(
-                        bbox = BoundingBox(
-                            x = det.x1 * imgW,
-                            y = det.y1 * imgH,
-                            width = (det.x2 - det.x1) * imgW,
-                            height = (det.y2 - det.y1) * imgH,
-                        ),
-                        material = classNameToMaterial(det.className),
-                        type = classNameToType(det.className),
-                        confidence = det.confidence,
-                    )
-                }
-
-                // 4. Calculate health score
-                val detection = DebrisDetection(
-                    debrisList, debrisList.size, ImageQuality.FAIR, inferenceTimeMs,
-                )
-                val healthScore = detection.calculateHealthScore()
-
-                // 5. Get GPS location
-                val location = locationProvider?.getLastKnownLocation()
-
-                // 6. Save session
+                val debrisList = detections.map(::toDebris)
                 val session = DetectionSession(
-                    imageUri = imageUri.toString(),
-                    thumbnailUri = thumbnailUri,
+                    imageUri = Uri.fromFile(photoFile).toString(),
+                    thumbnailUri = saveAnnotatedThumbnail(ctx, originalBitmap, detections, timestamp),
                     debrisList = debrisList,
                     totalCount = debrisList.size,
-                    healthScore = healthScore,
-                    location = location,
+                    healthScore = DebrisDetection(
+                        debrisList, debrisList.size, ImageQuality.FAIR, inferenceTimeMs,
+                    ).calculateHealthScore(),
+                    location = locationProvider?.getLastKnownLocation(),
                     imageQuality = ImageQuality.FAIR,
                     processingTimeMs = inferenceTimeMs,
                     tags = "live_detection",
+                    modelName = AnalysisModels.RT_DETR_V2,
                 )
                 repo.saveSession(session, skipAchievements = true)
 
@@ -245,6 +208,30 @@ class LiveDetectionManager(
             }
         }
     }
+
+    private fun saveAnnotatedThumbnail(
+        ctx: Context,
+        frame: Bitmap,
+        detections: List<DetectionResult>,
+        timestamp: String,
+    ): String {
+        val annotated = BitmapAnnotator.annotate(frame, detections)
+        val thumbDir = File(ctx.filesDir, "annotated").also { it.mkdirs() }
+        val thumbFile = File(thumbDir, "annotated_live_$timestamp.jpg")
+        FileOutputStream(thumbFile).use { out ->
+            annotated.compress(Bitmap.CompressFormat.JPEG, 85, out)
+        }
+        annotated.recycle()
+        return Uri.fromFile(thumbFile).toString()
+    }
+
+    /** Normalised box, like every other session: the COCO export depends on it. */
+    private fun toDebris(detection: DetectionResult) = Debris(
+        bbox = BoundingBox(detection.x1, detection.y1, detection.width, detection.height),
+        material = classNameToMaterial(detection.className),
+        type = classNameToType(detection.className),
+        confidence = detection.confidence,
+    )
 
     private fun classNameToType(className: String): DebrisType = when (className.lowercase()) {
         "bottle" -> DebrisType.BOTTLE

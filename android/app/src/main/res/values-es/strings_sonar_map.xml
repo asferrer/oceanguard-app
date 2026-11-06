@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings of the map and history screens. -->
+<resources>
+    <string name="map_style_light">Claro</string>
+    <string name="map_style_dark">Oscuro</string>
+    <string name="map_style_terrain">Terreno</string>
+    <plurals name="map_cluster_cd">
+        <item quantity="one">%1$d foto en esta zona. Toca para acercar.</item>
+        <item quantity="other">%1$d fotos en esta zona. Toca para acercar.</item>
+    </plurals>
+    <string name="map_pin_cd">Foto, salud %1$d. Toca para ver el detalle.</string>
+    <string name="map_pin_open_detail">Abrir análisis</string>
+    <string name="map_pin_fix_location">Corregir ubicación</string>
+    <string name="map_offline_title">Sin conexión</string>
+    <string name="map_offline_message">El mapa base necesita internet para descargarse. Tus detecciones siguen aquí y aparecen en cuanto cargue.</string>
+    <string name="map_load_failed_title">No se pudo cargar el mapa</string>
+    <string name="map_load_failed_message">El mapa base no se descargó. Revisa la conexión e inténtalo de nuevo.</string>
+    <string name="map_empty_action_scan">Escanear residuos</string>
+    <plurals name="map_subtitle_sessions">
+        <item quantity="one">%1$d análisis</item>
+        <item quantity="other">%1$d análisis</item>
+    </plurals>
+    <plurals name="map_subtitle_zones">
+        <item quantity="one">%1$d zona</item>
+        <item quantity="other">%1$d zonas</item>
+    </plurals>
+    <string name="history_select">Seleccionar</string>
+    <string name="history_group_today">Hoy</string>
+    <string name="history_group_yesterday">Ayer</string>
+    <string name="history_no_results_title">Nada coincide</string>
+    <string name="history_no_results_message">Prueba otra búsqueda o quita los filtros.</string>
+    <string name="history_clear_filters">Quitar filtros</string>
+    <plurals name="history_video_unique_debris">
+        <item quantity="one">%1$d residuo único</item>
+        <item quantity="other">%1$d residuos únicos</item>
+    </plurals>
+    <string name="history_video_summary">Vídeo de %1$d s, %2$d fotogramas</string>
+    <string name="history_risk_low">Bajo</string>
+    <string name="history_risk_moderate">Moderado</string>
+    <string name="history_risk_high">Alto</string>
+    <string name="history_risk_critical">Crítico</string>
+    <string name="history_quality_good">Buena</string>
+    <string name="history_quality_fair">Media</string>
+    <string name="history_quality_poor">Baja</string>
+    <string name="history_state_selected">Seleccionado</string>
+    <string name="history_state_not_selected">No seleccionado</string>
+</resources>

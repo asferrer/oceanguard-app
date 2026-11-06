@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.oceanguard.ai.R
-import com.oceanguard.ai.ui.theme.OceanGreen
 
 /**
  * Ordered sequence of the 9 screens visited during the full guided tour.
@@ -109,7 +107,7 @@ fun GuidedTourTransitionDialog(
                         text = stringResource(R.string.guided_tour_complete_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = OceanGreen,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -126,7 +124,6 @@ fun GuidedTourTransitionDialog(
                     Spacer(modifier = Modifier.height(20.dp))
                     Button(
                         onClick = onContinue,
-                        colors = ButtonDefaults.buttonColors(containerColor = OceanGreen),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(text = stringResource(R.string.guided_tour_btn_finish))
@@ -138,7 +135,7 @@ fun GuidedTourTransitionDialog(
                         text = stringResource(R.string.guided_tour_screen_done_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = OceanGreen,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     if (nextNameRes != null) {
@@ -168,8 +165,7 @@ fun GuidedTourTransitionDialog(
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = onContinue,
-                            colors = ButtonDefaults.buttonColors(containerColor = OceanGreen),
-                            modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f),
                         ) {
                             Text(text = stringResource(R.string.guided_tour_btn_continue))
                         }

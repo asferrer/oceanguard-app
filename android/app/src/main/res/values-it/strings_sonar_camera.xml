@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Camera, analysis and continuous scan. -->
+<resources>
+    <string name="sonar_camera_target_debris">Rifiuti</string>
+    <string name="sonar_camera_target_species">Specie</string>
+    <string name="sonar_camera_capture_failed">Impossibile scattare la foto. Riprova.</string>
+    <string name="sonar_camera_continuous_loading">La scansione continua sarà pronta quando il rilevatore avrà finito di caricarsi</string>
+    <string name="sonar_camera_flash_off">Flash spento</string>
+    <string name="sonar_camera_flash_on">Flash acceso</string>
+    <string name="sonar_camera_flash_auto">Flash automatico</string>
+    <string name="sonar_camera_grid_on">Griglia visibile</string>
+    <string name="sonar_camera_grid_off">Griglia nascosta</string>
+    <string name="sonar_analysis_status_warming">Caricamento del modello. La prima volta richiede più tempo</string>
+    <string name="sonar_analysis_status_refining">Aggiunta di tipo e materiale</string>
+    <string name="sonar_analysis_photos_sent">foto inviate a internet</string>
+    <string name="sonar_analysis_contributing">Analizzata sul tuo telefono. In coda per il caricamento, perché hai scelto di contribuire.</string>
+    <string name="sonar_analysis_error_message">Impossibile analizzare questa foto. Riprova.</string>
+    <string name="sonar_live_engine">%1$s sul tuo telefono</string>
+    <string name="sonar_live_cadence">Ogni %1$s s</string>
+    <string name="sonar_live_cadence_measuring">Misurazione della cadenza…</string>
+    <string name="sonar_live_latency">Inferenza %1$s s</string>
+    <string name="sonar_live_full_analysis">Analisi completa</string>
+    <string name="sonar_stage_preparing">Preparazione</string>
+    <string name="sonar_stage_detecting">Rilevamento</string>
+    <string name="sonar_stage_deep">Analisi approfondita</string>
+</resources>

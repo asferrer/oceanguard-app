@@ -67,12 +67,13 @@ import com.oceanguard.ai.R
 import com.oceanguard.ai.data.species.SpeciesCatalog
 import com.oceanguard.ai.data.species.SpeciesNames
 import com.oceanguard.ai.inference.species.IdentificationResult
-import com.oceanguard.ai.ui.components.GlassCard
+import com.oceanguard.ai.ui.components.sonar.SonarCard
 import com.oceanguard.ai.ui.components.LottieEmptyState
 import com.oceanguard.ai.ui.components.NormBox
 import com.oceanguard.ai.ui.components.SpeciesBoundingBoxOverlay
 import com.oceanguard.ai.ui.components.bboxToNormBox
-import com.oceanguard.ai.ui.theme.OceanGreen
+import com.oceanguard.ai.ui.theme.SonarDarkColors
+import com.oceanguard.ai.ui.theme.SonarTheme
 import java.util.Locale
 
 /**
@@ -378,7 +379,7 @@ private fun SpeciesBatchSummaryCard(
     totalTimeMs: Long,
 ) {
     val totalSeconds = totalTimeMs / 1000L
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+    SonarCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -398,7 +399,7 @@ private fun SpeciesBatchSummaryCard(
                 SpeciesSummaryStat(
                     label = stringResource(R.string.species_batch_summary_species),
                     value = totalSpecies.toString(),
-                    valueColor = OceanGreen,
+                    valueColor = SonarTheme.colors.trace,
                     modifier = Modifier.weight(1f),
                 )
                 SpeciesSummaryStat(
@@ -505,7 +506,7 @@ private fun speciesBatchNormBoxes(
 private fun SpeciesBatchThumbnailCard(item: SpeciesBatchItem, catalog: SpeciesCatalog) {
     val state = item.state
     val borderColor: Color = when (state) {
-        is SpeciesBatchItemState.Done   -> OceanGreen
+        is SpeciesBatchItemState.Done   -> SonarTheme.colors.trace
         is SpeciesBatchItemState.Failed -> MaterialTheme.colorScheme.error
         else                            -> MaterialTheme.colorScheme.outlineVariant
     }
@@ -575,7 +576,7 @@ private fun SpeciesBatchThumbnailCard(item: SpeciesBatchItem, catalog: SpeciesCa
                     CircularProgressIndicator(
                         modifier = Modifier.size(36.dp),
                         strokeWidth = 3.dp,
-                        color = OceanGreen,
+                        color = SonarTheme.colors.trace,
                     )
                 }
             }
@@ -595,7 +596,7 @@ private fun SpeciesBatchThumbnailCard(item: SpeciesBatchItem, catalog: SpeciesCa
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
                             .background(
-                                Color.Black.copy(alpha = 0.65f),
+                                MaterialTheme.colorScheme.scrim.copy(alpha = 0.65f),
                                 RoundedCornerShape(bottomStart = 14.dp, bottomEnd = 14.dp),
                             )
                             .padding(horizontal = 6.dp, vertical = 5.dp),
@@ -605,16 +606,16 @@ private fun SpeciesBatchThumbnailCard(item: SpeciesBatchItem, catalog: SpeciesCa
                             Text(
                                 text = name,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
+                                color = SonarDarkColors.ink,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 fontWeight = FontWeight.SemiBold,
                             )
                             if (results.size > 1) {
                                 Text(
-                                    text = "+${results.size - 1} more",
+                                    text = stringResource(R.string.species_batch_more, results.size - 1),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White.copy(alpha = 0.75f),
+                                    color = SonarDarkColors.ink2,
                                 )
                             }
                         }
@@ -624,14 +625,14 @@ private fun SpeciesBatchThumbnailCard(item: SpeciesBatchItem, catalog: SpeciesCa
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth(),
-                        color = OceanGreen.copy(alpha = 0.80f),
+                        color = SonarTheme.colors.traceContainer,
                         shape = RoundedCornerShape(bottomStart = 14.dp, bottomEnd = 14.dp),
                     ) {
                         Text(
                             text = stringResource(R.string.biodex_result_none_short),
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White,
+                            color = SonarTheme.colors.onTraceContainer,
                             textAlign = TextAlign.Center,
                         )
                     }

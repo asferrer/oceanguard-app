@@ -1,46 +1,16 @@
 package com.oceanguard.ai.ui.screens
 
-import android.net.Uri
-import android.util.Log
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
+import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraControl
 import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -52,54 +22,67 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 import com.oceanguard.ai.OceanGuardApp
+import com.oceanguard.ai.R
 import com.oceanguard.ai.data.SettingsRepository
-import com.oceanguard.ai.inference.DetectionResult
 import com.oceanguard.ai.inference.LiveDetectionManager
 import com.oceanguard.ai.ui.MainViewModel
-import com.oceanguard.ai.ui.components.spotlight.SpotlightOverlay
+import com.oceanguard.ai.ui.components.ZoomSlider
+import com.oceanguard.ai.ui.components.pinchToZoom
 import com.oceanguard.ai.ui.components.spotlight.TourDefinitions
 import com.oceanguard.ai.ui.components.spotlight.rememberSpotlightBounds
-import com.oceanguard.ai.ui.components.spotlight.rememberSpotlightController
 import com.oceanguard.ai.ui.components.spotlight.spotlightTarget
-import com.oceanguard.ai.ui.components.ZoomSlider
-import com.oceanguard.ai.ui.components.drawDetection
-import com.oceanguard.ai.ui.components.pinchToZoom
-import com.oceanguard.ai.ui.theme.OceanGreen
-import androidx.compose.ui.res.stringResource
-import com.oceanguard.ai.R
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Locale
+import com.oceanguard.ai.ui.screens.camera.CameraPermissionScreen
+import com.oceanguard.ai.ui.screens.camera.CameraScreenTour
+import com.oceanguard.ai.ui.screens.camera.CaptureDock
+import com.oceanguard.ai.ui.screens.camera.CaptureHint
+import com.oceanguard.ai.ui.screens.camera.CaptureMode
+import com.oceanguard.ai.ui.screens.camera.CaptureModeToggle
+import com.oceanguard.ai.ui.screens.camera.DisplayRotationEffect
+import com.oceanguard.ai.ui.screens.camera.LiveDetectionOverlay
+import com.oceanguard.ai.ui.screens.camera.LiveHud
+import com.oceanguard.ai.ui.screens.camera.ShutterButton
+import com.oceanguard.ai.ui.screens.camera.StillCaptureState
+import com.oceanguard.ai.ui.screens.camera.VolumeShutterEffect
+import com.oceanguard.ai.ui.screens.camera.buildLiveAnalysis
+import com.oceanguard.ai.ui.screens.camera.createViewfinder
+import com.oceanguard.ai.ui.screens.camera.openCameraAnalysis
+import com.oceanguard.ai.ui.screens.camera.rememberStillCapture
+import com.oceanguard.ai.ui.screens.camera.submitLiveFrame
 import java.util.concurrent.Executors
+import kotlinx.coroutines.launch
 
-private const val TAG = "LiveDetectionScreen"
+private const val LIVE_FILE_PREFIX = "OceanGuard_Live"
+private const val DEFAULT_MAX_ZOOM = 10f
+private const val LANDSCAPE_SLIDER_WIDTH = 0.6f
+
+private val LANDSCAPE_SLIDER_BOTTOM = 12.dp
 
 /**
- * LiveDetectionScreen — full-screen continuous detection with camera zoom.
+ * Continuous scan: the preview runs at full rate while RT-DETRv2 analyses frames in the background,
+ * one pass every few seconds. The boxes of a pass stay until the next one replaces them, the real
+ * cadence is on screen, and the shutter runs the full analysis of the chosen mode. Only RT-DETRv2
+ * runs here: Gemma would take far too long per frame.
  *
- * The camera preview runs at 30fps while RT-DETRv2 processes frames in the
- * background at ~0.3-1 FPS. Detections persist on the overlay until replaced
- * by new results. Includes pinch-to-zoom, zoom slider, resolution selector,
- * and a capture button for full pipeline analysis.
+ * Back returns to the photo mode of the camera, which stays below on the stack. It is intercepted
+ * so that the predictive gesture does not compose the camera underneath: binding its viewfinder
+ * would take CameraX from this screen, and a cancelled gesture would leave a frozen preview.
  */
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -107,84 +90,51 @@ fun LiveDetectionScreen(
     navController: NavController,
     viewModel: MainViewModel,
 ) {
-    val cameraPermissionState = rememberPermissionState(
-        android.Manifest.permission.CAMERA
-    )
-
-    val liveContext = LocalContext.current
-    val app = remember(liveContext) { liveContext.applicationContext as OceanGuardApp }
-    val liveScope = rememberCoroutineScope()
+    val cameraPermissionState = rememberPermissionState(android.Manifest.permission.CAMERA)
     val boundsMap = rememberSpotlightBounds()
-    val tourController = rememberSpotlightController(TourDefinitions.LIVE_DETECTION)
-    val tourComplete by app.settingsRepository
-        .isTourComplete(TourDefinitions.getScreenId(TourDefinitions.LIVE_DETECTION))
-        .collectAsStateWithLifecycle(initialValue = true)
-
-    LaunchedEffect(tourComplete) {
-        if (!tourComplete) tourController.start()
-    }
+    val backToCamera: () -> Unit = { navController.popBackStack() }
+    BackHandler(onBack = backToCamera)
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (cameraPermissionState.status.isGranted) {
-            LiveDetectionContent(
-                navController = navController,
-                viewModel = viewModel,
-                boundsMap = boundsMap,
-                onBack = { navController.popBackStack() },
-            )
+            LiveDetectionContent(navController, viewModel, boundsMap, backToCamera)
         } else {
-            // Permission request inline
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = stringResource(R.string.live_permission_required),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                androidx.compose.material3.Button(
-                    onClick = { cameraPermissionState.launchPermissionRequest() },
-                ) {
-                    Text(stringResource(R.string.live_btn_grant_permission))
-                }
-            }
+            CameraPermissionScreen(
+                shouldShowRationale = cameraPermissionState.status.shouldShowRationale,
+                onRequestPermission = { cameraPermissionState.launchPermissionRequest() },
+                onBack = backToCamera,
+            )
         }
+        CameraScreenTour(TourDefinitions.LIVE_DETECTION, boundsMap)
+    }
+}
 
-        SpotlightOverlay(
-            controller = tourController,
-            targetBounds = boundsMap,
-            onComplete = {
-                liveScope.launch {
-                    app.settingsRepository.markTourComplete(
-                        TourDefinitions.getScreenId(TourDefinitions.LIVE_DETECTION)
-                    )
-                }
-            },
-        )
+/** Zoom of the bound camera, driven by the pinch and by the slider. */
+private class LiveZoom {
+    var ratio by mutableFloatStateOf(1f)
+        private set
+    var maxRatio by mutableFloatStateOf(DEFAULT_MAX_ZOOM)
+        private set
+    private var control: CameraControl? = null
+
+    fun attach(camera: Camera) {
+        control = camera.cameraControl
+        maxRatio = camera.cameraInfo.zoomState.value?.maxZoomRatio ?: DEFAULT_MAX_ZOOM
+    }
+
+    fun set(newRatio: Float) {
+        ratio = newRatio
+        control?.setZoomRatio(newRatio)
     }
 }
 
 @Composable
-private fun LiveDetectionContent(
-    navController: NavController,
-    viewModel: MainViewModel,
-    boundsMap: MutableMap<String, androidx.compose.ui.geometry.Rect>,
-    onBack: () -> Unit,
-) {
+private fun rememberLiveManager(app: OceanGuardApp): LiveDetectionManager {
     val context = LocalContext.current
-    val app = remember { context.applicationContext as OceanGuardApp }
     val threshold by app.settingsRepository.confidenceThreshold.collectAsStateWithLifecycle(
-        initialValue = SettingsRepository.DEFAULT_CONFIDENCE_THRESHOLD
+        initialValue = SettingsRepository.DEFAULT_CONFIDENCE_THRESHOLD,
     )
-    // Live mode is hard-wired to RT-DETRv2 regardless of the user's "active detector" preference.
-    // Gemma 4 Vision is far too slow per frame on Exynos 2200 (latency pending measurement), which would collapse the camera loop
-    // to a very low frame rate. The deep Gemma 4 path runs on demand via single-shot capture instead.
-    val liveDetectionManager = remember {
+    val manager = remember {
         LiveDetectionManager(
             detector = app.rtdetrInference,
             context = context,
@@ -192,463 +142,158 @@ private fun LiveDetectionContent(
             locationProvider = app.locationProvider,
         )
     }
-    val detectionState by liveDetectionManager.state.collectAsStateWithLifecycle()
-    val scope = rememberCoroutineScope()
+    LaunchedEffect(threshold) { manager.confidenceThreshold = threshold }
 
-    // Keep threshold in sync with settings
-    LaunchedEffect(threshold) { liveDetectionManager.confidenceThreshold = threshold }
-
-    // Camera state
-    var zoomRatio by remember { mutableFloatStateOf(1f) }
-    var maxZoomRatio by remember { mutableFloatStateOf(10f) }
-    var cameraControl by remember { mutableStateOf<androidx.camera.core.CameraControl?>(null) }
-
-    // ImageCapture for the capture button
-    val imageCapture = remember { ImageCapture.Builder().build() }
-    val captureExecutor = remember { Executors.newSingleThreadExecutor() }
-    var isCapturing by remember { mutableStateOf(false) }
-
-    // Lifecycle management
-    DisposableEffect(Unit) {
-        liveDetectionManager.start()
+    // Runs only with the screen visible: time in the background is not cadence.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, manager) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> manager.start()
+                Lifecycle.Event.ON_STOP -> manager.stop()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
-            liveDetectionManager.stop()
-            captureExecutor.shutdown()
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            manager.stop()
         }
     }
+    return manager
+}
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pinchToZoom(
-                currentZoom = zoomRatio,
-                maxZoom = maxZoomRatio,
-                onZoomChanged = { ratio ->
-                    zoomRatio = ratio
-                    cameraControl?.setZoomRatio(ratio)
-                },
-            )
-    ) {
-        // Layer 1: CameraX Preview + ImageAnalysis
-        LiveCameraPreview(
-            liveDetectionManager = liveDetectionManager,
-            imageCapture = imageCapture,
-            boundsMap = boundsMap,
-            onCameraReady = { control, info ->
-                cameraControl = control
-                maxZoomRatio = info.zoomState.value?.maxZoomRatio ?: 10f
-            },
-        )
+@Composable
+private fun LiveDetectionContent(
+    navController: NavController,
+    viewModel: MainViewModel,
+    boundsMap: MutableMap<String, Rect>,
+    onBack: () -> Unit,
+) {
+    val app = LocalContext.current.applicationContext as OceanGuardApp
+    val manager = rememberLiveManager(app)
+    val state by manager.state.collectAsStateWithLifecycle()
+    val capture = rememberStillCapture()
+    val zoom = remember { LiveZoom() }
+    val scope = rememberCoroutineScope()
+    var opening by remember { mutableStateOf(false) }
 
-        // Layer 2: Bounding box overlay on camera preview
-        LiveBoundingBoxOverlay(
-            detections = detectionState.detections,
-            isProcessing = detectionState.isProcessing,
+    val fullAnalysis: () -> Unit = {
+        if (!opening) {
+            manager.stop()
+            capture.capture(LIVE_FILE_PREFIX, onFailure = { manager.start() }) { uri ->
+                opening = true
+                scope.launch { openCameraAnalysis(navController, viewModel, uri) }
+            }
+        }
+    }
+    VolumeShutterEffect(fullAnalysis)
+    FirstScanAchievementEffect(hasScanned = state.frameCount > 0, app)
+
+    Box(Modifier.fillMaxSize().pinchToZoom(zoom.ratio, zoom.maxRatio, zoom::set)) {
+        LiveCameraPreview(manager, capture.imageCapture, boundsMap, zoom::attach)
+        LiveDetectionOverlay(
+            detections = state.detections,
+            frameSize = Size(state.frameWidth.toFloat(), state.frameHeight.toFloat()),
+            isProcessing = state.isProcessing,
             modifier = Modifier.fillMaxSize(),
         )
-
-        // Layer 3: Top HUD (back button + stats)
-        TopHUD(
-            fps = detectionState.fps,
-            latencyMs = detectionState.inferenceTimeMs,
-            isProcessing = detectionState.isProcessing,
-            detectionCount = detectionState.detections.size,
-            savedCount = detectionState.savedCount,
+        LiveHud(
+            state = state,
+            modelName = app.rtdetrInference.modelName,
             onBack = onBack,
             boundsMap = boundsMap,
         )
-
-        // Layer 4: Bottom controls (zoom, capture)
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
-                    ),
-                )
-                .navigationBarsPadding()
-                .padding(bottom = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // Zoom slider
-            ZoomSlider(
-                zoomRatio = zoomRatio,
-                maxZoomRatio = maxZoomRatio,
-                onZoomChanged = { ratio ->
-                    zoomRatio = ratio
-                    cameraControl?.setZoomRatio(ratio)
-                },
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Capture button
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(72.dp)
-                    .background(
-                        color = Color.Black.copy(alpha = 0.30f),
-                        shape = CircleShape,
-                    )
-                    .background(
-                        color = Color.Transparent,
-                        shape = CircleShape,
-                    )
-                    .spotlightTarget("live_capture", boundsMap),
-            ) {
-                IconButton(
-                    onClick = {
-                        if (!isCapturing) {
-                            isCapturing = true
-                            liveDetectionManager.stop()
-
-                            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
-                                .format(System.currentTimeMillis())
-                            val photoFile = File(
-                                context.getExternalFilesDir(null),
-                                "OceanGuard_Live_$timestamp.jpg",
-                            )
-                            val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-
-                            imageCapture.takePicture(
-                                outputOptions,
-                                captureExecutor,
-                                object : ImageCapture.OnImageSavedCallback {
-                                    override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                                        val savedUri = output.savedUri ?: Uri.fromFile(photoFile)
-                                        Log.i(TAG, "Live capture saved: $savedUri")
-                                        ContextCompat.getMainExecutor(context).execute {
-                                            isCapturing = false
-                                            scope.launch { app.achievementChecker.checkFirstLive() }
-                                            viewModel.analyzeImage(savedUri)
-                                            navController.navigate("results") {
-                                                popUpTo("live_detection") { inclusive = true }
-                                            }
-                                        }
-                                    }
-
-                                    override fun onError(exc: ImageCaptureException) {
-                                        Log.e(TAG, "Live capture failed", exc)
-                                        ContextCompat.getMainExecutor(context).execute {
-                                            isCapturing = false
-                                            liveDetectionManager.start()
-                                        }
-                                    }
-                                },
-                            )
-                        }
-                    },
-                    modifier = Modifier.size(64.dp),
-                    enabled = !isCapturing,
-                ) {
-                    if (isCapturing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(28.dp),
-                            color = Color.White,
-                            strokeWidth = 3.dp,
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Filled.CameraAlt,
-                            contentDescription = stringResource(R.string.cd_capture_and_analyze),
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp),
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = stringResource(R.string.live_hint_tap_to_analyze),
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.7f),
-            )
-        }
+        LiveControls(zoom, capture, opening, boundsMap, onBack, fullAnalysis)
     }
 }
 
-// ---------------------------------------------------------------------------
-// CameraX Preview + ImageAnalysis
-// ---------------------------------------------------------------------------
+/** One real pass is what "using the continuous scan" means for the Eagle Eye achievement. */
+@Composable
+private fun FirstScanAchievementEffect(hasScanned: Boolean, app: OceanGuardApp) {
+    LaunchedEffect(hasScanned) {
+        if (hasScanned) app.achievementChecker.checkFirstLive()
+    }
+}
+
+@Composable
+private fun BoxScope.LiveControls(
+    zoom: LiveZoom,
+    capture: StillCaptureState,
+    opening: Boolean,
+    boundsMap: MutableMap<String, Rect>,
+    onPhotoMode: () -> Unit,
+    onFullAnalysis: () -> Unit,
+) {
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val slider: @Composable (Modifier) -> Unit = { placement ->
+        ZoomSlider(
+            zoomRatio = zoom.ratio,
+            maxZoomRatio = zoom.maxRatio,
+            onZoomChanged = zoom::set,
+            modifier = placement,
+        )
+    }
+    if (isLandscape) {
+        slider(
+            Modifier
+                .align(Alignment.BottomStart)
+                .navigationBarsPadding()
+                .fillMaxWidth(LANDSCAPE_SLIDER_WIDTH)
+                .padding(bottom = LANDSCAPE_SLIDER_BOTTOM),
+        )
+    }
+    CaptureDock(isLandscape) {
+        if (!isLandscape) slider(Modifier)
+        CaptureModeToggle(
+            selected = CaptureMode.CONTINUOUS,
+            continuousEnabled = true,
+            onSelect = { if (it == CaptureMode.PHOTO) onPhotoMode() },
+        )
+        ShutterButton(
+            isCapturing = capture.isCapturing || opening,
+            onClick = onFullAnalysis,
+            contentDescription = stringResource(R.string.cd_capture_and_analyze),
+            modifier = Modifier.spotlightTarget("live_capture", boundsMap),
+        )
+        CaptureHint(
+            failed = capture.failed,
+            fallback = stringResource(R.string.sonar_live_full_analysis),
+        )
+    }
+}
 
 @Composable
 private fun LiveCameraPreview(
-    liveDetectionManager: LiveDetectionManager,
+    manager: LiveDetectionManager,
     imageCapture: ImageCapture,
-    boundsMap: MutableMap<String, androidx.compose.ui.geometry.Rect>,
-    onCameraReady: (androidx.camera.core.CameraControl, androidx.camera.core.CameraInfo) -> Unit,
+    boundsMap: MutableMap<String, Rect>,
+    onCameraReady: (Camera) -> Unit,
 ) {
-    val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
-    val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
-
-    DisposableEffect(Unit) {
-        onDispose { analysisExecutor.shutdown() }
+    val analysis = remember { buildLiveAnalysis() }
+    DisposableEffect(analysis) {
+        val executor = Executors.newSingleThreadExecutor()
+        analysis.setAnalyzer(executor) { proxy -> submitLiveFrame(proxy, manager, scope) }
+        onDispose {
+            analysis.clearAnalyzer()
+            executor.shutdown()
+        }
     }
+    DisplayRotationEffect(analysis)
 
     AndroidView(
-        factory = { ctx ->
-            val previewView = PreviewView(ctx).apply {
-                implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-            }
-
-            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
-            cameraProviderFuture.addListener(
-                {
-                    val cameraProvider = cameraProviderFuture.get()
-
-                    val preview = Preview.Builder().build().also {
-                        it.setSurfaceProvider(previewView.surfaceProvider)
-                    }
-
-
-                    val imageAnalysis = ImageAnalysis.Builder()
-                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                        .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
-                        .setResolutionSelector(
-                            androidx.camera.core.resolutionselector.ResolutionSelector.Builder()
-                                .setResolutionStrategy(
-                                    androidx.camera.core.resolutionselector.ResolutionStrategy(
-                                        android.util.Size(640, 640),
-                                        androidx.camera.core.resolutionselector.ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER,
-                                    )
-                                )
-                                .build()
-                        )
-                        .build()
-
-                    imageAnalysis.setAnalyzer(analysisExecutor) { imageProxy ->
-                        val bitmap = imageProxy.toBitmap()
-                        imageProxy.close() // Release immediately to free camera pipeline
-
-                        scope.launch(Dispatchers.Default) {
-                            try {
-                                liveDetectionManager.processFrame(bitmap)
-                            } finally {
-                                bitmap.recycle()
-                            }
-                        }
-                    }
-
-                    try {
-                        cameraProvider.unbindAll()
-                        val camera = cameraProvider.bindToLifecycle(
-                            lifecycleOwner,
-                            CameraSelector.DEFAULT_BACK_CAMERA,
-                            preview,
-                            imageAnalysis,
-                            imageCapture,
-                        )
-                        onCameraReady(camera.cameraControl, camera.cameraInfo)
-                    } catch (exc: Exception) {
-                        Log.e(TAG, "CameraX binding failed", exc)
-                    }
-                },
-                ContextCompat.getMainExecutor(ctx),
+        factory = { context ->
+            createViewfinder(
+                context = context,
+                lifecycleOwner = lifecycleOwner,
+                useCases = listOf(analysis, imageCapture),
+                onBound = onCameraReady,
             )
-
-            previewView
         },
         modifier = Modifier
             .fillMaxSize()
             .spotlightTarget("live_viewfinder", boundsMap),
-    )
-}
-
-// ---------------------------------------------------------------------------
-// Live bounding box overlay with scanning animation
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun LiveBoundingBoxOverlay(
-    detections: List<DetectionResult>,
-    isProcessing: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    var displaySize by remember { mutableStateOf(IntSize.Zero) }
-
-    // Scanning line animation during inference
-    val infiniteTransition = rememberInfiniteTransition(label = "scanning")
-    val scanProgress by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2000),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "scanLine",
-    )
-
-    Canvas(
-        modifier = modifier.onSizeChanged { displaySize = it },
-    ) {
-        if (displaySize == IntSize.Zero) return@Canvas
-
-        val scaleX = displaySize.width.toFloat()
-        val scaleY = displaySize.height.toFloat()
-        val strokePx = 3.dp.toPx()
-
-        // Draw detections
-        for (detection in detections) {
-            drawDetection(detection, scaleX, scaleY, strokePx)
-        }
-
-        // Scanning line animation (only when processing)
-        if (isProcessing) {
-            val scanY = scanProgress * scaleY
-            drawLine(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        Color.Cyan.copy(alpha = 0.6f),
-                        Color.Cyan.copy(alpha = 0.8f),
-                        Color.Cyan.copy(alpha = 0.6f),
-                        Color.Transparent,
-                    ),
-                ),
-                start = Offset(0f, scanY),
-                end = Offset(scaleX, scanY),
-                strokeWidth = 2.dp.toPx(),
-            )
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Top HUD: back button + performance stats
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun TopHUD(
-    fps: Float,
-    latencyMs: Long,
-    isProcessing: Boolean,
-    detectionCount: Int,
-    savedCount: Int = 0,
-    onBack: () -> Unit,
-    boundsMap: MutableMap<String, androidx.compose.ui.geometry.Rect> = mutableMapOf(),
-) {
-    // Pop animation trigger for detection count changes
-    var prevCount by remember { mutableStateOf(detectionCount) }
-    var popTrigger by remember { mutableStateOf(0) }
-    if (detectionCount != prevCount) {
-        prevCount = detectionCount
-        popTrigger++
-    }
-
-    // Use LaunchedEffect to briefly spike scale on count change
-    var spikeScale by remember { mutableFloatStateOf(1f) }
-    LaunchedEffect(popTrigger) {
-        if (popTrigger > 0) {
-            spikeScale = 1.25f
-            kotlinx.coroutines.delay(100)
-            spikeScale = 1f
-        }
-    }
-    val animatedSpikeScale by animateFloatAsState(
-        targetValue = spikeScale,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium,
-        ),
-        label = "spikeScale",
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.Black.copy(alpha = 0.55f),
-                        Color.Black.copy(alpha = 0.25f),
-                        Color.Transparent,
-                    ),
-                ),
-            )
-            .statusBarsPadding()
-            .padding(12.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Back button
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = Color.Black.copy(alpha = 0.50f),
-                        shape = CircleShape,
-                    ),
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.cd_go_back),
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-
-            // Stats badges
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.spotlightTarget("live_fps", boundsMap),
-            ) {
-                HudBadge(text = "%.1f FPS".format(fps))
-                HudBadge(text = "${latencyMs}ms")
-                if (detectionCount > 0) {
-                    HudBadge(
-                        text = stringResource(R.string.live_detection_count, detectionCount),
-                        backgroundColor = OceanGreen.copy(alpha = 0.7f),
-                        modifier = Modifier.graphicsLayer {
-                            scaleX = animatedSpikeScale
-                            scaleY = animatedSpikeScale
-                        },
-                    )
-                }
-                if (savedCount > 0) {
-                    HudBadge(
-                        text = stringResource(R.string.live_saved_count, savedCount),
-                        backgroundColor = Color(0xFF1565C0).copy(alpha = 0.7f),
-                    )
-                }
-                if (isProcessing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = Color.Cyan,
-                        strokeWidth = 2.dp,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun HudBadge(
-    text: String,
-    modifier: Modifier = Modifier,
-    backgroundColor: Color = Color.Black.copy(alpha = 0.55f),
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = Color.White,
-        modifier = modifier
-            .background(
-                color = backgroundColor,
-                shape = RoundedCornerShape(8.dp),
-            )
-            .padding(horizontal = 8.dp, vertical = 4.dp),
     )
 }

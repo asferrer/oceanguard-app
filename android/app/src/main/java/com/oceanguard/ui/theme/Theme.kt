@@ -2,7 +2,6 @@ package com.oceanguard.ai.ui.theme
 
 import android.app.Activity
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -17,6 +16,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import com.oceanguard.ai.ui.motion.LocalReducedMotion
+import com.oceanguard.ai.ui.motion.rememberReducedMotion
 
 /**
  * CompositionLocal that exposes the app's *effective* dark-mode preference
@@ -63,8 +64,7 @@ val OceanGuardShapes = Shapes(
  *   deep-ocean dark background during actual detection sessions.
  *
  * @param useDarkTheme   When true (default) the deep-ocean dark palette is
- *                       applied. Callers may pass isSystemInDarkTheme() to
- *                       honour the system setting for non-detection screens.
+ *                       applied. Always the app setting, never the system's.
  * @param dynamicColor   When true on Android 12+, Material You colour
  *                       extraction overrides the ocean palette. Disabled by
  *                       default for safety-signal consistency.
@@ -77,6 +77,7 @@ fun OceanGuardTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
+    val sonarColors = if (useDarkTheme) SonarDarkColors else SonarLightColors
 
     val colorScheme = when {
         // Dynamic colour (Material You) — Android 12+ only
@@ -85,11 +86,8 @@ fun OceanGuardTheme(
             else dynamicLightColorScheme(context)
         }
 
-        // Ocean dark scheme — default for detection and underwater use
-        useDarkTheme -> OceanDarkColorScheme
-
-        // Ocean light scheme — post-dive review, accessibility preference
-        else -> OceanLightColorScheme
+        // App schemes: dark is the default, light keeps AA contrast
+        else -> sonarColorScheme(sonarColors, useDarkTheme)
     }
 
     // Synchronise system bar colours with the selected colour scheme.
@@ -108,7 +106,12 @@ fun OceanGuardTheme(
         }
     }
 
-    CompositionLocalProvider(LocalIsDarkTheme provides useDarkTheme) {
+    CompositionLocalProvider(
+        LocalIsDarkTheme provides useDarkTheme,
+        LocalSonarColors provides sonarColors,
+        LocalSonarTypography provides OceanSonarTypography,
+        LocalReducedMotion provides rememberReducedMotion(),
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = OceanGuardTypography,

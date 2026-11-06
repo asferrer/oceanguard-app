@@ -1,447 +1,182 @@
 package com.oceanguard.ai.ui.screens
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Psychology
-import androidx.compose.material.icons.filled.Science
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.oceanguard.ai.OceanGuardApp
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.oceanguard.ai.OceanGuardApp
 import com.oceanguard.ai.R
-import com.oceanguard.ai.ui.components.BubbleParticles
-import com.oceanguard.ai.ui.components.OceanGradientButton
-import com.oceanguard.ai.ui.components.OnGradientColor
-import com.oceanguard.ai.ui.theme.BioluminescentCyan
-import com.oceanguard.ai.ui.theme.GradientCTAEnd
-import com.oceanguard.ai.ui.theme.GradientCTAStart
-import com.oceanguard.ai.ui.theme.OceanGreen
-import com.oceanguard.ai.ui.theme.glassSurfaceColor
-import com.oceanguard.ai.ui.theme.heroGradientBrush
-import com.oceanguard.ai.ui.theme.waveThemeForCurrent
+import com.oceanguard.ai.inference.VlmModelManager
+import com.oceanguard.ai.ui.components.sonar.SonarButton
+import com.oceanguard.ai.ui.components.sonar.SonarButtonStyle
+import com.oceanguard.ai.ui.motion.OceanMotion
+import com.oceanguard.ai.ui.motion.motionSpec
+import com.oceanguard.ai.ui.screens.onboarding.ContributePage
+import com.oceanguard.ai.ui.screens.onboarding.InfoPage
+import com.oceanguard.ai.ui.screens.onboarding.ModelsPage
+import com.oceanguard.ai.ui.screens.onboarding.TourPage
+import com.oceanguard.ai.ui.screens.onboarding.WelcomeLogic
+import com.oceanguard.ai.ui.screens.onboarding.WelcomeResult
 import kotlinx.coroutines.launch
-import kotlin.math.cos
-import kotlin.math.sin
 
-private data class OnboardingPage(
-    val icon: ImageVector,
-    val title: String,
-    val description: String,
-    val accentColor: Color,
-    val showContributeToggle: Boolean = false,
+private sealed interface WelcomePage {
+    data class Info(val icon: ImageVector, val title: Int, val body: Int) : WelcomePage
+    data object Models : WelcomePage
+    data object Contribute : WelcomePage
+    data object Tour : WelcomePage
+}
+
+private val PAGES: List<WelcomePage> = listOf(
+    WelcomePage.Info(Icons.Filled.WaterDrop, R.string.onboarding_page1_title, R.string.onboarding_page1_desc),
+    WelcomePage.Info(Icons.Filled.CameraAlt, R.string.onboarding_page2_title, R.string.onboarding_page2_desc),
+    WelcomePage.Info(Icons.Filled.Psychology, R.string.onboarding_page3_title, R.string.onboarding_page3_desc),
+    WelcomePage.Info(Icons.Filled.Security, R.string.onboarding_page4_title, R.string.onboarding_page4_desc),
+    WelcomePage.Info(Icons.Filled.EmojiEvents, R.string.onboarding_page5_title, R.string.onboarding_page5_desc),
+    WelcomePage.Models,
+    WelcomePage.Contribute,
+    WelcomePage.Tour,
 )
+private val MODELS_INDEX = PAGES.indexOf(WelcomePage.Models)
+private val LAST_INDEX = PAGES.lastIndex
+
+private val INDICATOR_ACTIVE = 28.dp
+private val INDICATOR_IDLE = 8.dp
 
 /**
- * Onboarding screen with 4 swipeable slides introducing the app.
- * Shown only on first launch; flags completion in DataStore.
+ * First-run welcome: what the app does, which model to download and what it costs, whether to
+ * contribute images, and an optional guided tour. Nothing here promises accuracy or speed the app
+ * has not measured.
+ *
+ * @param onComplete Called once with the chosen mode and whether to start the tour.
  */
 @Composable
-fun OnboardingScreen(
-    onComplete: () -> Unit,
-) {
+fun OnboardingScreen(onComplete: (WelcomeResult) -> Unit) {
     val context = LocalContext.current
     val app = remember(context) { context.applicationContext as OceanGuardApp }
-    val contributeEnabled by app.settingsRepository.contributeConsentGiven
-        .collectAsStateWithLifecycle(initialValue = false)
-
-    val pages = listOf(
-        OnboardingPage(
-            icon = Icons.Filled.WaterDrop,
-            title = stringResource(R.string.onboarding_page1_title),
-            description = stringResource(R.string.onboarding_page1_desc),
-            accentColor = GradientCTAStart,
-        ),
-        OnboardingPage(
-            icon = Icons.Filled.CameraAlt,
-            title = stringResource(R.string.onboarding_page2_title),
-            description = stringResource(R.string.onboarding_page2_desc),
-            accentColor = GradientCTAEnd,
-        ),
-        OnboardingPage(
-            icon = Icons.Filled.Psychology,
-            title = stringResource(R.string.onboarding_page3_title),
-            description = stringResource(R.string.onboarding_page3_desc),
-            accentColor = BioluminescentCyan,
-        ),
-        OnboardingPage(
-            icon = Icons.Filled.Security,
-            title = stringResource(R.string.onboarding_page4_title),
-            description = stringResource(R.string.onboarding_page4_desc),
-            accentColor = GradientCTAEnd,
-        ),
-        OnboardingPage(
-            icon = Icons.Filled.EmojiEvents,
-            title = stringResource(R.string.onboarding_page5_title),
-            description = stringResource(R.string.onboarding_page5_desc),
-            accentColor = OceanGreen,
-        ),
-        OnboardingPage(
-            icon = Icons.Filled.Science,
-            title = stringResource(R.string.onboarding_contribute_title),
-            description = stringResource(R.string.onboarding_contribute_body),
-            accentColor = BioluminescentCyan,
-            showContributeToggle = true,
-        ),
-    )
-
-    val pagerState = rememberPagerState(pageCount = { pages.size })
+    val options = remember {
+        WelcomeLogic.options(app::isModelDownloaded, VlmModelManager.FINETUNED_LITERTLM_PUBLISHED)
+    }
+    var selected by rememberSaveable { mutableStateOf(WelcomeLogic.DEFAULT_MODE) }
+    val contribute by app.settingsRepository.contributeConsentGiven.collectAsStateWithLifecycle(false)
+    val pager = rememberPagerState(pageCount = { PAGES.size })
     val scope = rememberCoroutineScope()
-    val isLastPage = pagerState.currentPage == pages.lastIndex
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-        ) { page ->
-            OnboardingPageContent(
-                page = pages[page],
-                contributeEnabled = contributeEnabled,
-                onContributeToggle = { enabled ->
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        HorizontalPager(state = pager, modifier = Modifier.weight(1f).fillMaxWidth()) { index ->
+            when (val page = PAGES[index]) {
+                is WelcomePage.Info -> InfoPage(page.icon, page.title, page.body)
+                WelcomePage.Models -> ModelsPage(options, selected) { selected = it }
+                WelcomePage.Contribute -> ContributePage(contribute) { enabled ->
                     scope.launch { app.settingsRepository.setContributeConsentGiven(enabled) }
-                },
-            )
-        }
-
-        // Bottom controls
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // Page indicators
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                pages.forEachIndexed { index, _ ->
-                    PageIndicator(isActive = index == pagerState.currentPage)
-                    if (index < pages.lastIndex) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // CTA button with landing page gradient
-            OceanGradientButton(
-                onClick = {
-                    if (isLastPage) {
-                        onComplete()
-                    } else {
-                        scope.launch {
-                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                height = 56.dp,
-                cornerRadius = 16.dp,
-            ) {
-                if (isLastPage) {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(22.dp),
-                        tint = OnGradientColor,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.onboarding_btn_get_started),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = OnGradientColor,
-                    )
-                } else {
-                    Text(
-                        text = stringResource(R.string.onboarding_btn_continue),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = OnGradientColor,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = OnGradientColor,
-                    )
-                }
-            }
-
-            // Skip button (not on last page)
-            if (!isLastPage) {
-                TextButton(
-                    onClick = onComplete,
-                    modifier = Modifier.padding(top = 8.dp),
-                ) {
-                    Text(
-                        text = stringResource(R.string.onboarding_btn_skip),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF94A3B8), // landing --text-secondary
-                    )
-                }
+                WelcomePage.Tour -> TourPage()
             }
         }
+        WelcomeControls(pager) { onComplete(WelcomeResult(selected, it)) }
     }
 }
 
 @Composable
-private fun OnboardingPageContent(
-    page: OnboardingPage,
-    contributeEnabled: Boolean = false,
-    onContributeToggle: (Boolean) -> Unit = {},
-) {
-    // Content entry animation per page
-    val contentAlpha = remember(page.title) { Animatable(0f) }
-    val contentOffsetY = remember(page.title) { Animatable(30f) }
-
-    LaunchedEffect(page.title) {
-        contentAlpha.animateTo(
-            1f,
-            animationSpec = tween(500, easing = FastOutSlowInEasing),
-        )
-    }
-    LaunchedEffect(page.title) {
-        contentOffsetY.animateTo(
-            0f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow,
-            ),
-        )
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(brush = heroGradientBrush()),
-        contentAlignment = Alignment.Center,
+private fun WelcomeControls(pager: PagerState, finish: (startTour: Boolean) -> Unit) {
+    val scope = rememberCoroutineScope()
+    val onLast = pager.currentPage == LAST_INDEX
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // Ambient effects
-        OnboardingWaves(accentColor = page.accentColor)
-        BubbleParticles()
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 32.dp)
-                .padding(bottom = 160.dp)
-                .graphicsLayer {
-                    alpha = contentAlpha.value
-                    translationY = contentOffsetY.value
-                },
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // Icon in glass circle with accent border
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .background(color = glassSurfaceColor())
-                    .border(
-                        width = 1.dp,
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                page.accentColor.copy(alpha = 0.4f),
-                                page.accentColor.copy(alpha = 0.1f),
-                            ),
-                        ),
-                        shape = CircleShape,
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = page.icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = page.accentColor,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(40.dp))
-
-            // Gradient title
-            Text(
-                text = page.title,
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    brush = Brush.linearGradient(
-                        colors = listOf(Color.White, GradientCTAStart, GradientCTAEnd),
-                    ),
-                ),
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
+        PageDots(pager.currentPage)
+        if (onLast) {
+            SonarButton(
+                text = stringResource(R.string.welcome_tour_start),
+                onClick = { finish(true) },
+                modifier = Modifier.fillMaxWidth(),
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = page.description,
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color(0xFF94A3B8), // landing --text-secondary
-                textAlign = TextAlign.Center,
+            SonarButton(
+                text = stringResource(R.string.welcome_tour_later),
+                onClick = { finish(false) },
+                modifier = Modifier.fillMaxWidth(),
+                style = SonarButtonStyle.Quiet,
             )
-
-            if (page.showContributeToggle) {
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = stringResource(R.string.onboarding_contribute_toggle),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White,
-                    )
-                    Switch(
-                        checked = contributeEnabled,
-                        onCheckedChange = onContributeToggle,
-                    )
-                }
-            }
+        } else {
+            SonarButton(
+                text = stringResource(R.string.onboarding_btn_continue),
+                onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } },
+                modifier = Modifier.fillMaxWidth(),
+                icon = Icons.AutoMirrored.Filled.ArrowForward,
+            )
+            SkipButton(pager.currentPage) { scope.launch { pager.animateScrollToPage(MODELS_INDEX) } }
         }
     }
 }
 
-/** Per-page wave background with accent-tinted caustic. */
+/** Skipping the introduction lands on the model choice, which still has to be made. */
 @Composable
-private fun OnboardingWaves(accentColor: Color) {
-    val waveTheme = waveThemeForCurrent()
-    val a = waveTheme.alphaMultiplier
-    val infiniteTransition = rememberInfiniteTransition(label = "obWave")
-    val phase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = (2f * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(7000, easing = LinearEasing),
-        ),
-        label = "obWavePhase",
+private fun SkipButton(current: Int, onSkip: () -> Unit) {
+    if (current >= MODELS_INDEX) return
+    SonarButton(
+        text = stringResource(R.string.onboarding_btn_skip),
+        onClick = onSkip,
+        modifier = Modifier.fillMaxWidth(),
+        style = SonarButtonStyle.Quiet,
     )
+}
 
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        // Accent-tinted caustic glow
-        val causticPhase = phase * 0.25f
-        val cx = size.width * 0.5f + sin(causticPhase) * size.width * 0.08f
-        val cy = size.height * 0.35f +
-            cos(causticPhase * 0.6f) * size.height * 0.05f
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    accentColor.copy(alpha = (0.03f * a).coerceAtMost(1f)),
-                    Color.Transparent,
-                ),
-                center = Offset(cx, cy),
-                radius = size.width * 0.25f,
-            ),
-            radius = size.width * 0.25f,
-            center = Offset(cx, cy),
-        )
-
-        // Two subtle wave layers
-        val waveConfigs = listOf(
-            Triple(0.72f, 0.025f, waveTheme.primary.copy(alpha = (0.035f * a).coerceAtMost(1f))),
-            Triple(0.80f, 0.018f, waveTheme.secondary.copy(alpha = (0.03f * a).coerceAtMost(1f))),
-        )
-        waveConfigs.forEachIndexed { index, (yFrac, ampFrac, color) ->
-            val wavePath = Path()
-            val amplitude = size.height * ampFrac
-            val yCenter = size.height * yFrac
-            val phaseOff = index * 1.5f
-
-            wavePath.moveTo(0f, yCenter)
-            for (x in 0..size.width.toInt() step 4) {
-                val xf = x.toFloat()
-                val y = yCenter + amplitude * sin(
-                    (xf / size.width * 3 * Math.PI + phase + phaseOff).toFloat(),
-                )
-                wavePath.lineTo(xf, y)
-            }
-            wavePath.lineTo(size.width, size.height)
-            wavePath.lineTo(0f, size.height)
-            wavePath.close()
-            drawPath(path = wavePath, color = color)
-        }
+@Composable
+private fun PageDots(current: Int) {
+    val description = stringResource(R.string.welcome_page_cd, current + 1, PAGES.size)
+    Row(
+        modifier = Modifier.clearAndSetSemantics { contentDescription = description },
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PAGES.indices.forEach { index -> PageDot(active = index == current) }
     }
 }
 
 @Composable
-private fun PageIndicator(isActive: Boolean) {
+private fun PageDot(active: Boolean) {
     val width by animateDpAsState(
-        targetValue = if (isActive) 28.dp else 8.dp,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium,
-        ),
-        label = "indicatorWidth",
+        targetValue = if (active) INDICATOR_ACTIVE else INDICATOR_IDLE,
+        animationSpec = motionSpec(OceanMotion.softSpring()),
+        label = "dotWidth",
     )
-    val color by animateColorAsState(
-        targetValue = if (isActive) GradientCTAStart else Color.White.copy(alpha = 0.25f),
-        label = "indicatorColor",
-    )
-
-    Box(
-        modifier = Modifier
-            .width(width)
-            .height(8.dp)
-            .clip(CircleShape)
-            .background(color),
-    )
+    val color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+    Box(Modifier.width(width).height(INDICATOR_IDLE).clip(CircleShape).background(color))
 }

@@ -1,11 +1,5 @@
 package com.oceanguard.ai.ui.components
 
-import androidx.compose.animation.core.EaseInOut
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,6 +24,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import com.oceanguard.ai.ui.motion.LocalReducedMotion
+import com.oceanguard.ai.ui.motion.rememberOceanLoop
 
 // ---------------------------------------------------------------------------
 // Species bounding-box overlay
@@ -243,15 +239,14 @@ fun SpeciesFitWidthBoxOverlay(
 /** Continuous alpha pulse [0.4, 1.0] shared by the species overlays. */
 @Composable
 private fun rememberSpeciesPulse(): Float {
-    val transition = rememberInfiniteTransition(label = "speciesBoxPulse")
-    val pulse by transition.animateFloat(
-        initialValue = 0.45f,
-        targetValue  = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation  = tween(durationMillis = 900, easing = EaseInOut),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "speciesBoxPulseAlpha",
-    )
-    return pulse
+    // The loop stops off-screen and under "Remove animations", where the boxes stay at full alpha.
+    val phase by rememberOceanLoop(SPECIES_PULSE_PERIOD_MS)
+    return if (LocalReducedMotion.current) 1f else speciesPulseAlphaAt(phase)
 }
+
+private const val SPECIES_PULSE_PERIOD_MS = 1_800
+private const val SPECIES_PULSE_MIN_ALPHA = 0.45f
+
+/** Triangle wave over one loop: alpha goes from the minimum up to 1 and back. */
+internal fun speciesPulseAlphaAt(phase: Float): Float =
+    SPECIES_PULSE_MIN_ALPHA + (1f - SPECIES_PULSE_MIN_ALPHA) * (1f - kotlin.math.abs(2f * phase - 1f))

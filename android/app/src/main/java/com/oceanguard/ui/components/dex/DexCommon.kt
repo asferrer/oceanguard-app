@@ -1,13 +1,9 @@
 package com.oceanguard.ai.ui.components.dex
 
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,8 +16,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -34,31 +33,32 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.oceanguard.ai.ui.components.GlassCard
+import com.oceanguard.ai.R
 import com.oceanguard.ai.ui.components.SpeciesSpriteImage
-import com.oceanguard.ai.ui.components.pressableScale
-import com.oceanguard.ai.ui.theme.GradientDeepEnd
-import com.oceanguard.ai.ui.theme.GradientDeepMid
-import com.oceanguard.ai.ui.theme.GradientDeepStart
-import com.oceanguard.ai.ui.theme.OceanBlueLight
-import com.oceanguard.ai.ui.theme.OceanGreen
+import com.oceanguard.ai.ui.components.sonar.springPress
+import com.oceanguard.ai.ui.motion.OceanMotion
+import com.oceanguard.ai.ui.motion.motionSpec
+import com.oceanguard.ai.ui.motion.LocalReducedMotion
+import com.oceanguard.ai.ui.theme.SonarTheme
+import kotlinx.coroutines.delay
 
 // ---------------------------------------------------------------------------
-// Shared data model — lightweight transfer object for dex grid cells.
+// Shared data model: lightweight transfer object for dex grid cells.
 // Parametrizes both MarineDex and BioDex card/header composables.
 // ---------------------------------------------------------------------------
 
@@ -84,13 +84,33 @@ data class DexItem(
     val subtitle: String? = null,
 )
 
+/**
+ * Draws the sprite of a [DexItem] in a card or a hero. [silhouette] is true for an entry that
+ * has not been discovered: the slot must then paint a flat shape, never the real artwork.
+ */
+typealias DexSpriteSlot = @Composable (modifier: Modifier, size: Dp, silhouette: Boolean) -> Unit
+
+/** Default slot: species artwork (or its neutral placeholder). */
+fun speciesSpriteSlot(item: DexItem): DexSpriteSlot = { modifier, size, silhouette ->
+    SpeciesSpriteImage(
+        spritePath = item.spritePath,
+        modifier = modifier,
+        size = size,
+        silhouette = silhouette,
+        silhouetteColor = SonarTheme.colors.lineStrong,
+    )
+}
+
+private val CardShape = RoundedCornerShape(16.dp)
+private const val MAX_STAGGERED_CARDS = 8
+
 // ---------------------------------------------------------------------------
-// DexCollectionHeader — gradient hero block with circular progress + stats
+// DexCollectionHeader: progress ring with the collection figures
 // ---------------------------------------------------------------------------
 
 /**
- * Full-width hero header showing collection progress.
- * Clones the MarineDex header pattern, parametrised by total catalog size.
+ * Full-width header with collection progress. [caption] is the line under the ring (for
+ * example "3 / 11 discovered", or the completion message once [discoveredCount] == [totalCount]).
  */
 @Composable
 fun DexCollectionHeader(
@@ -98,53 +118,42 @@ fun DexCollectionHeader(
     totalCount: Int,
     favoriteCount: Int,
     observationCount: Int,
+    caption: String,
     discoveredLabel: String,
     favoritesLabel: String,
     observationsLabel: String,
     modifier: Modifier = Modifier,
 ) {
-    val isDark = isSystemInDarkTheme()
-    val heroTextColor = if (isDark) Color.White else MaterialTheme.colorScheme.onPrimaryContainer
-
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = if (isDark) {
-                            listOf(GradientDeepStart, GradientDeepMid, GradientDeepEnd)
-                        } else {
-                            listOf(
-                                MaterialTheme.colorScheme.primaryContainer,
-                                MaterialTheme.colorScheme.secondaryContainer,
-                            )
-                        },
-                    )
-                )
-                .padding(vertical = 24.dp),
-            contentAlignment = Alignment.Center,
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = SonarTheme.colors.hull),
+            border = BorderStroke(1.dp, SonarTheme.colors.line),
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 DexCircularProgress(discovered = discoveredCount, total = totalCount)
-                Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "$discoveredCount / $totalCount",
+                    text = caption,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = heroTextColor,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
                 )
             }
         }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
         DexStatsRow(
             discoveredCount = discoveredCount,
             favoriteCount = favoriteCount,
@@ -165,98 +174,70 @@ private fun DexStatsRow(
     favoritesLabel: String,
     observationsLabel: String,
 ) {
-    GlassCard(animate = false) {
+    val colors = SonarTheme.colors
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = CardShape,
+        colors = CardDefaults.cardColors(containerColor = colors.hull),
+        border = BorderStroke(1.dp, colors.line),
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DexStat(label = discoveredLabel, value = discoveredCount.toString(), valueColor = OceanGreen)
-            VerticalDivider(
-                modifier = Modifier.height(40.dp),
-                color = MaterialTheme.colorScheme.outlineVariant,
-                thickness = 1.dp,
-            )
-            DexStat(label = favoritesLabel, value = favoriteCount.toString(), valueColor = OceanBlueLight)
-            VerticalDivider(
-                modifier = Modifier.height(40.dp),
-                color = MaterialTheme.colorScheme.outlineVariant,
-                thickness = 1.dp,
-            )
-            DexStat(label = observationsLabel, value = observationCount.toString(), valueColor = MaterialTheme.colorScheme.primary)
+            DexStat(label = discoveredLabel, value = discoveredCount.toString(), valueColor = colors.trace)
+            VerticalDivider(modifier = Modifier.height(40.dp), color = colors.line)
+            DexStat(label = favoritesLabel, value = favoriteCount.toString(), valueColor = colors.alert)
+            VerticalDivider(modifier = Modifier.height(40.dp), color = colors.line)
+            DexStat(label = observationsLabel, value = observationCount.toString(), valueColor = colors.echo)
         }
     }
 }
 
 // ---------------------------------------------------------------------------
-// DexCircularProgress — animated arc showing fraction discovered
+// DexCircularProgress: animated arc showing the fraction discovered
 // ---------------------------------------------------------------------------
 
 @Composable
 fun DexCircularProgress(discovered: Int, total: Int) {
-    val isDark = isSystemInDarkTheme()
+    val colors = SonarTheme.colors
     val progress = if (total > 0) (discovered.toFloat() / total).coerceIn(0f, 1f) else 0f
     val sweepAngle by animateFloatAsState(
         targetValue = 360f * progress,
-        animationSpec = tween(durationMillis = 800),
+        animationSpec = motionSpec(OceanMotion.signature()),
         label = "dexProgress",
     )
-    val progressColor = when {
-        progress >= 1f -> OceanGreen
-        progress >= 0.6f -> OceanBlueLight
-        else -> MaterialTheme.colorScheme.primary
-    }
-    val trackColor = if (isDark) Color.White.copy(alpha = 0.15f)
-        else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-    val textColor = if (isDark) Color.White else MaterialTheme.colorScheme.onPrimaryContainer
-    val subtextColor = textColor.copy(alpha = 0.7f)
+    val arcColor = if (progress >= 1f) colors.echo else colors.trace
+    val trackColor = colors.line
 
     Box(
         modifier = Modifier
             .size(96.dp)
             .drawBehind {
-                drawArc(
-                    color = trackColor,
-                    startAngle = -90f,
-                    sweepAngle = 360f,
-                    useCenter = false,
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 8.dp.toPx()),
-                )
-                drawArc(
-                    color = progressColor,
-                    startAngle = -90f,
-                    sweepAngle = sweepAngle,
-                    useCenter = false,
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 8.dp.toPx()),
-                )
+                val stroke = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
+                drawArc(trackColor, -90f, 360f, useCenter = false, style = stroke)
+                drawArc(arcColor, -90f, sweepAngle, useCenter = false, style = stroke)
             },
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "$discovered",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
-                color = textColor,
-            )
-            Text(text = "/ $total", style = MaterialTheme.typography.labelSmall, color = subtextColor)
+            Text(text = "$discovered", style = SonarTheme.type.dataLarge, color = colors.ink)
+            Text(text = "/ $total", style = SonarTheme.type.dataSmall, color = colors.ink2)
         }
     }
 }
 
 // ---------------------------------------------------------------------------
-// DexStat — single label+value column used in the stats row
+// DexStat: single label+value column used in the stats row
 // ---------------------------------------------------------------------------
 
 @Composable
 fun DexStat(label: String, value: String, valueColor: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = valueColor,
-        )
+        Text(text = value, style = SonarTheme.type.dataLarge, color = valueColor)
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = label,
@@ -268,19 +249,16 @@ fun DexStat(label: String, value: String, valueColor: Color) {
 }
 
 // ---------------------------------------------------------------------------
-// DexCard — grid cell for a single DexItem (discovered or locked)
+// DexCard: grid cell for a single DexItem (discovered or locked)
 // ---------------------------------------------------------------------------
 
 /**
- * A single Pokédex-style card cell.
+ * A single collection card.
  *
- * Discovered entries show the sprite loaded via [SpeciesSpriteImage], display
- * name, optional subtitle and an observation-count pill.
- * Locked entries blur the sprite and overlay a "?" glyph.
- *
- * @param item            The lightweight DexItem to render.
- * @param animationIndex  Stagger index for the spring entry animation.
- * @param onNavigateToDetail Invoked with [DexItem.key] when the card is tapped.
+ * A discovered entry shows its sprite (through [sprite]), name, optional subtitle, the count and
+ * a heart when it is a favourite; tapping it calls [onNavigateToDetail]. An undiscovered entry
+ * shows the silhouette of the sprite and a "?" in place of the name, and is not clickable.
+ * [badge] is an optional marker in the top corner (the risk dot of MarineDex).
  */
 @Composable
 fun DexCard(
@@ -288,193 +266,139 @@ fun DexCard(
     animationIndex: Int,
     onNavigateToDetail: (key: String) -> Unit,
     modifier: Modifier = Modifier,
+    sprite: DexSpriteSlot = speciesSpriteSlot(item),
+    badge: (@Composable () -> Unit)? = null,
 ) {
-    var isVisible by remember { mutableStateOf(false) }
+    val reduced = LocalReducedMotion.current
+    var isVisible by remember { mutableStateOf(reduced) }
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(animationIndex * 40L)
+        if (!reduced) delay(animationIndex.coerceAtMost(MAX_STAGGERED_CARDS) * OceanMotion.STAGGER_MS.toLong())
         isVisible = true
     }
-    val cardScale by animateFloatAsState(
-        targetValue = if (isVisible) 1f else 0.75f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "cardScale_${item.key}",
-    )
-    val cardAlpha by animateFloatAsState(
+    val appear by animateFloatAsState(
         targetValue = if (isVisible) 1f else 0f,
-        animationSpec = tween(durationMillis = 250, delayMillis = animationIndex * 40),
-        label = "cardAlpha_${item.key}",
+        animationSpec = motionSpec(OceanMotion.popSpring()),
+        label = "dexCardAppear",
     )
-
-    val borderBrush = if (item.discovered) {
-        Brush.verticalGradient(listOf(OceanGreen.copy(alpha = 0.8f), OceanBlueLight.copy(alpha = 0.4f)))
+    val colors = SonarTheme.colors
+    val interaction = remember { MutableInteractionSource() }
+    val description = if (item.discovered) {
+        stringResource(R.string.dex_card_cd_discovered, item.displayName, item.count)
     } else {
-        val locked = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-        Brush.linearGradient(listOf(locked, locked))
+        stringResource(R.string.dex_card_cd_locked, item.displayName)
     }
-    val cardCd = if (item.discovered) "${item.displayName}, observed ${item.count} times"
-        else "${item.displayName}, not yet discovered"
+    val openLabel = stringResource(R.string.dex_card_open_label, item.displayName)
 
     Card(
         modifier = modifier
             .aspectRatio(0.75f)
-            .graphicsLayer { scaleX = cardScale; scaleY = cardScale; alpha = cardAlpha }
+            .graphicsLayer {
+                val scale = 0.75f + 0.25f * appear
+                scaleX = scale
+                scaleY = scale
+                alpha = appear.coerceIn(0f, 1f)
+            }
             .then(
                 if (item.discovered) {
                     Modifier
-                        .pressableScale()
-                        .clickable { onNavigateToDetail(item.key) }
-                } else Modifier
+                        .springPress(interaction)
+                        .clickable(
+                            interactionSource = interaction,
+                            indication = null,
+                            role = Role.Button,
+                            onClickLabel = openLabel,
+                        ) { onNavigateToDetail(item.key) }
+                } else {
+                    Modifier
+                },
             )
-            .semantics { contentDescription = cardCd },
-        shape = RoundedCornerShape(16.dp),
+            .semantics { contentDescription = description },
+        shape = CardShape,
         colors = CardDefaults.cardColors(
-            containerColor = if (item.discovered) MaterialTheme.colorScheme.surfaceContainerHigh
-            else MaterialTheme.colorScheme.surfaceContainerLowest,
+            containerColor = if (item.discovered) colors.hull else colors.deep,
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (item.discovered) 4.dp else 1.dp),
-        border = BorderStroke(width = if (item.discovered) 1.5.dp else 0.5.dp, brush = borderBrush),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (item.discovered) colors.trace.copy(alpha = 0.7f) else colors.line,
+        ),
     ) {
-        if (item.discovered) {
-            DiscoveredCardContent(item = item)
-        } else {
-            LockedCardContent(item = item)
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Private card internals
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun DiscoveredCardContent(item: DexItem) {
-    val isDark = isSystemInDarkTheme()
-    Box(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(80.dp)
-                .align(Alignment.TopCenter)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(OceanGreen.copy(alpha = if (isDark) 0.08f else 0.06f), Color.Transparent)
-                    )
-                ),
-        )
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 8.dp, vertical = 10.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            SpeciesSpriteImage(spritePath = item.spritePath, size = 48.dp)
-
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = item.displayName,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                item.subtitle?.let { sub ->
-                    Text(
-                        text = sub,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontStyle = FontStyle.Italic,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Surface(shape = RoundedCornerShape(8.dp), color = OceanGreen.copy(alpha = 0.18f)) {
-                    Text(
-                        text = "×${item.count}",
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = OceanGreen,
-                    )
-                }
-            }
+            CardMarkers(item = item, badge = badge)
+            sprite(Modifier, 48.dp, !item.discovered)
+            if (item.discovered) DiscoveredCaption(item) else LockedCaption()
         }
     }
 }
 
 @Composable
-private fun LockedCardContent(item: DexItem) {
-    val isDark = isSystemInDarkTheme()
-    val overlayColors = if (isDark) {
-        listOf(Color.Black.copy(alpha = 0.35f), Color.Black.copy(alpha = 0.55f))
-    } else {
-        listOf(
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
-        )
-    }
-    val questionMarkColor = if (isDark) Color.White.copy(alpha = 0.85f)
-        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-
-    Box(
+private fun CardMarkers(item: DexItem, badge: (@Composable () -> Unit)?) {
+    Row(
         modifier = Modifier
-            .fillMaxSize()
-            .background(Brush.verticalGradient(colors = overlayColors)),
-        contentAlignment = Alignment.Center,
+            .fillMaxWidth()
+            .height(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        SpeciesSpriteImage(
-            spritePath = item.spritePath,
-            size = 56.dp,
-            modifier = Modifier.blur(radius = 12.dp).graphicsLayer { alpha = 0.5f },
-        )
-        Text(
-            text = "?",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = questionMarkColor,
-        )
+        if (item.discovered && item.isFavorite) {
+            Icon(
+                imageVector = Icons.Filled.Favorite,
+                contentDescription = null,
+                tint = SonarTheme.colors.alert,
+                modifier = Modifier.size(14.dp),
+            )
+        }
+        if (item.discovered) badge?.invoke()
     }
 }
 
-// ---------------------------------------------------------------------------
-// Preview
-// ---------------------------------------------------------------------------
-
-@Preview(showBackground = true, backgroundColor = 0xFF0A1929)
 @Composable
-private fun DexCardDiscoveredPreview() {
-    DexCard(
-        item = DexItem(
-            key = "acanthaster_planci",
-            displayName = "Crown-of-thorns",
-            spritePath = null,
-            discovered = true,
-            count = 5,
-            isFavorite = false,
-            subtitle = "Acanthaster planci",
-        ),
-        animationIndex = 0,
-        onNavigateToDetail = {},
-    )
+private fun DiscoveredCaption(item: DexItem) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = item.displayName,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        item.subtitle?.let { sub ->
+            Text(
+                text = sub,
+                style = MaterialTheme.typography.labelSmall,
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Surface(shape = RoundedCornerShape(8.dp), color = SonarTheme.colors.traceContainer) {
+            Text(
+                text = "×${item.count}",
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                style = SonarTheme.type.dataSmall,
+                color = SonarTheme.colors.onTraceContainer,
+            )
+        }
+    }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0A1929)
 @Composable
-private fun DexCardLockedPreview() {
-    DexCard(
-        item = DexItem(
-            key = "unknown_species",
-            displayName = "???",
-            spritePath = null,
-            discovered = false,
-            count = 0,
-            isFavorite = false,
-        ),
-        animationIndex = 1,
-        onNavigateToDetail = {},
+private fun LockedCaption() {
+    Text(
+        text = "?",
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(bottom = 4.dp),
     )
 }

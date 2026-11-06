@@ -1,12 +1,6 @@
 package com.oceanguard.ai.ui.components
 
-import androidx.compose.animation.core.EaseInOut
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -30,18 +24,26 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import com.oceanguard.ai.R
 import com.oceanguard.ai.inference.DetectionResult
+import com.oceanguard.ai.ui.components.analysis.SweepGeometry
+import com.oceanguard.ai.ui.motion.LocalReducedMotion
+import com.oceanguard.ai.ui.motion.OceanMotion
+import com.oceanguard.ai.ui.motion.motionSpec
+import com.oceanguard.ai.ui.motion.rememberOceanLoop
 import com.oceanguard.ai.ui.theme.MaterialFabric
 import com.oceanguard.ai.ui.theme.MaterialFishingNet
 import com.oceanguard.ai.ui.theme.MaterialGlass
@@ -51,293 +53,11 @@ import com.oceanguard.ai.ui.theme.MaterialPlastic
 import com.oceanguard.ai.ui.theme.MaterialRubber
 
 // ---------------------------------------------------------------------------
-// Colour mapping: RT-DETR class name -> material colour
-// Mirrors the DebrisMaterial enum colour palette so overlays are consistent
-// with DebrisCard material badges.
+// Shared animation state for the three BoundingBoxOverlay overloads.
 // ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Cached Paint objects — allocated once, reused every frame.
-// Canvas rendering is always on the main thread, so no synchronisation needed.
-// ---------------------------------------------------------------------------
-
-internal val cachedTextPaint = android.graphics.Paint().apply {
-    color       = android.graphics.Color.WHITE
-    isAntiAlias = true
-    typeface    = android.graphics.Typeface.DEFAULT_BOLD
-}
-
-internal val cachedBgPaint = android.graphics.Paint().apply {
-    style       = android.graphics.Paint.Style.FILL
-    isAntiAlias = true
-}
-
-internal val cachedBorderPaint = android.graphics.Paint().apply {
-    color       = android.graphics.Color.argb(51, 255, 255, 255)
-    style       = android.graphics.Paint.Style.STROKE
-    strokeWidth = 1f
-    isAntiAlias = true
-}
-
-// New material colours not present in the shared theme -- defined locally
-// so they are available for open-vocabulary detections without modifying the
-// theme file.
-private val MaterialWood     = Color(0xFF8D6E63) // brown 400
-private val MaterialPaper    = Color(0xFFD7CCC8) // brown 100
-private val MaterialCeramic  = Color(0xFFFF8A65) // deep-orange 300
-private val MaterialChemical = Color(0xFFEF5350) // red 400
-
-private val CLASS_COLOR_MAP: Map<String, Color> = mapOf(
-    // Plastic-family
-    "bottle"           to MaterialPlastic,
-    "plastic_debris"   to MaterialPlastic,
-    "mask"             to MaterialPlastic,
-    "bottle_cap"       to MaterialPlastic,
-    "plastic_bag"      to MaterialPlastic,
-    "food_wrapper"     to MaterialPlastic,
-    "styrofoam"        to MaterialPlastic,
-    "plastic_cup"      to MaterialPlastic,
-    "straw"            to MaterialPlastic,
-    "plastic_utensil"  to MaterialPlastic,
-    "six_pack_ring"    to MaterialPlastic,
-    "plastic_sheeting" to MaterialPlastic,
-    "diaper"           to MaterialPlastic,
-    "cigarette_butt"   to MaterialPlastic,
-    "cigarette_lighter" to MaterialPlastic,
-    // Metal-family
-    "can"              to MaterialMetal,
-    "metal_debris"     to MaterialMetal,
-    "aerosol_can"      to MaterialMetal,
-    "metal_drum"       to MaterialMetal,
-    "wire_cable"       to MaterialMetal,
-    "battery"          to MaterialMetal,
-    "electronics"      to MaterialMetal,
-    // Fishing gear
-    "fishing_net"      to MaterialFishingNet,
-    "fishing_line"     to MaterialFishingNet,
-    "rope"             to MaterialFishingNet,
-    "fishing_buoy"     to MaterialFishingNet,
-    "fishing_trap"     to MaterialFishingNet,
-    // Glass
-    "glass_debris"     to MaterialGlass,
-    "glass_bottle"     to MaterialGlass,
-    "glass_jar"        to MaterialGlass,
-    "glass_fragment"   to MaterialGlass,
-    "light_bulb"       to MaterialGlass,
-    // Rubber
-    "tire"             to MaterialRubber,
-    "flip_flop"        to MaterialRubber,
-    "rubber_hose"      to MaterialRubber,
-    // Fabric
-    "glove"            to MaterialFabric,
-    "fabric_debris"    to MaterialFabric,
-    "clothing"         to MaterialFabric,
-    "shoe"             to MaterialFabric,
-    // Paper
-    "cardboard"        to MaterialPaper,
-    "paper"            to MaterialPaper,
-    // Wood
-    "wood_pallet"      to MaterialWood,
-    "lumber"           to MaterialWood,
-    // Ceramic
-    "ceramic_fragment" to MaterialCeramic,
-    "brick"            to MaterialCeramic,
-    // Chemical / hazmat
-    "paint_can"        to MaterialChemical,
-    "oil_container"    to MaterialChemical,
-    "syringe"          to MaterialChemical,
-    "chemical_drum"    to MaterialChemical,
-)
-
-/**
- * Resolve an overlay colour for a given [className] (case-insensitive).
- * Falls back to [MaterialOther] when no exact match is found.
- */
-internal fun colorForClass(className: String): Color =
-    CLASS_COLOR_MAP[className.lowercase()] ?: MaterialOther
-
-// ---------------------------------------------------------------------------
-// Core drawing helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Draw L-shaped corner brackets for a bounding box.
- *
- * Each corner gets two perpendicular lines with rounded caps.
- * Line length is proportional to the box dimensions, clamped to avoid
- * overshoot on tiny boxes or excessive length on large ones.
- */
-internal fun DrawScope.drawCornerBrackets(
-    left: Float,
-    top: Float,
-    right: Float,
-    bottom: Float,
-    color: Color,
-    strokeWidth: Float,
-    bracketFraction: Float = 0.15f,
-) {
-    val boxW = right - left
-    val boxH = bottom - top
-    val arm = (minOf(boxW, boxH) * bracketFraction).coerceIn(6f, 40f)
-    val cap = StrokeCap.Round
-
-    // Top-left corner
-    drawLine(color, Offset(left, top), Offset(left + arm, top), strokeWidth, cap)
-    drawLine(color, Offset(left, top), Offset(left, top + arm), strokeWidth, cap)
-
-    // Top-right corner
-    drawLine(color, Offset(right, top), Offset(right - arm, top), strokeWidth, cap)
-    drawLine(color, Offset(right, top), Offset(right, top + arm), strokeWidth, cap)
-
-    // Bottom-left corner
-    drawLine(color, Offset(left, bottom), Offset(left + arm, bottom), strokeWidth, cap)
-    drawLine(color, Offset(left, bottom), Offset(left, bottom - arm), strokeWidth, cap)
-
-    // Bottom-right corner
-    drawLine(color, Offset(right, bottom), Offset(right - arm, bottom), strokeWidth, cap)
-    drawLine(color, Offset(right, bottom), Offset(right, bottom - arm), strokeWidth, cap)
-}
-
-/**
- * Draw a multi-layer outer glow around corner brackets.
- *
- * Three concentric layers with increasing stroke width and decreasing
- * alpha produce a subtle neon-like glow behind the main brackets.
- * Must be called BEFORE drawCornerBrackets so glow renders underneath.
- */
-internal fun DrawScope.drawGlow(
-    left: Float,
-    top: Float,
-    right: Float,
-    bottom: Float,
-    color: Color,
-    baseStroke: Float,
-) {
-    val layers = listOf(
-        Pair(baseStroke + 6f, 0.03f),  // outermost: 3% alpha, widest
-        Pair(baseStroke + 4f, 0.05f),  // middle:    5% alpha
-        Pair(baseStroke + 2f, 0.08f),  // innermost: 8% alpha
-    )
-    for ((stroke, alpha) in layers) {
-        drawCornerBrackets(
-            left = left, top = top, right = right, bottom = bottom,
-            color = color.copy(alpha = alpha),
-            strokeWidth = stroke,
-        )
-    }
-}
-
-/**
- * Draw one detection's bounding box (brackets + glow + fill) and pill label.
- *
- * Visual pipeline per detection:
- * 1. Semi-transparent fill inside the box area
- * 2. Outer glow (3 concentric bracket layers)
- * 3. Corner brackets (foreground, rounded caps)
- * 4. Pill-shaped label chip with white border
- *
- * Confidence modulates visual intensity: higher confidence = brighter
- * brackets/fill/glow. Labels stay at fixed 85% alpha for readability.
- *
- * @param detection     The detection to render.
- * @param scaleX        Horizontal scale factor (display width; coords are [0,1]).
- * @param scaleY        Vertical scale factor (display height; coords are [0,1]).
- * @param strokeWidthPx Stroke width in pixels (caller converts from dp).
- * @param pulseAlpha    Animated alpha multiplier for the pulse effect [0.4, 1.0].
- */
-internal fun DrawScope.drawDetection(
-    detection: DetectionResult,
-    scaleX: Float,
-    scaleY: Float,
-    strokeWidthPx: Float,
-    pulseAlpha: Float = 1f,
-) {
-    val baseColor = colorForClass(detection.className)
-
-    // Confidence-based intensity: map [0,1] -> [0.5, 1.0]
-    // Low-confidence boxes appear dimmer but never invisible.
-    val confidenceIntensity = 0.5f + (detection.confidence.coerceIn(0f, 1f) * 0.5f)
-
-    // Combine pulse animation with confidence for final alpha
-    val effectiveAlpha = (pulseAlpha * confidenceIntensity).coerceIn(0f, 1f)
-    val color = baseColor.copy(alpha = effectiveAlpha)
-
-    // Scale normalized [0,1] coordinates to display pixels
-    val left   = detection.x1 * scaleX
-    val top    = detection.y1 * scaleY
-    val right  = detection.x2 * scaleX
-    val bottom = detection.y2 * scaleY
-
-    // 1. Semi-transparent fill inside the box
-    val fillAlpha = 0.08f * confidenceIntensity * pulseAlpha
-    drawRect(
-        color   = baseColor.copy(alpha = fillAlpha),
-        topLeft = Offset(left, top),
-        size    = Size(right - left, bottom - top),
-    )
-
-    // 2. Outer glow (behind brackets)
-    drawGlow(
-        left = left, top = top, right = right, bottom = bottom,
-        color = baseColor.copy(alpha = effectiveAlpha),
-        baseStroke = strokeWidthPx,
-    )
-
-    // 3. Corner brackets (foreground)
-    drawCornerBrackets(
-        left = left, top = top, right = right, bottom = bottom,
-        color = color,
-        strokeWidth = strokeWidthPx,
-    )
-
-    // 4. Pill-shaped label chip — prefer the raw VLM label so the user sees
-    //    what the model actually recognised ("plastic_grocery_bag") rather than
-    //    the canonical bucket ("PLASTIC_DEBRIS"). Falls back to className for
-    //    RT-DETRv2 detections that have no raw label.
-    val displayName = detection.rawLabel
-        ?.replace('_', ' ')
-        ?.split(' ')
-        ?.joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }
-        ?: detection.className
-    val label      = "$displayName ${(detection.confidence * 100).toInt()}%"
-    val textSizePx = 12.dp.toPx()
-    val paddingH   = 6.dp.toPx()
-    val paddingV   = 3.dp.toPx()
-
-    drawIntoCanvas { canvas ->
-        // Reuse cached Paint objects — update only the mutable property that varies per call.
-        cachedTextPaint.textSize = textSizePx
-        cachedBgPaint.color      = baseColor.copy(alpha = 0.85f).toArgb()
-
-        val textWidth  = cachedTextPaint.measureText(label)
-        val chipHeight = textSizePx + paddingV * 2
-        val chipRadius = chipHeight / 2f   // full pill shape
-
-        // Position above the box with a small gap, clamped to canvas top
-        val chipTop    = (top - chipHeight - 4.dp.toPx()).coerceAtLeast(0f)
-        val chipBottom = chipTop + chipHeight
-        val chipLeft   = left
-        val chipRight  = (left + textWidth + paddingH * 2).coerceAtMost(size.width)
-
-        val chipRect = android.graphics.RectF(chipLeft, chipTop, chipRight, chipBottom)
-
-        canvas.nativeCanvas.drawRoundRect(chipRect, chipRadius, chipRadius, cachedBgPaint)
-        canvas.nativeCanvas.drawRoundRect(chipRect, chipRadius, chipRadius, cachedBorderPaint)
-
-        // White label text centered vertically within the pill
-        canvas.nativeCanvas.drawText(
-            label,
-            chipLeft + paddingH,
-            chipBottom - paddingV,
-            cachedTextPaint,
-        )
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Shared animation state — extracted to avoid duplicating rememberInfiniteTransition
-// in both BoundingBoxOverlay overloads.
-// ---------------------------------------------------------------------------
+private const val PULSE_PERIOD_MS = 1_600
+private const val PULSE_MIN_ALPHA = 0.4f
 
 private data class BboxAnimState(
     val pulseAlpha    : Float,
@@ -345,31 +65,77 @@ private data class BboxAnimState(
     val entranceAlpha : Float,
 )
 
+/** Triangle wave over one loop: alpha goes from the minimum up to 1 and back, like a pulse. */
+internal fun pulseAlphaAt(phase: Float): Float {
+    val wave = 1f - kotlin.math.abs(2f * phase - 1f)
+    return PULSE_MIN_ALPHA + (1f - PULSE_MIN_ALPHA) * wave
+}
+
 @Composable
 private fun rememberBboxAnimState(detections: List<DetectionResult>): BboxAnimState {
-    val infiniteTransition = rememberInfiniteTransition(label = "bboxPulse")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue  = 0.4f,
-        targetValue   = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation  = tween(durationMillis = 800, easing = EaseInOut),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "bboxPulseAlpha",
-    )
+    // The loop stops off-screen and under "Remove animations", where the boxes stay at full alpha.
+    val phase by rememberOceanLoop(PULSE_PERIOD_MS)
+    val pulseAlpha = if (LocalReducedMotion.current) 1f else pulseAlphaAt(phase)
     var entranceTriggered by remember { mutableStateOf(false) }
     LaunchedEffect(detections) { entranceTriggered = detections.isNotEmpty() }
     val entranceScale by animateFloatAsState(
         targetValue   = if (entranceTriggered) 1f else 0.8f,
-        animationSpec = tween(durationMillis = 400, easing = EaseInOut),
+        animationSpec = motionSpec(OceanMotion.standard()),
         label         = "bboxEntranceScale",
     )
     val entranceAlpha by animateFloatAsState(
         targetValue   = if (entranceTriggered) 1f else 0f,
-        animationSpec = tween(durationMillis = 400, easing = EaseInOut),
+        animationSpec = motionSpec(OceanMotion.standard()),
         label         = "bboxEntranceAlpha",
     )
     return BboxAnimState(pulseAlpha, entranceScale, entranceAlpha)
+}
+
+/**
+ * Boxes of [detections] over an image that reports its size, with the pulse and the entrance.
+ * [imageSize] is the picture's own size; when unknown the picture is taken to fill the view.
+ */
+@Composable
+private fun DetectionLayer(
+    detections: List<DetectionResult>,
+    displaySize: IntSize,
+    imageSize: Size,
+    anim: BboxAnimState,
+    showConfidence: Boolean,
+    modifier: Modifier,
+) {
+    if (displaySize == IntSize.Zero || detections.isEmpty()) return
+    Canvas(
+        modifier = modifier.graphicsLayer(
+            scaleX = anim.entranceScale,
+            scaleY = anim.entranceScale,
+            alpha = anim.entranceAlpha,
+        ),
+    ) {
+        val strokePx = 3.dp.toPx()
+        // Boxes are normalised to the picture, which `Fit` letterboxes inside the container.
+        val frame = SweepGeometry.fit(size, imageSize)
+        translate(frame.left, frame.top) {
+            for (detection in detections) {
+                drawDetection(detection, frame.width, frame.height, strokePx, anim.pulseAlpha, showConfidence)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoImagePlaceholder(modifier: Modifier) {
+    Box(
+        modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.overlay_no_image),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -381,74 +147,35 @@ private fun rememberBboxAnimState(detections: List<DetectionResult>): BboxAnimSt
  *
  * Each box is drawn with corner brackets, outer glow, and semi-transparent
  * fill, coloured by the material type inferred from [DetectionResult.className].
- * A pill-shaped label chip above each box shows the class name and confidence.
+ * A pill-shaped label chip above each box shows the class name and, when
+ * [showConfidence] is on, the confidence.
  *
- * Animations:
- * - Pulse: continuous alpha oscillation (0.4 → 1.0) for a "living" feel.
- * - Entrance: scale + fade when detections first appear.
- *
- * When [imageBitmap] is null a placeholder surface is shown instead.
+ * Animations: a pulse (stopped off-screen and under "Remove animations") and an entrance
+ * when detections first appear. When [imageBitmap] is null a placeholder is shown instead.
  */
 @Composable
 fun BoundingBoxOverlay(
     imageBitmap: ImageBitmap?,
     detections : List<DetectionResult>,
-    modifier   : Modifier = Modifier
+    modifier   : Modifier = Modifier,
+    showConfidence: Boolean = true,
 ) {
     var displaySize by remember { mutableStateOf(IntSize.Zero) }
     val anim = rememberBboxAnimState(detections)
+    val imageSize = imageBitmap?.let { Size(it.width.toFloat(), it.height.toFloat()) } ?: Size.Unspecified
 
-    Box(
-        modifier         = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        if (imageBitmap != null) {
-            // Image layer: fills the composable and reports its rendered size.
-            androidx.compose.foundation.Image(
-                bitmap             = imageBitmap,
-                contentDescription = "Captured image for debris analysis",
-                contentScale       = ContentScale.Fit,
-                modifier           = Modifier
-                    .fillMaxSize()
-                    .onSizeChanged { displaySize = it }
-            )
-
-            // Overlay layer: brackets + glow + animations
-            if (displaySize != IntSize.Zero && detections.isNotEmpty()) {
-                val scaleX = displaySize.width.toFloat()
-                val scaleY = displaySize.height.toFloat()
-
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer(
-                            scaleX = anim.entranceScale,
-                            scaleY = anim.entranceScale,
-                            alpha  = anim.entranceAlpha,
-                        )
-                ) {
-                    val strokePx = 3.dp.toPx()
-                    for (detection in detections) {
-                        drawDetection(detection, scaleX, scaleY, strokePx, anim.pulseAlpha)
-                    }
-                }
-            }
-        } else {
-            // Placeholder when no image is available yet.
-            Box(
-                modifier         = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text      = "No image available",
-                    style     = MaterialTheme.typography.bodyMedium,
-                    color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        if (imageBitmap == null) {
+            NoImagePlaceholder(Modifier.fillMaxSize())
+            return@Box
         }
+        androidx.compose.foundation.Image(
+            bitmap = imageBitmap,
+            contentDescription = stringResource(R.string.overlay_image_cd),
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize().onSizeChanged { displaySize = it },
+        )
+        DetectionLayer(detections, displaySize, imageSize, anim, showConfidence, Modifier.fillMaxSize())
     }
 }
 
@@ -464,63 +191,26 @@ fun BoundingBoxOverlay(
 fun BoundingBoxOverlay(
     imageUri  : String?,
     detections: List<DetectionResult>,
-    modifier  : Modifier = Modifier
+    modifier  : Modifier = Modifier,
+    showConfidence: Boolean = true,
 ) {
     var displaySize by remember { mutableStateOf(IntSize.Zero) }
+    var imageSize by remember(imageUri) { mutableStateOf(Size.Unspecified) }
     val anim = rememberBboxAnimState(detections)
 
-    Box(
-        modifier         = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        if (imageUri != null) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(imageUri)
-                    .build(),
-                contentDescription = "Captured image for debris analysis",
-                contentScale       = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .onSizeChanged { displaySize = it }
-            )
-
-            // Draw overlay once the display size is known.
-            if (displaySize != IntSize.Zero && detections.isNotEmpty()) {
-                val scaleX = displaySize.width.toFloat()
-                val scaleY = displaySize.height.toFloat()
-
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer(
-                            scaleX = anim.entranceScale,
-                            scaleY = anim.entranceScale,
-                            alpha  = anim.entranceAlpha,
-                        )
-                ) {
-                    val strokePx = 3.dp.toPx()
-                    for (detection in detections) {
-                        drawDetection(detection, scaleX, scaleY, strokePx, anim.pulseAlpha)
-                    }
-                }
-            }
-        } else {
-            // Null URI placeholder
-            Box(
-                modifier         = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text      = "No image available",
-                    style     = MaterialTheme.typography.bodyMedium,
-                    color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        if (imageUri == null) {
+            NoImagePlaceholder(Modifier.fillMaxSize())
+            return@Box
         }
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current).data(imageUri).build(),
+            contentDescription = stringResource(R.string.overlay_image_cd),
+            contentScale = ContentScale.Fit,
+            onSuccess = { imageSize = it.painter.intrinsicSize },
+            modifier = Modifier.fillMaxSize().onSizeChanged { displaySize = it },
+        )
+        DetectionLayer(detections, displaySize, imageSize, anim, showConfidence, Modifier.fillMaxSize())
     }
 }
 
@@ -532,9 +222,7 @@ fun BoundingBoxOverlay(
  * URI-based overload that renders with [ContentScale.FillWidth] and lets the
  * height grow to match the image's aspect ratio. Used by the Results screen
  * while the inference is still running, so the captured photo is shown
- * uncropped (matching the look of SessionDetailScreen's annotated-thumbnail
- * branch). Bounding boxes are drawn on top with the same brackets/glow/pulse
- * animation as the canonical overlay.
+ * uncropped (matching the look of the annotated thumbnail of a saved analysis).
  *
  * The caller is responsible for placing this inside a `Modifier.fillMaxWidth()`
  * container — height adapts automatically to the loaded image.
@@ -544,59 +232,23 @@ fun FitWidthBoundingBoxOverlay(
     imageUri  : String?,
     detections: List<DetectionResult>,
     modifier  : Modifier = Modifier,
+    showConfidence: Boolean = true,
 ) {
     if (imageUri == null) {
-        // Without an image, fall back to the centred placeholder used by the
-        // canonical overlay; a 4:3 aspectRatio gives it sensible height.
-        Box(
-            modifier = modifier
-                .fillMaxWidth()
-                .aspectRatio(4f / 3f)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text      = "No image available",
-                style     = MaterialTheme.typography.bodyMedium,
-                color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-        }
+        // A 4:3 placeholder gives the missing image a sensible height.
+        NoImagePlaceholder(modifier.fillMaxWidth().aspectRatio(4f / 3f))
         return
     }
-
     var displaySize by remember { mutableStateOf(IntSize.Zero) }
     val anim = rememberBboxAnimState(detections)
 
     Box(modifier = modifier.fillMaxWidth()) {
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(imageUri)
-                .build(),
-            contentDescription = "Captured image for debris analysis",
-            contentScale       = ContentScale.FillWidth,
-            modifier = Modifier
-                .fillMaxWidth()
-                .onSizeChanged { displaySize = it },
+            model = ImageRequest.Builder(LocalContext.current).data(imageUri).build(),
+            contentDescription = stringResource(R.string.overlay_image_cd),
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier.fillMaxWidth().onSizeChanged { displaySize = it },
         )
-
-        if (displaySize != IntSize.Zero && detections.isNotEmpty()) {
-            val scaleX = displaySize.width.toFloat()
-            val scaleY = displaySize.height.toFloat()
-            Canvas(
-                modifier = Modifier
-                    .matchParentSize()
-                    .graphicsLayer(
-                        scaleX = anim.entranceScale,
-                        scaleY = anim.entranceScale,
-                        alpha  = anim.entranceAlpha,
-                    ),
-            ) {
-                val strokePx = 3.dp.toPx()
-                for (detection in detections) {
-                    drawDetection(detection, scaleX, scaleY, strokePx, anim.pulseAlpha)
-                }
-            }
-        }
+        DetectionLayer(detections, displaySize, Size.Unspecified, anim, showConfidence, Modifier.matchParentSize())
     }
 }
