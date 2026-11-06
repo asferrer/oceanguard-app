@@ -21,7 +21,7 @@ enum class VlmProvider(
 ) {
     QWEN("qwen", "Qwen 3.5", usesLiteRT = false),
     GEMMA4("gemma4", "Gemma 4", usesLiteRT = true),
-    /** Fine-tuned Gemma 4 E2B via GGUF + llama.cpp (+205% mAP@0.5 vs base on marine debris). */
+    /** Fine-tuned Gemma 4 E2B (adapter exp11g) via GGUF + llama.cpp (mAP@0.5 0.2941 vs 0.1381 base on TEST-200). */
     GEMMA4_GGUF("gemma4_gguf", "Gemma 4 FT (GGUF)", usesLiteRT = false);
 
     companion object {
@@ -38,9 +38,9 @@ enum class VlmProvider(
  * no changes needed in [LlamaTextEngine] or [ReportGenerator].
  *
  * **Qwen 3.5** — Q4_K_M GGUF (Apache 2.0):
- * - [FAST]:     0.8B — ~533 MB, ~20–30 tok/s. No thinking.
- * - [BALANCED]: 2B   — ~1.1 GB, ~12–18 tok/s. Thinking enabled.
- * - [QUALITY]:  4B   — ~2.74 GB, ~6–10 tok/s. Thinking enabled.
+ * - [FAST]:     0.8B — ~533 MB. No thinking.
+ * - [BALANCED]: 2B   — ~1.1 GB. Thinking enabled.
+ * - [QUALITY]:  4B   — ~2.74 GB. Thinking enabled.
  *
  * **Gemma 4** — Q4_K_M GGUF (Apache 2.0):
  * - [GEMMA4_E2B]: E2B (5.1B total, 2.3B effective) — ~3.1 GB. Native vision via mmproj.
@@ -111,9 +111,10 @@ enum class TextModelTier(
     /**
      * OceanGuard fine-tuned Gemma 4 E2B — Q4_K_M GGUF via llama.cpp.
      *
-     * This is the exp12_vision_lora adapter (r=16, α=32, language + SigLIP2 vision encoder)
-     * merged into the base model and quantized to Q4_K_M. Benchmarked at mAP@0.5 = 0.3256
-     * vs 0.1067 base (+205%) on the OceanGuard marine debris held-out eval split.
+     * This is the exp11g adapter (LoRA on real + synthetic data, group-aware partition; attention
+     * and MLP projections of the language tower) merged into the base model and
+     * quantized to Q4_K_M. mAP@0.5 on TEST-200: 0.2941 vs 0.1381 for the base model (x2.13);
+     * on VAL-100: 0.2820 vs 0.1081. Model card: asferrer/gemma-4-E2B-it-oceanguard-marine-debris.
      *
      * Uses [VlmProvider.GEMMA4_GGUF] so [OceanGuardApp.createTextEngine] routes it to
      * [LlamaTextEngine] (not LiteRTTextEngine). The Gemma 4 chat template is handled by
@@ -170,7 +171,8 @@ enum class TextModelTier(
      * otherwise returns [variant] unchanged.
      */
     fun variantFallback(variant: TextModelVariant): TextModelVariant =
-        if (supportsFinetuned) variant else TextModelVariant.BASE
+        if (supportsFinetuned && (variant != TextModelVariant.FINETUNED || VlmModelManager.FINETUNED_LITERTLM_PUBLISHED)) variant
+        else TextModelVariant.BASE
 
     companion object {
         fun fromKey(key: String): TextModelTier =

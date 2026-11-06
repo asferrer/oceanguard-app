@@ -1,18 +1,18 @@
-# setup-models.ps1 — Download RT-DETRv2 detector models from the latest release.
+# setup-models.ps1 - Download the RT-DETRv2 detector (TFLite FP16) from a release.
+# Or build it with tools/rtdetrv2/README.md and copy it to android/app/src/main/assets/models/.
 # Verifies SHA256 against models\CHECKSUMS.txt. Idempotent.
 #
 # Usage: .\scripts\setup-models.ps1
 #        $env:OCEANGUARD_REPO = "owner/repo"; .\scripts\setup-models.ps1
 $ErrorActionPreference = "Stop"
 
-$Repo          = if ($env:OCEANGUARD_REPO) { $env:OCEANGUARD_REPO } else { "asferrer/OceanguardAI" }
+$Repo          = if ($env:OCEANGUARD_REPO) { $env:OCEANGUARD_REPO } else { "asferrer/oceanguard-app" }
 $ModelsDir     = "android\app\src\main\assets\models"
 $ChecksumsFile = "models\CHECKSUMS.txt"
 $BaseUrl       = "https://github.com/$Repo/releases/latest/download"
 
 $Models = @(
-    "rtdetrv2_detector.tflite",
-    "rtdetrv2_detector_int8.tflite"
+    "rtdetrv2_detector.tflite"   # FP16 build of the final RT-DETRv2 (INT8 was discarded)
 )
 
 New-Item -ItemType Directory -Force -Path $ModelsDir | Out-Null

@@ -177,8 +177,8 @@ private fun ModelChip(
  * so users always know whether detections will run before capturing an image.
  *
  * Two chips are rendered side by side:
- * - "VLM"      — Gemma 3n + OceanGuard LoRA (slow to load, ~3-5 s)
- * - "Detector" — RT-DETRv2 TFLite (fast to load, ~200-500 ms)
+ * - "VLM"      — Gemma 4 E2B (slow to load)
+ * - "Detector" — RT-DETRv2 TFLite (fast to load)
  *
  * Color semantics:
  * - Green  : model ready.

@@ -58,7 +58,7 @@ import com.oceanguard.ai.ui.theme.OceanGreen
  * on its right.
  *
  * @param statusText  Main message shown in the status pill.
- * @param subText     Optional secondary line (e.g. "Open-vocabulary AI · ~25 s").
+ * @param subText     Optional secondary line (e.g. "Open-vocabulary AI").
  * @param accentColor Animation tint. Defaults to the ocean-green theme accent.
  */
 @Composable

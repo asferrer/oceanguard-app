@@ -15,7 +15,7 @@ Gemma 4 natively supports `box_2d` output -- a structured coordinate format that
 - **Verification**: Cross-validates RT-DETRv2 detections with a fundamentally different approach
 - **Flexibility**: Adapts to new debris categories by simply editing the prompt
 
-**Trade-off**: ~100-300x slower than RT-DETRv2 (~4-10s vs ~30ms), so it is used for deep analysis, not real-time scanning.
+**Trade-off**: it is slower than RT-DETRv2 (TODO: latencies pending measurement on the Galaxy S22), so it is used for deep analysis, not real-time scanning.
 
 ---
 
@@ -219,7 +219,7 @@ The regex pattern ````(?:json)?\s*\n?(\[.*?])\s*``` ` extracts the JSON array fr
 | **Architecture** | Transformer encoder-decoder | 5.1B param VLM (2.3B effective) |
 | **Training** | Supervised on 8-class COCO dataset | General pretraining (zero-shot) |
 | **Runtime** | TFLite + NNAPI/XNNPACK | LiteRT-LM Engine API |
-| **Latency** | ~30ms | ~4-10s |
+| **Latency** | TODO (pending measurement on the S22) | TODO (pending) |
 | **Confidence** | Calibrated sigmoid scores | Fixed 0.75 |
 | **Boxes** | 150 queries, cxcywh | Unbounded, box_2d y-first |
 | **NMS** | Per-class NMS in Kotlin | Not needed (VLM outputs final set) |
@@ -236,27 +236,17 @@ The regex pattern ````(?:json)?\s*\n?(\[.*?])\s*``` ` extracts the JSON array fr
 
 The `DetectionOrchestrator` can run both detectors:
 
-1. RT-DETRv2 runs first (~30ms) and results are shown immediately
-2. Gemma 4 Vision runs in parallel (~4-10s) for deep verification
+1. RT-DETRv2 runs first and results are shown immediately
+2. Gemma 4 Vision runs in parallel for deep verification
 3. Results are merged: RT-DETRv2 provides calibrated scores, Gemma 4 catches missed items
 
 ---
 
-## Latency Breakdown (Exynos 2200)
+## Latency Breakdown (Galaxy S22)
 
-| Phase | Time |
-|-------|------|
-| Image to JPEG bytes | ~5-15ms |
-| LiteRT-LM engine create conversation | ~50-100ms |
-| Vision encoding (image patch processing) | ~500-1500ms |
-| Text generation (~50-150 tokens) | ~3-8s |
-| JSON parsing + coordinate conversion | <1ms |
-| **Total** | **~4-10s** |
-
-The dominant cost is text generation. Token count varies with the number of detected objects:
-- 0 objects: ~10 tokens (`[]`) -- ~1-2s
-- 1-3 objects: ~50-100 tokens -- ~4-7s
-- 5+ objects: ~100-200 tokens -- ~7-10s
+TODO: the per-phase latencies (JPEG encoding, conversation creation, vision encoding, text generation) are pending
+measurement on the phone; no figure is claimed here. Text generation is expected to dominate, and its cost grows with
+the number of detected objects (more tokens in the JSON output).
 
 ---
 

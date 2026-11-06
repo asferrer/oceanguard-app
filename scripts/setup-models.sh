@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# setup-models.sh — Download RT-DETRv2 detector models from the latest release.
+# setup-models.sh — Download the RT-DETRv2 detector (TFLite FP16) from a release.
+# Or build it with tools/rtdetrv2/README.md and copy it to android/app/src/main/assets/models/.
 # Verifies SHA256 against models/CHECKSUMS.txt. Idempotent.
 set -euo pipefail
 
-REPO="${OCEANGUARD_REPO:-asferrer/OceanguardAI}"
+REPO="${OCEANGUARD_REPO:-asferrer/oceanguard-app}"
 MODELS_DIR="android/app/src/main/assets/models"
 CHECKSUMS_FILE="models/CHECKSUMS.txt"
 BASE_URL="https://github.com/${REPO}/releases/latest/download"
 
 MODELS=(
-  "rtdetrv2_detector.tflite"
-  "rtdetrv2_detector_int8.tflite"
+  "rtdetrv2_detector.tflite"   # FP16 build of the final RT-DETRv2 (INT8 was discarded)
 )
 
 mkdir -p "${MODELS_DIR}"

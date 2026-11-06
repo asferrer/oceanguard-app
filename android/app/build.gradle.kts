@@ -121,7 +121,10 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            // Without the keystore env vars (local builds) the release APK is left unsigned.
+            if (System.getenv("OCEANGUARD_KEYSTORE_PATH") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -152,7 +155,7 @@ android {
 
     // CRITICAL: Don't compress model files (gguf added for Qwen3.5 GGUF models)
     androidResources {
-        noCompress += listOf("bin", "tflite", "litert", "task", "litertlm", "gguf")
+        noCompress += listOf("bin", "tflite", "litert", "task", "litertlm", "gguf", "onnx")
     }
 
     // Asset pack configuration (for large model files)
@@ -209,7 +212,7 @@ dependencies {
     // 0.11.0 (May 2026) adds Gemma 4 MTP heads (~2x decode) and unifies vision encoder
     // to a single signature, fixing the "Vision Encoder model must have exactly one
     // signature but got 3" crash that 0.10.0 raised on legacy Gemma 3n preview models.
-    implementation("com.google.ai.edge.litertlm:litertlm-android:0.11.0")
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.19.1")
     // Guava (transitiva de LiteRT-LM) — explicit to expose ListenableFuture at compile time for CameraX 1.6.0
     implementation("com.google.guava:guava:33.3.1-android")
 
@@ -263,11 +266,18 @@ dependencies {
     // Konfetti - celebration particle effects
     implementation("nl.dionsegijn:konfetti-compose:2.0.5")
 
+    // ONNX Runtime Mobile — BioDex species encoder (OpenCLIP ViT-B/32)
+    // Uses NNAPI EP; GPU TFLite delegate is intentionally excluded (roto en Exynos Xclipse 920).
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
+
     // WorkManager — background upload scheduling (ktx merged into runtime since 2.9.0)
     implementation("androidx.work:work-runtime-ktx:2.11.2")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
+    // Mockito 5 (inline mock maker by default) — used to mock final android.* stub
+    // classes such as Bitmap in pure-JVM unit tests (no Robolectric needed).
+    testImplementation("org.mockito:mockito-core:5.14.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation(composeBom)

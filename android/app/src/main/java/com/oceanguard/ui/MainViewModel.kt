@@ -373,7 +373,7 @@ class MainViewModel(
     // -----------------------------------------------------------------------
 
     /**
-     * Triggers the full two-stage detection pipeline for the supplied image
+     * Triggers the full detection pipeline (RT-DETRv2, then optional Gemma 4 verification) for the supplied image
      * via the [InferenceService] foreground service.
      *
      * The service runs inference in a lifecycle-aware scope that survives
@@ -458,7 +458,7 @@ class MainViewModel(
             // "batch processed twice" bug — reported 2026-05-17).
             markBatchStarted(imageUris.hashCode())
             // Enqueue the image batch BEFORE the video jobs so the queue
-            // processes images first. Images take ~6-10 s each with Gemma 4;
+            // processes images first. Images are slow with Gemma 4;
             // videos take minutes per clip. Surfacing the fast image results
             // first lets the user start reviewing them while the slower video
             // jobs continue in the background.

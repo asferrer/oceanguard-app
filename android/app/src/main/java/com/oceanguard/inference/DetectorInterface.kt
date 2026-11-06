@@ -35,7 +35,7 @@ interface ObjectDetector {
      */
     suspend fun detect(
         bitmap: Bitmap,
-        confidenceThreshold: Float = 0.5f,
+        confidenceThreshold: Float = 0.6f,
     ): List<DetectionResult>
 
     /** Release all native resources (interpreter, delegates, buffers). */
@@ -45,7 +45,7 @@ interface ObjectDetector {
 /** Enumerates available detector models for the settings UI. */
 enum class DetectorType(val key: String, val displayLabel: String) {
     PICODET_S("picodet", "PicoDet-S (Fast, ~1 MB)"),
-    RT_DETR_V2("rtdetr", "RT-DETRv2 (Accurate, 83 MB)"),
+    RT_DETR_V2("rtdetr", "RT-DETRv2 (default, on-device, 83 MB)"),
     GEMMA4_VISION("gemma4", "Gemma 4 Vision (Deep, ~2.6 GB)");
 
     companion object {

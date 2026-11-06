@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Sélection du mode d\'analyse (Accueil) -->
+    <string name="scan_mode_title">Que voulez-vous analyser ?</string>
+    <string name="scan_mode_debris_title">Détecter les déchets</string>
+    <string name="scan_mode_debris_desc">Repérer et classer les déchets marins</string>
+    <string name="scan_mode_species_title">Identifier les espèces</string>
+    <string name="scan_mode_species_desc">Reconnaître la faune marine et l\'ajouter à votre BioDex</string>
+    <string name="biodex_download_pack">Télécharger le pack d\'espèces</string>
 
     <!-- ================================================================== -->
     <!-- Écran Détail de Session                                              -->
@@ -133,10 +140,12 @@
     <string name="settings_label_confidence_threshold">Seuil de confiance</string>
     <string name="settings_desc_confidence_threshold">Afficher uniquement les détections dont la confiance est supérieure à cette valeur</string>
     <string name="settings_label_detector_precision">Précision du détecteur</string>
-    <string name="settings_desc_detector_precision">INT8 est plus léger (43 Mo contre 83 Mo) et peut être plus rapide. Nécessite un redémarrage de l\'application.</string>
+    <string name="settings_desc_detector_precision">INT8 a été retiré : la version FP16 est la seule fournie. Poids FP16, calcul en FP32.</string>
     <string name="settings_hint_restart">Redémarrez l\'application pour appliquer la nouvelle précision du modèle</string>
     <string name="settings_label_detector_mode">Moteur de detection</string>
-    <string name="settings_desc_detector_mode">RT-DETRv2 est rapide (~30ms). Gemma 4 Vision utilise un VLM pour une analyse approfondie (~4--10s par image).</string>
+    <string name="settings_desc_detector_mode">RT-DETRv2 détecte sur le CPU (par défaut) ; Gemma 4 rédige ensuite le rapport. Gemma 4 Vision comme détecteur est plus lent par image.</string>
+    <string name="settings_label_refine_gemma">Affiner avec Gemma 4</string>
+    <string name="settings_desc_refine_gemma">Après RT-DETRv2, Gemma 4 ajoute le sous-type et le matériau à chaque boîte (plus lent par photo ; nécessite Gemma 4 téléchargé)</string>
     <string name="settings_label_deep_analysis">Analyse approfondie</string>
     <string name="settings_desc_deep_analysis">Lancer une analyse IA approfondie après la détection. Désactivez pour des résultats plus rapides (détection uniquement)</string>
     <string name="settings_label_confirm_capture">Confirmer la capture</string>
@@ -190,7 +199,7 @@
     <string name="settings_desc_vlm_variant">Utilisez le modèle de base Google ou le modèle affiné OceanGuard pour les déchets marins</string>
     <string name="vlm_variant_base">Base (Google)</string>
     <string name="vlm_variant_finetuned">Affiné (OceanGuard)</string>
-    <string name="vlm_variant_finetuned_metric">mAP@0.5 0.325 vs Base 0.107</string>
+    <string name="vlm_variant_finetuned_metric">mAP@0.5 0.294 vs Base 0.138 (TEST-200)</string>
     <string name="settings_label_gemma4_mmproj">Projecteur de vision (mmproj)</string>
     <string name="settings_desc_gemma4_mmproj">Téléchargez le projecteur de vision pour activer l\'analyse d\'images avec Gemma 4.</string>
 
@@ -655,5 +664,98 @@
     <string name="model_update_later_action">Plus tard</string>
     <string name="model_variant_current">v%1$s — actuelle</string>
     <string name="model_variant_update_available">mise à jour vers v%1$s disponible</string>
+
+    <!-- ================================================================== -->
+    <!-- BioDex                                                               -->
+    <!-- ================================================================== -->
+    <string name="biodex_title">BioDex</string>
+    <string name="biodex_home_subtitle">Identifier les espèces marines</string>
+    <string name="biodex_empty_title">Aucune espèce pour l\'instant</string>
+    <string name="biodex_empty_message">Les espèces marines que vous identifiez apparaîtront ici. Scannez la vie marine pour commencer votre collection.</string>
+    <string name="biodex_cd_go_back">Retour</string>
+    <!-- Le compteur de découvertes est construit dans le code : "$discoveredCount / $total Découvertes" -->
+    <string name="biodex_stat_discovered">Découvertes</string>
+    <string name="biodex_stat_favorites">Favoris</string>
+    <string name="biodex_stat_observations">Observations</string>
+
+    <!-- ================================================================== -->
+    <!-- Écran de détail BioDex                                               -->
+    <!-- ================================================================== -->
+    <string name="biodex_detail_cd_go_back">Retour</string>
+    <string name="biodex_detail_cd_remove_favorite">Retirer des favoris</string>
+    <string name="biodex_detail_cd_add_favorite">Ajouter aux favoris</string>
+    <string name="biodex_detail_tab_info">Info</string>
+    <string name="biodex_detail_tab_gallery">Galerie</string>
+    <string name="biodex_detail_tab_map">Carte</string>
+    <string name="biodex_detail_stat_observations">Fois\nObservée</string>
+
+    <!-- ================================================================== -->
+    <!-- Galerie BioDex                                                       -->
+    <!-- ================================================================== -->
+    <string name="biodex_gallery_cd_observation">Image d\'observation d\'espèce</string>
+    <string name="biodex_gallery_empty_title">Aucune observation pour l\'instant</string>
+    <!-- %1$s est le nom commun de l\'espèce -->
+    <string name="biodex_gallery_empty_message">Aucune photo enregistrée pour %1$s. Capturez une image de cette espèce pour la voir ici.</string>
+
+    <!-- ================================================================== -->
+    <!-- Badges BioDex                                                        -->
+    <!-- ================================================================== -->
+    <!-- Affiché sur les miniatures lorsque l\'observation est hors de l\'aire de répartition -->
+    <string name="biodex_badge_out_of_range">Hors zone</string>
+    <!-- Affiché dans l\'onglet Info quand cosmopolitan=true -->
+    <string name="biodex_badge_cosmopolitan">Cosmopolite</string>
+
+    <!-- ================================================================== -->
+    <!-- Espace réservé carte BioDex                                          -->
+    <!-- ================================================================== -->
+    <string name="biodex_map_placeholder">Carte bientôt disponible.\nLes lieux d\'observation apparaîtront ici une fois la couche carte intégrée.</string>
+    <string name="biodex_map_empty_no_location">Aucune de vos observations de cette espèce ne contient de données de localisation. Accordez la permission de localisation avant de capturer pour voir les marqueurs GPS ici.</string>
+    <string name="biodex_map_empty_no_obs">Aucune observation enregistrée pour l\'instant. Capturez une image de cette espèce pour alimenter la carte.</string>
+
+    <!-- ================================================================== -->
+    <!-- BioDex Détail d\'observation (M6)                                   -->
+    <!-- ================================================================== -->
+    <string name="biodex_obs_detail_title">Observation</string>
+    <string name="biodex_obs_detail_label_confidence">Confiance</string>
+    <string name="biodex_obs_detail_label_source">Source</string>
+    <string name="biodex_obs_detail_label_date">Date</string>
+    <string name="biodex_obs_detail_label_location">Localisation</string>
+    <string name="biodex_obs_detail_label_description">Description VLM</string>
+    <string name="biodex_obs_detail_badge_uncatalogued">Non cataloguée</string>
+    <string name="biodex_obs_detail_badge_out_of_range">Hors zone</string>
+    <string name="biodex_obs_detail_cd_image">Image d\'observation</string>
+    <string name="biodex_obs_detail_cd_go_back">Retour</string>
+
+    <!-- ================================================================== -->
+    <!-- BioDex Enrichissement en ligne (M7)                                 -->
+    <!-- ================================================================== -->
+    <string name="settings_species_enrichment_title">Infos espèces en ligne</string>
+    <string name="settings_species_enrichment_subtitle">L\'identification est 100%% locale. Seules des fiches externes (WoRMS / GBIF / iNaturalist) sont téléchargées ; votre image n\'est jamais envoyée.</string>
+    <string name="biodex_enrichment_section_title">Informations en ligne</string>
+    <string name="biodex_enrichment_label_status">Statut</string>
+    <string name="biodex_enrichment_label_distribution">Distribution</string>
+    <string name="biodex_enrichment_source_prefix">Sources : %1$s</string>
+    <string name="biodex_enrichment_disabled_hint">Activez « Infos espèces en ligne » dans Paramètres pour charger les fiches externes de WoRMS, GBIF et iNaturalist.</string>
+
+    <!-- ================================================================== -->
+    <!-- BioDex Identification d\'espèces (M5)                               -->
+    <!-- ================================================================== -->
+    <string name="biodex_identify_cta">Identifier une espèce</string>
+    <string name="biodex_result_title">Résultats d\'identification</string>
+    <string name="biodex_result_confidence">Confiance : %1$d%%</string>
+    <string name="biodex_result_uncatalogued">Non cataloguée</string>
+    <string name="biodex_result_none">Aucune espèce identifiée dans cette image.</string>
+    <string name="biodex_result_done">Terminé</string>
+    <string name="species_identifying">Identification en cours…</string>
+
+    <string name="species_result_auto_return">Nouvelle analyse dans %1$d s…</string>
+    <string name="species_result_btn_new_scan">Nouveau scan</string>
+    <string name="species_result_btn_view_biodex">BioDex</string>
+    <string name="biodex_result_none_short">Aucune espèce</string>
+    <string name="species_batch_title">Lot d\'espèces</string>
+    <string name="species_batch_summary_species">Espèces trouvées</string>
+    <string name="species_batch_summary_images">Images</string>
+    <string name="species_batch_btn_new_batch">Nouveau lot</string>
+    <string name="species_batch_btn_view_biodex">Voir BioDex</string>
 
 </resources>

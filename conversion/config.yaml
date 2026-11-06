@@ -24,13 +24,12 @@ base_model:
 
 # LoRA Adapter Configuration
 lora_adapter:
-  # exp12_vision_lora — winner adapter (mAP@0.5=0.3256, Δ+0.2189 vs base 0.1067)
-  # vision_lora=True: SAME target modules applied to BOTH language tower AND SigLIP2
-  # vision encoder. Trainable params ≈ 60M (≈ 1.2 % of 5.15 B base).
-  # HF: asferrer/gemma-4-E2B-it-oceanguard-marine-debris
-  adapter_path: "../finetune/outputs/grid_best/adapter"
+  # exp11g adapter (LoRA on the language tower, real + 5,000 synthetic images, group-aware partition).
+  # mAP@0.5 (eval_grid) on TEST-200: 0.2941 vs 0.1381 base; VAL-100: 0.2820 vs 0.1081.
+  # TODO: the adapter is not published yet; set adapter_path to your local copy.
+  adapter_path: "./adapter"
 
-  # LoRA configuration — must match exp12 training config exactly
+  # LoRA configuration — TODO: verify against the adapter's adapter_config.json
   rank: 16
   alpha: 32
   target_modules:

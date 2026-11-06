@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,6 +51,13 @@ import com.oceanguard.ai.ui.screens.AchievementsScreen
 import com.oceanguard.ai.ui.screens.LocationPickerScreen
 import com.oceanguard.ai.ui.screens.MarineDexDetailScreen
 import com.oceanguard.ai.ui.screens.MarineDexScreen
+import com.oceanguard.ai.ui.screens.SpeciesDexDetailScreen
+import com.oceanguard.ai.ui.screens.SpeciesDexScreen
+import com.oceanguard.ai.ui.screens.SpeciesObservationDetailScreen
+import com.oceanguard.ai.ui.screens.SpeciesBatchResultScreen
+import com.oceanguard.ai.ui.screens.SpeciesResultScreen
+import com.oceanguard.ai.ui.screens.SpeciesViewModel
+import com.oceanguard.ai.data.species.SpeciesObservation
 import com.oceanguard.ai.ui.screens.SplashScreen
 import com.oceanguard.ai.ui.screens.VideoDetailScreen
 import com.oceanguard.ai.ui.screens.VideoResultsScreen
@@ -157,6 +165,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val viewModel = MainViewModel(applicationContext, app.detectionOrchestrator, app.repository, app.settingsRepository, app.locationProvider)
+        val speciesViewModel = SpeciesViewModel(applicationContext, app.speciesIdentifier, app.speciesCollectionRepository, app.speciesImagePreprocessor, app.locationProvider)
 
         // Deep-link route from notification click (initial intent + onNewIntent)
         _pendingDeepLink.value = intent?.getStringExtra(InferenceService.EXTRA_DEEP_LINK_ROUTE)
@@ -257,10 +266,33 @@ class MainActivity : AppCompatActivity() {
                                 dexEntries = dexEntries,
                                 discoveredCount = discoveredCount,
                                 latestAchievement = latestUnlocked,
+                                onSpeciesImagePicked = { uri ->
+                                    speciesViewModel.identifyFromImage(uri)
+                                    navController.navigate("species_result")
+                                },
+                                onSpeciesBatchPicked = { uris ->
+                                    speciesViewModel.identifyBatch(uris)
+                                    navController.navigate("species_batch_result")
+                                },
                             )
                         }
-                        composable("camera") {
-                            CameraScreen(navController = navController, viewModel = viewModel)
+                        composable(
+                            route = "camera?mode={mode}",
+                            arguments = listOf(navArgument("mode") {
+                                type = NavType.StringType
+                                defaultValue = "debris"
+                            }),
+                        ) { backStackEntry ->
+                            val speciesMode = backStackEntry.arguments?.getString("mode") == "species"
+                            CameraScreen(
+                                navController = navController,
+                                viewModel = viewModel,
+                                speciesMode = speciesMode,
+                                onSpeciesCapture = { uri ->
+                                    speciesViewModel.identifyFromImage(uri)
+                                    navController.navigate("species_result")
+                                },
+                            )
                         }
                         composable("live_detection") {
                             LiveDetectionScreen(navController = navController, viewModel = viewModel)
@@ -373,6 +405,80 @@ class MainActivity : AppCompatActivity() {
                                 },
                                 navController = navController,
                             )
+                        }
+                        composable("biodex") {
+                            // Pre-warm the ONNX species encoder while the user
+                            // browses BioDex, so the first identify is fast.
+                            LaunchedEffect(Unit) { app.prewarmSpeciesEncoder() }
+                            SpeciesDexScreen(
+                                repo = app.speciesCollectionRepository,
+                                catalog = app.speciesCatalog,
+                                onNavigateToDetail = { key -> navController.navigate("biodex/$key") },
+                                onNavigateBack = { navController.popBackStack() },
+                                onDownloadPack = { app.launchSpeciesPackDownload() },
+                            )
+                        }
+                        composable("species_result") {
+                            SpeciesResultScreen(
+                                navController = navController,
+                                viewModel = speciesViewModel,
+                                catalog = app.speciesCatalog,
+                            )
+                        }
+                        composable("species_batch_result") {
+                            val batchState by speciesViewModel.batchUiState.collectAsStateWithLifecycle()
+                            val uriList = when (val s = batchState) {
+                                is com.oceanguard.ai.ui.screens.SpeciesBatchUiState.Running  -> s.items.map { it.uri }
+                                is com.oceanguard.ai.ui.screens.SpeciesBatchUiState.Complete -> s.items.map { it.uri }
+                                else -> emptyList()
+                            }
+                            SpeciesBatchResultScreen(
+                                navController = navController,
+                                viewModel = speciesViewModel,
+                                catalog = app.speciesCatalog,
+                                uriList = uriList,
+                            )
+                        }
+                        composable(
+                            route = "biodex/{speciesKey}?tab={tab}",
+                            arguments = listOf(
+                                navArgument("speciesKey") { type = NavType.StringType },
+                                navArgument("tab") {
+                                    type = NavType.IntType
+                                    defaultValue = 0
+                                },
+                            ),
+                        ) { backStackEntry ->
+                            val speciesKey = backStackEntry.arguments?.getString("speciesKey") ?: return@composable
+                            // 0 = Info (default), 1 = Gallery, 2 = Map.
+                            val initialTab = backStackEntry.arguments?.getInt("tab") ?: 0
+                            SpeciesDexDetailScreen(
+                                speciesKey = speciesKey,
+                                repo = app.speciesCollectionRepository,
+                                catalog = app.speciesCatalog,
+                                onNavigateBack = { navController.popBackStack() },
+                                onObservationClick = { id -> navController.navigate("species_observation/$id") },
+                                initialTab = initialTab,
+                                enrichmentProvider = { aphiaId, name ->
+                                    app.speciesEnrichmentRepository.enrich(aphiaId, name)
+                                },
+                            )
+                        }
+                        composable(
+                            route = "species_observation/{observationId}",
+                            arguments = listOf(navArgument("observationId") { type = NavType.LongType }),
+                        ) { backStackEntry ->
+                            val obsId = backStackEntry.arguments?.getLong("observationId") ?: return@composable
+                            val observation by produceState<SpeciesObservation?>(initialValue = null, obsId) {
+                                value = app.speciesCollectionRepository.getObservationById(obsId)
+                            }
+                            observation?.let { obs ->
+                                SpeciesObservationDetailScreen(
+                                    observation = obs,
+                                    catalog = app.speciesCatalog,
+                                    onNavigateBack = { navController.popBackStack() },
+                                )
+                            }
                         }
                         composable("achievements") {
                             AchievementsScreen(

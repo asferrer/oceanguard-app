@@ -45,6 +45,7 @@ import com.oceanguard.ai.ui.components.spotlight.rememberSpotlightController
 import com.oceanguard.ai.ui.components.spotlight.spotlightTarget
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import androidx.compose.material.icons.filled.Public
 import com.oceanguard.ai.inference.DetectorType
 import com.oceanguard.ai.inference.TextModelTier
 import com.oceanguard.ai.inference.TextModelVariant
@@ -91,6 +92,10 @@ fun SettingsScreen(
     val confidenceThreshold by settings.confidenceThreshold.collectAsStateWithLifecycle(
         initialValue = SettingsRepository.DEFAULT_CONFIDENCE_THRESHOLD
     )
+
+    // BioDex online enrichment
+    val speciesOnlineEnrichmentEnabled by settings.speciesOnlineEnrichmentEnabled
+        .collectAsStateWithLifecycle(initialValue = false)
 
     // Research contribution settings
     val contributeConsentGiven by settings.contributeConsentGiven.collectAsStateWithLifecycle(
@@ -391,6 +396,23 @@ fun SettingsScreen(
             }
 
             // ---------------------------------------------------------------
+            // BioDex: Online species enrichment (privacy opt-in)
+            // ---------------------------------------------------------------
+            SettingsSection(
+                title = stringResource(R.string.biodex_title),
+                icon = Icons.Filled.Public,
+            ) {
+                SettingsToggleRow(
+                    title = stringResource(R.string.settings_species_enrichment_title),
+                    description = stringResource(R.string.settings_species_enrichment_subtitle),
+                    checked = speciesOnlineEnrichmentEnabled,
+                    onCheckedChange = {
+                        scope.launch { settings.setSpeciesOnlineEnrichmentEnabled(it) }
+                    },
+                )
+            }
+
+            // ---------------------------------------------------------------
             // About
             // ---------------------------------------------------------------
             AboutSection(
@@ -553,6 +575,9 @@ private fun DeveloperSettingsSection(
     val detectorModeKey by settings.detectorMode.collectAsStateWithLifecycle(
         initialValue = SettingsRepository.DEFAULT_DETECTOR_MODE
     )
+    val refineWithGemma by settings.refineWithGemma.collectAsStateWithLifecycle(
+        initialValue = SettingsRepository.DEFAULT_REFINE_WITH_GEMMA
+    )
 
     SettingsSection(
         title = stringResource(R.string.settings_section_developer),
@@ -705,6 +730,21 @@ private fun DeveloperSettingsSection(
             }
         }
 
+        if (currentDetectorType == DetectorType.RT_DETR_V2) {
+            Spacer(modifier = Modifier.height(8.dp))
+            SettingsToggleRow(
+                title = stringResource(R.string.settings_label_refine_gemma),
+                description = stringResource(R.string.settings_desc_refine_gemma),
+                checked = refineWithGemma,
+                onCheckedChange = { enabled ->
+                    scope.launch {
+                        settings.setRefineWithGemma(enabled)
+                        (devContext.applicationContext as? OceanGuardApp)?.applyDetectorMode()
+                    }
+                },
+            )
+        }
+
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
         // VLM provider selector (Qwen 3.5 / Gemma 4)
@@ -782,7 +822,7 @@ private fun DeveloperSettingsSection(
         )
         Spacer(modifier = Modifier.height(4.dp))
 
-        val currentAvailable = vlmModelManager.isModelAvailable(currentTier)
+        val currentAvailable = vlmModelManager.isAnyVariantAvailable(currentTier)
         val notDownloaded = stringResource(R.string.settings_vlm_not_downloaded)
         val isDownloading = downloadState is VlmDownloadState.Downloading ||
             downloadState is VlmDownloadState.Preparing ||
@@ -808,7 +848,7 @@ private fun DeveloperSettingsSection(
                 onDismissRequest = { tierExpanded = false },
             ) {
                 providerTiers.forEach { tier ->
-                    val tierAvailable = vlmModelManager.isModelAvailable(tier)
+                    val tierAvailable = vlmModelManager.isAnyVariantAvailable(tier)
                     DropdownMenuItem(
                         text = {
                             Row(
@@ -837,7 +877,8 @@ private fun DeveloperSettingsSection(
 
         // Model variant selector — visible only for Gemma 4 (the only provider with a fine-tuned variant)
         val currentVariant = TextModelVariant.fromKey(vlmModelVariantKey)
-        if (currentProvider == VlmProvider.GEMMA4 && currentTier.supportsFinetuned) {
+        if (currentProvider == VlmProvider.GEMMA4 && currentTier.supportsFinetuned &&
+            VlmModelManager.FINETUNED_LITERTLM_PUBLISHED) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.settings_label_vlm_variant),
@@ -936,7 +977,7 @@ private fun DeveloperSettingsSection(
                 ) {
                     Text(
                         "Download ${currentVariant.displayLabel} " +
-                            if (currentVariant == TextModelVariant.FINETUNED) "(~2.6 GB)"
+                            if (currentVariant == TextModelVariant.FINETUNED) "(~5.0 GB)"
                             else "(${currentTier.sizeLabel})"
                     )
                 }
@@ -1153,7 +1194,7 @@ private fun DeveloperSettingsSection(
             fontWeight = FontWeight.Medium,
         )
         Text(
-            text = "FP16 + INT8, NNAPI+XNNPACK. 5 warmup + 50 runs. Results logged: adb logcat -s RTDETRBenchmark:I",
+            text = "FP16, NNAPI + XNNPACK. 5 warmup + 50 runs. Results logged: adb logcat -s RTDETRBenchmark:I",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -1161,7 +1202,7 @@ private fun DeveloperSettingsSection(
         if (detectorBenchRunning) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             Text(
-                text = "Running benchmark (5 warmup + 50 runs x 2 models)...",
+                text = "Running benchmark (5 warmup + 50 runs x 2 delegates)...",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

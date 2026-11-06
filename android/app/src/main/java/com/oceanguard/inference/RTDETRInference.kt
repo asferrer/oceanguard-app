@@ -15,7 +15,7 @@ import java.nio.channels.FileChannel
 import kotlin.math.exp
 
 /**
- * RT-DETRv2 inference wrapper for fast object detection (~30ms).
+ * RT-DETRv2 inference wrapper for fast object detection.
  *
  * Uses TensorFlow Lite with GPU delegate for real-time debris detection.
  * The TFLite model exports raw outputs (no postprocessor baked in):
@@ -44,9 +44,9 @@ class RTDETRInference(
     companion object {
         private const val TAG = "RTDETRInference"
         const val MODEL_PATH_FP16 = "models/rtdetrv2_detector.tflite"
-        const val MODEL_PATH_INT8 = "models/rtdetrv2_detector_int8.tflite"
         const val INPUT_SIZE = 640
-        private const val DEFAULT_CONFIDENCE_THRESHOLD = 0.5f
+        /** Score threshold chosen on VAL (max F1 at IoU 0.5 with the app post-processing); see tools/rtdetrv2/README.md. */
+        private const val DEFAULT_CONFIDENCE_THRESHOLD = 0.6f
         private const val NMS_IOU_THRESHOLD = 0.5f
         private const val MAX_DETECTIONS = 100
 
@@ -60,6 +60,59 @@ class RTDETRInference(
         private const val NUM_CLASSES = 8
 
         val CLASS_NAMES = DebrisClasses.NAMES
+
+        /**
+         * Post-process raw model outputs (Kotlin reimplementation of RTDETRPostProcessor).
+         *
+         * Mirrors the PyTorch postprocessor with use_focal_loss=True:
+         * 1. Apply sigmoid to raw logits to get class scores
+         * 2. Filter by confidence threshold
+         * 3. Convert boxes from cxcywh to xyxy (kept normalized [0,1] for UI scaling)
+         * 4. Per-class NMS to remove overlapping detections (keep highest confidence)
+         * 5. Sort by confidence, take top MAX_DETECTIONS
+         */
+        internal fun postProcess(
+            logits: Array<FloatArray>,   // [NUM_QUERIES, NUM_CLASSES] raw logits
+            boxes: Array<FloatArray>,    // [NUM_QUERIES, 4] cxcywh normalized [0,1]
+            originalWidth: Int,
+            originalHeight: Int,
+            confidenceThreshold: Float = DEFAULT_CONFIDENCE_THRESHOLD,
+        ): List<DetectionResult> {
+            val candidates = mutableListOf<DetectionResult>()
+
+            for (q in logits.indices) {
+                for (c in logits[q].indices) {
+                    if (c >= CLASS_NAMES.size) continue
+                    val raw = logits[q][c]
+                    if (raw < -5f) continue
+                    val score = sigmoid(raw)
+                    if (score < confidenceThreshold) continue
+
+                    val cx = boxes[q][0]
+                    val cy = boxes[q][1]
+                    val w = boxes[q][2]
+                    val h = boxes[q][3]
+
+                    val x1 = (cx - w / 2f).coerceIn(0f, 1f)
+                    val y1 = (cy - h / 2f).coerceIn(0f, 1f)
+                    val x2 = (cx + w / 2f).coerceIn(0f, 1f)
+                    val y2 = (cy + h / 2f).coerceIn(0f, 1f)
+
+                    candidates.add(
+                        DetectionResult(
+                            x1 = x1, y1 = y1, x2 = x2, y2 = y2,
+                            classId = c,
+                            className = CLASS_NAMES[c],
+                            confidence = score,
+                        )
+                    )
+                }
+            }
+
+            return DetectionNms.apply(candidates, NMS_IOU_THRESHOLD, MAX_DETECTIONS)
+        }
+
+        internal fun sigmoid(x: Float): Float = 1.0f / (1.0f + exp(-x))
     }
 
     override val displayName: String
@@ -365,58 +418,6 @@ class RTDETRInference(
         return inputBuffer
     }
 
-    /**
-     * Post-process raw model outputs (Kotlin reimplementation of RTDETRPostProcessor).
-     *
-     * Mirrors the PyTorch postprocessor with use_focal_loss=True:
-     * 1. Apply sigmoid to raw logits to get class scores
-     * 2. Filter by confidence threshold
-     * 3. Convert boxes from cxcywh to xyxy (kept normalized [0,1] for UI scaling)
-     * 4. Per-class NMS to remove overlapping detections (keep highest confidence)
-     * 5. Sort by confidence, take top MAX_DETECTIONS
-     */
-    private fun postProcess(
-        logits: Array<FloatArray>,   // [NUM_QUERIES, NUM_CLASSES] raw logits
-        boxes: Array<FloatArray>,    // [NUM_QUERIES, 4] cxcywh normalized [0,1]
-        originalWidth: Int,
-        originalHeight: Int,
-        confidenceThreshold: Float = DEFAULT_CONFIDENCE_THRESHOLD,
-    ): List<DetectionResult> {
-        val candidates = mutableListOf<DetectionResult>()
-
-        for (q in logits.indices) {
-            for (c in logits[q].indices) {
-                if (c >= CLASS_NAMES.size) continue
-                val raw = logits[q][c]
-                if (raw < -5f) continue
-                val score = sigmoid(raw)
-                if (score < confidenceThreshold) continue
-
-                val cx = boxes[q][0]
-                val cy = boxes[q][1]
-                val w = boxes[q][2]
-                val h = boxes[q][3]
-
-                val x1 = (cx - w / 2f).coerceIn(0f, 1f)
-                val y1 = (cy - h / 2f).coerceIn(0f, 1f)
-                val x2 = (cx + w / 2f).coerceIn(0f, 1f)
-                val y2 = (cy + h / 2f).coerceIn(0f, 1f)
-
-                candidates.add(
-                    DetectionResult(
-                        x1 = x1, y1 = y1, x2 = x2, y2 = y2,
-                        classId = c,
-                        className = CLASS_NAMES[c],
-                        confidence = score,
-                    )
-                )
-            }
-        }
-
-        return DetectionNms.apply(candidates, NMS_IOU_THRESHOLD, MAX_DETECTIONS)
-    }
-
-    private fun sigmoid(x: Float): Float = 1.0f / (1.0f + exp(-x))
 
     /**
      * Load TFLite model from assets.

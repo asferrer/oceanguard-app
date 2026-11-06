@@ -72,15 +72,15 @@ Output is always a list of `DetectionResult` with **normalized [0,1] bounding bo
 | Property | Value |
 |----------|-------|
 | File | `RTDETRInference.kt` |
-| Model format | TFLite (FP16: 83 MB, INT8: 43.5 MB) |
+| Model format | TFLite FP16 (83 MB, FP16 weights / FP32 compute). INT8 was discarded (the full-integer build fails when allocating tensors; the weight-only build takes 56 s per image on a PC). Detector model `exp08_real_synth_minor_s3`; conversion and VAL validation in `tools/rtdetrv2/README.md` |
 | Input | 640x640 RGB, fixed size |
 | Output | `pred_boxes[1,150,4]` (cxcywh) + `pred_logits[1,150,8]` |
-| Postprocessing | Sigmoid on logits, threshold filter, cxcywh-to-xyxy, per-class NMS |
-| Delegates | NNAPI preferred (Exynos big.LITTLE scheduling, +28%), XNNPACK fallback |
-| Latency | ~30ms per frame (NNAPI on Exynos 2200) |
+| Postprocessing | Sigmoid on logits, threshold filter (default 0.6, chosen on VAL), cxcywh-to-xyxy, per-class NMS (IoU 0.5), max 100 |
+| Delegates | NNAPI preferred, XNNPACK fallback |
+| Latency | Galaxy S22 Ultra, `RTDETRBenchmarkRunner` (5 warm-up + 50 runs): median 3.98 s, p95 4.12 s with NNAPI; median 4.19 s with XNNPACK only |
 
 **Delegate strategy** is configurable via `DelegateStrategy` enum:
-- `NNAPI_PREFERRED` -- default, best on Exynos 2200
+- `NNAPI_PREFERRED` -- default
 - `XNNPACK_ONLY` -- pure CPU, for benchmarking
 
 **Erf-free model**: The TFLite model uses a custom ONNX surgery that replaces the `Erf` operator (unsupported by some delegates) with a `tanh` approximation, ensuring NNAPI compatibility.
@@ -94,7 +94,7 @@ Output is always a list of `DetectionResult` with **normalized [0,1] bounding bo
 | Input | Any size (LiteRT-LM handles resizing internally) |
 | Output | JSON array with `box_2d` coordinates + class labels |
 | Backend | `LiteRTTextEngine` -- GPU auto-detect, CPU fallback |
-| Latency | ~4-10s per image (CPU), potentially faster on GPU |
+| Latency | TODO: pending measurement on the Galaxy S22 |
 
 **How it works**: Sends image + structured prompt to the VLM. Gemma 4 outputs `box_2d` coordinates on a 1000x1000 grid in `[y_min, x_min, y_max, x_max]` order. These are parsed from JSON and converted to normalized `[0,1]` `[x1, y1, x2, y2]` coordinates.
 
@@ -171,9 +171,9 @@ Three quality tiers:
 
 | Tier | Model | Size | Speed | Context |
 |------|-------|------|-------|---------|
-| Fast | Qwen 3.5 0.8B | 533 MB | ~15-20 tok/s | 12288 |
-| Balanced | Qwen 3.5 2B | 1.1 GB | ~8-12 tok/s | 12288 |
-| Quality | Qwen 3.5 4B | 2.74 GB | ~4-8 tok/s | 12288 |
+| Fast | Qwen 3.5 0.8B | 533 MB | TODO | 12288 |
+| Balanced | Qwen 3.5 2B | 1.1 GB | TODO | 12288 |
+| Quality | Qwen 3.5 4B | 2.74 GB | TODO | 12288 |
 
 ### Implementation 2: Gemma 4 E2B via LiteRT-LM
 
@@ -188,7 +188,7 @@ Three quality tiers:
 | Sampling | topK=20, topP=0.95, temperature=0.5 (text) / 0.3 (vision) |
 
 **LiteRT-LM advantages over llama.cpp** for Gemma 4:
-- 1.65x faster decode speed on Exynos 2200 CPU
+- Faster decode than llama.cpp on the target phone (TODO: figure pending measurement on the S22)
 - Native chat template handling (no manual prompt formatting)
 - Built-in vision support (image bytes sent directly, no mmproj needed)
 - GPU backend via `Backend.GPU()` (driver-level optimization)
@@ -274,6 +274,13 @@ NotLoaded -> Loading -> WarmingUp -> Ready -> Standby -> (re-load on demand)
                                            -> Error
 ```
 
+### Multi-model flow (v1.0.0)
+- Default: RT-DETRv2 (TFLite FP16) detects; Gemma 4 E2B writes the report (`ToolAgentLoop`, unchanged).
+- Optional (Settings > Detection Engine > "Refine with Gemma 4"): after RT-DETRv2, Gemma 4 runs on the same
+  image and `DetectionRefiner` copies sub-type / material onto the RT-DETRv2 boxes it overlaps (IoU >= 0.3,
+  same canonical family). Boxes, classes and confidences stay RT-DETRv2's. Costs one extra Gemma 4 pass.
+- Gemma 4 Vision can still be selected as the detector itself. Live camera and video always use RT-DETRv2.
+
 ### Lazy Loading
 - RT-DETRv2: loaded at app startup (bundled in APK, ~83 MB, fast init)
 - VLM models: loaded on-demand when user triggers detection or report generation
@@ -347,15 +354,18 @@ All services use foreground notifications to prevent Android from killing them d
 
 ---
 
-## Performance Summary (Exynos 2200)
+## Performance Summary (Galaxy S22, Exynos 2200)
+
+Only the RT-DETRv2 detector has been measured (in-app `RTDETRBenchmarkRunner`, 5 warm-up + 50 runs, one session, Galaxy
+S22 Ultra). The other latencies are still pending measurement; no figure is claimed for them.
 
 | Operation | Latency | Backend |
 |-----------|---------|---------|
-| RT-DETRv2 detection | ~30ms | NNAPI (big.LITTLE) |
-| Gemma 4 vision detection | ~4-10s | LiteRT-LM (CPU/GPU) |
-| Qwen 0.8B report (2000 words) | ~30-45s | llama.cpp (Vulkan) |
-| Qwen 2B report (2000 words) | ~60-90s | llama.cpp (Vulkan) |
-| Gemma 4 E2B report (2000 words) | ~40-60s | LiteRT-LM (CPU/GPU) |
-| Model load (RT-DETRv2) | ~1s | TFLite |
-| Model load (Gemma 4 E2B) | ~8-15s | LiteRT-LM |
-| Model load (Qwen 2B) | ~5-10s | llama.cpp |
+| RT-DETRv2 detection | 3.98 s median (p95 4.12 s); 4.19 s with XNNPACK only | NNAPI / XNNPACK (CPU) |
+| Gemma 4 vision detection | TODO (pending) | LiteRT-LM (CPU/GPU) |
+| Qwen 0.8B report (2000 words) | TODO (pending) | llama.cpp (Vulkan) |
+| Qwen 2B report (2000 words) | TODO (pending) | llama.cpp (Vulkan) |
+| Gemma 4 E2B report (2000 words) | TODO (pending) | LiteRT-LM (CPU/GPU) |
+| Model load (RT-DETRv2) | TODO (pending) | TFLite |
+| Model load (Gemma 4 E2B) | TODO (pending) | LiteRT-LM |
+| Model load (Qwen 2B) | TODO (pending) | llama.cpp |

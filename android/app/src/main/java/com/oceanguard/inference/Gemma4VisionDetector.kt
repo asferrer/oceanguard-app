@@ -20,7 +20,7 @@ import kotlin.math.min
  * in `[y_min, x_min, y_max, x_max]` order. This detector converts them to
  * normalized [0,1] `[x1, y1, x2, y2]` matching the rest of the pipeline.
  *
- * Typical latency: ~4-10s on CPU (vs ~30ms for RT-DETRv2). Use for deep
+ * Much slower than RT-DETRv2 (latency on the S22: pending measurement). Use for deep
  * analysis where accuracy matters more than speed.
  */
 class Gemma4VisionDetector(
@@ -76,6 +76,65 @@ If nothing visible: [].
             "natural feature as debris. Output ONLY valid JSON arrays, no markdown or prose."
 
         /**
+         * Prompt the fine-tuned model was trained and evaluated with, verbatim. With the
+         * generic [DETECTION_PROMPT] it returns fewer objects and labels outside its 8 classes.
+         */
+        private val FINETUNED_DETECTION_PROMPT = """
+Detect ALL marine debris and litter in this image. Output ONLY a JSON array.
+
+For each object, provide:
+- "box_2d": bounding box as [y_min, x_min, y_max, x_max], integers 0-1000
+- "label": ONE of these 8 labels (snake_case, lowercase): plastic_bottle, metal_can, fishing_net, glove, face_mask, metal_debris, plastic_debris, tire
+- "material": Plastic, Metal, Glass, Rubber, Fabric, Latex
+
+Output format:
+[{"box_2d": [y_min, x_min, y_max, x_max], "label": "object_type", "material": "material_type"}]
+
+If no debris is found, output: []
+""".trimIndent()
+
+        private const val FINETUNED_SYSTEM_MESSAGE =
+            "You are a marine debris detection system. Output ONLY valid JSON arrays. " +
+            "Never include explanations, markdown, or text outside the JSON."
+
+        /** Prompts and sampling for one detection call. */
+        internal data class DetectionProfile(
+            val prompt: String,
+            val systemMessage: String,
+            val maxTokens: Int,
+            val temperature: Double,
+            val topK: Int,
+        )
+
+        // 512 fits ~14 typical detections in JSON without truncation. 0.1 + topK=10 keeps
+        // the model deterministic (less drift mid-array) and cuts per-token decode time.
+        private val BASE_PROFILE = DetectionProfile(
+            prompt = DETECTION_PROMPT,
+            systemMessage = SYSTEM_MESSAGE,
+            maxTokens = 512,
+            temperature = 0.1,
+            topK = 10,
+        )
+
+        // Greedy decoding and 256 tokens: the protocol of the published evaluation.
+        private val FINETUNED_PROFILE = DetectionProfile(
+            prompt = FINETUNED_DETECTION_PROMPT,
+            systemMessage = FINETUNED_SYSTEM_MESSAGE,
+            maxTokens = 256,
+            temperature = 0.0,
+            topK = 1,
+        )
+
+        /**
+         * Picks the profile from the file actually loaded, not from the setting: when the
+         * fine-tuned variant is selected but absent, the app loads the base model.
+         * Only the file name counts, because the app's own directory contains "oceanguard".
+         */
+        internal fun profileFor(modelPath: String?): DetectionProfile =
+            if (modelPath?.substringAfterLast('/')?.contains("oceanguard") == true) FINETUNED_PROFILE
+            else BASE_PROFILE
+
+        /**
          * Maps Gemma 4 free-form labels to one of the 11 canonical [DebrisType]s.
          * Keys are lowercase with underscores; values are always canonical so a
          * detection never lands in an extended enum (PLASTIC_BAG, STYROFOAM, ...)
@@ -102,6 +161,7 @@ If nothing visible: [].
 
             // ---- CAN family (canonical: CAN) ----
             put("can", DebrisType.CAN)
+            put("metal_can", DebrisType.CAN)
             put("aluminum_can", DebrisType.CAN)
             put("tin_can", DebrisType.CAN)
             put("beverage_can", DebrisType.CAN)
@@ -286,7 +346,7 @@ If nothing visible: [].
 
     override val displayName = "Gemma 4 E2B Vision"
     // 448 keeps LiteRT-LM on the vision_140 path (4 tiles) instead of vision_280
-    // (16 tiles). On Exynos 2200 this drops the encoder pass from ~12 s to ~3 s
+    // (16 tiles). On Exynos 2200 this makes the encoder pass much cheaper (figures pending measurement)
     // with no measurable recall loss for the canonical 11 debris classes.
     override val inputSize = 448
 
@@ -308,24 +368,16 @@ If nothing visible: [].
 
         Log.d(TAG, "Detecting debris in ${bitmap.width}x${bitmap.height} image...")
         val startMs = System.currentTimeMillis()
+        val profile = profileFor(textEngine.loadedModelPath)
 
         val response = try {
             textEngine.generateWithImage(
                 bitmap = bitmap,
-                prompt = DETECTION_PROMPT,
-                // 512 fits ~14 typical detections in JSON without truncation.
-                // 384 (previous value) cut off cluttered scenes mid-array, and
-                // a truncated JSON makes the parser drop every box after the
-                // failure point — including the one the user actually cared
-                // about. 1024 was wasteful: prefill rarely filled past 200
-                // tokens but the CPU sampler pays per slot allocated.
-                maxTokens = 512,
-                systemMessage = SYSTEM_MESSAGE,
-                // Structured JSON output benefits from low entropy. 0.1 + topK=10
-                // keeps the model deterministic (less drift mid-array) and cuts
-                // per-token decode time on CPU-sampled fallback.
-                temperature = 0.1,
-                topK = 10,
+                prompt = profile.prompt,
+                maxTokens = profile.maxTokens,
+                systemMessage = profile.systemMessage,
+                temperature = profile.temperature,
+                topK = profile.topK,
             )
         } catch (e: Exception) {
             Log.e(TAG, "Gemma 4 vision inference failed", e)

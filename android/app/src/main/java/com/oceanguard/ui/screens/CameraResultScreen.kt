@@ -185,7 +185,7 @@ fun CameraResultScreen(
             exit = fadeOut(),
         ) {
             val statusText = inferenceStatusText(uiState, isGemma4)
-            // Only show elapsed-time line; we no longer surface the "~20-30 s"
+            // Only show elapsed-time line; we no longer surface a time estimate
             // teaser so the overlay reads as a clean activity indicator.
             val subText = if (elapsedSec > 0) {
                 stringResource(R.string.results_status_elapsed, elapsedSec)

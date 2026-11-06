@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Seleção do modo de análise (Início) -->
+    <string name="scan_mode_title">O que queres analisar?</string>
+    <string name="scan_mode_debris_title">Detetar resíduos</string>
+    <string name="scan_mode_debris_desc">Encontra e classifica o lixo marinho</string>
+    <string name="scan_mode_species_title">Identificar espécies</string>
+    <string name="scan_mode_species_desc">Reconhece a vida marinha e adiciona-a ao teu BioDex</string>
+    <string name="biodex_download_pack">Transferir pacote de espécies</string>
 
     <!-- ================================================================== -->
     <!-- Tela de Detalhes da Sessão                                          -->
@@ -133,10 +140,12 @@
     <string name="settings_label_confidence_threshold">Limiar de Confiança</string>
     <string name="settings_desc_confidence_threshold">Mostrar apenas detecções com confiança acima deste valor</string>
     <string name="settings_label_detector_precision">Precisão do Detector</string>
-    <string name="settings_desc_detector_precision">INT8 é menor (43 MB vs 83 MB) e pode ser mais rápido. Requer reinício do aplicativo.</string>
+    <string name="settings_desc_detector_precision">INT8 foi removido: a versão FP16 é a única incluída. Pesos FP16, cálculo em FP32.</string>
     <string name="settings_hint_restart">Reinicie o aplicativo para aplicar a nova precisão do modelo</string>
     <string name="settings_label_detector_mode">Motor de detecao</string>
-    <string name="settings_desc_detector_mode">RT-DETRv2 e rapido (~30ms). Gemma 4 Vision usa um VLM para analise profunda (~4--10s por imagem).</string>
+    <string name="settings_desc_detector_mode">RT-DETRv2 detecta na CPU (padrão); o Gemma 4 escreve depois o relatório. O Gemma 4 Vision como detector é mais lento por imagem.</string>
+    <string name="settings_label_refine_gemma">Refinar com Gemma 4</string>
+    <string name="settings_desc_refine_gemma">Após o RT-DETRv2, o Gemma 4 acrescenta subtipo e material a cada caixa (mais lento por foto; requer o Gemma 4 baixado)</string>
     <string name="settings_label_deep_analysis">Análise Profunda</string>
     <string name="settings_desc_deep_analysis">Executar análise profunda por IA após a detecção. Desative para resultados mais rápidos (somente detecção)</string>
     <string name="settings_label_confirm_capture">Confirmar Captura</string>
@@ -190,7 +199,7 @@
     <string name="settings_desc_vlm_variant">Use o modelo base do Google ou o modelo ajustado da OceanGuard para resíduos marinhos</string>
     <string name="vlm_variant_base">Base (Google)</string>
     <string name="vlm_variant_finetuned">Afinado (OceanGuard)</string>
-    <string name="vlm_variant_finetuned_metric">mAP@0.5 0.325 vs Base 0.107</string>
+    <string name="vlm_variant_finetuned_metric">mAP@0.5 0.294 vs Base 0.138 (TEST-200)</string>
     <string name="settings_label_gemma4_mmproj">Projetor de visão (mmproj)</string>
     <string name="settings_desc_gemma4_mmproj">Descarregue o projetor de visão para ativar a análise de imagens com Gemma 4.</string>
 
@@ -654,5 +663,98 @@
     <string name="model_update_later_action">Mais tarde</string>
     <string name="model_variant_current">v%1$s — atual</string>
     <string name="model_variant_update_available">atualização para v%1$s disponível</string>
+
+    <!-- ================================================================== -->
+    <!-- BioDex                                                               -->
+    <!-- ================================================================== -->
+    <string name="biodex_title">BioDex</string>
+    <string name="biodex_home_subtitle">Identificar espécies marinhas</string>
+    <string name="biodex_empty_title">Ainda sem espécies</string>
+    <string name="biodex_empty_message">As espécies marinhas que identificares aparecerão aqui. Faz scan da vida marinha para começar a tua coleção.</string>
+    <string name="biodex_cd_go_back">Voltar</string>
+    <!-- O contador de descobertas é construído no código: "$discoveredCount / $total Descobertas" -->
+    <string name="biodex_stat_discovered">Descobertas</string>
+    <string name="biodex_stat_favorites">Favoritos</string>
+    <string name="biodex_stat_observations">Observações</string>
+
+    <!-- ================================================================== -->
+    <!-- Tela de detalhes do BioDex                                           -->
+    <!-- ================================================================== -->
+    <string name="biodex_detail_cd_go_back">Voltar</string>
+    <string name="biodex_detail_cd_remove_favorite">Remover dos favoritos</string>
+    <string name="biodex_detail_cd_add_favorite">Adicionar aos favoritos</string>
+    <string name="biodex_detail_tab_info">Info</string>
+    <string name="biodex_detail_tab_gallery">Galeria</string>
+    <string name="biodex_detail_tab_map">Mapa</string>
+    <string name="biodex_detail_stat_observations">Vezes\nObservada</string>
+
+    <!-- ================================================================== -->
+    <!-- Galeria do BioDex                                                    -->
+    <!-- ================================================================== -->
+    <string name="biodex_gallery_cd_observation">Imagem de observação de espécie</string>
+    <string name="biodex_gallery_empty_title">Nenhuma observação ainda</string>
+    <!-- %1$s é o nome comum da espécie -->
+    <string name="biodex_gallery_empty_message">Nenhuma foto registrada para %1$s ainda. Capture uma imagem desta espécie para vê-la aqui.</string>
+
+    <!-- ================================================================== -->
+    <!-- Selos do BioDex                                                      -->
+    <!-- ================================================================== -->
+    <!-- Exibido nas miniaturas da galeria quando a observação está fora da área de distribuição -->
+    <string name="biodex_badge_out_of_range">Fora da área</string>
+    <!-- Exibido na aba Info quando cosmopolitan=true -->
+    <string name="biodex_badge_cosmopolitan">Cosmopolita</string>
+
+    <!-- ================================================================== -->
+    <!-- Espaço reservado do mapa do BioDex                                   -->
+    <!-- ================================================================== -->
+    <string name="biodex_map_placeholder">Mapa em breve.\nAs localizações das observações aparecerão aqui quando a camada do mapa estiver integrada.</string>
+    <string name="biodex_map_empty_no_location">Nenhuma das suas observações desta espécie inclui dados de localização. Conceda a permissão de localização antes de capturar para ver os marcadores GPS aqui.</string>
+    <string name="biodex_map_empty_no_obs">Nenhuma observação registada ainda. Capture uma imagem desta espécie para preencher o mapa.</string>
+
+    <!-- ================================================================== -->
+    <!-- BioDex Detalhe de observação (M6)                                   -->
+    <!-- ================================================================== -->
+    <string name="biodex_obs_detail_title">Observação</string>
+    <string name="biodex_obs_detail_label_confidence">Confiança</string>
+    <string name="biodex_obs_detail_label_source">Fonte</string>
+    <string name="biodex_obs_detail_label_date">Data</string>
+    <string name="biodex_obs_detail_label_location">Localização</string>
+    <string name="biodex_obs_detail_label_description">Descrição VLM</string>
+    <string name="biodex_obs_detail_badge_uncatalogued">Não catalogada</string>
+    <string name="biodex_obs_detail_badge_out_of_range">Fora da área</string>
+    <string name="biodex_obs_detail_cd_image">Imagem de observação</string>
+    <string name="biodex_obs_detail_cd_go_back">Voltar</string>
+
+    <!-- ================================================================== -->
+    <!-- BioDex Enriquecimento online (M7)                                   -->
+    <!-- ================================================================== -->
+    <string name="settings_species_enrichment_title">Informações online de espécies</string>
+    <string name="settings_species_enrichment_subtitle">A identificação é 100%% local. Apenas fichas externas (WoRMS / GBIF / iNaturalist) são descarregadas; a sua imagem nunca é enviada.</string>
+    <string name="biodex_enrichment_section_title">Informações online</string>
+    <string name="biodex_enrichment_label_status">Estado</string>
+    <string name="biodex_enrichment_label_distribution">Distribuição</string>
+    <string name="biodex_enrichment_source_prefix">Fontes: %1$s</string>
+    <string name="biodex_enrichment_disabled_hint">Ative «Informações online de espécies» nas Definições para carregar fichas externas do WoRMS, GBIF e iNaturalist.</string>
+
+    <!-- ================================================================== -->
+    <!-- BioDex Identificação de espécies (M5)                               -->
+    <!-- ================================================================== -->
+    <string name="biodex_identify_cta">Identificar espécie</string>
+    <string name="biodex_result_title">Resultados de identificação</string>
+    <string name="biodex_result_confidence">Confiança: %1$d%%</string>
+    <string name="biodex_result_uncatalogued">Não catalogada</string>
+    <string name="biodex_result_none">Nenhuma espécie identificada nesta imagem.</string>
+    <string name="biodex_result_done">Concluído</string>
+    <string name="species_identifying">A identificar espécie…</string>
+
+    <string name="species_result_auto_return">Nova análise em %1$d s…</string>
+    <string name="species_result_btn_new_scan">Nova análise</string>
+    <string name="species_result_btn_view_biodex">BioDex</string>
+    <string name="biodex_result_none_short">Sem espécies</string>
+    <string name="species_batch_title">Lote de espécies</string>
+    <string name="species_batch_summary_species">Espécies encontradas</string>
+    <string name="species_batch_summary_images">Imagens</string>
+    <string name="species_batch_btn_new_batch">Novo lote</string>
+    <string name="species_batch_btn_view_biodex">Ver BioDex</string>
 
 </resources>

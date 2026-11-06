@@ -96,6 +96,8 @@ private const val TAG = "CameraScreen"
 fun CameraScreen(
     navController: NavController,
     viewModel: MainViewModel,
+    speciesMode: Boolean = false,
+    onSpeciesCapture: ((Uri) -> Unit)? = null,
 ) {
     val cameraPermissionState = rememberPermissionState(
         android.Manifest.permission.CAMERA
@@ -127,6 +129,13 @@ fun CameraScreen(
         app.prewarmGemma4DetectorIfAvailable()
     }
 
+    // In species (BioDex) mode also pre-warm the ONNX encoder so the first
+    // identify does not pay the OrtSession load + NNAPI compile lazily.
+    // No-op outside species mode / when the species pack is not downloaded.
+    LaunchedEffect(speciesMode) {
+        if (speciesMode) app.prewarmSpeciesEncoder()
+    }
+
     // Request location permission alongside camera so GPS data is available
     // when saving sessions. Location is optional — the app works without it.
     val locationPermissions = rememberMultiplePermissionsState(
@@ -155,14 +164,20 @@ fun CameraScreen(
                     }
                 },
                 onImageCaptured = { uri ->
-                    viewModel.analyzeImage(uri)
-                    // Camera flow lands on the dedicated immersive result screen
-                    // (image full-screen + bounding boxes painted on top, with
-                    // a live inference animation while the model runs). Gallery
-                    // and batch flows continue to use "results"/"batch".
-                    navController.navigate("camera_result") {
-                        // Pop the viewfinder so back from the result goes home.
-                        popUpTo("camera") { inclusive = true }
+                    if (speciesMode && onSpeciesCapture != null) {
+                        // Biology mode: hand the captured image to the species
+                        // identification pipeline instead of the debris detector.
+                        onSpeciesCapture(uri)
+                    } else {
+                        viewModel.analyzeImage(uri)
+                        // Camera flow lands on the dedicated immersive result screen
+                        // (image full-screen + bounding boxes painted on top, with
+                        // a live inference animation while the model runs). Gallery
+                        // and batch flows continue to use "results"/"batch".
+                        navController.navigate("camera_result") {
+                            // Pop the viewfinder so back from the result goes home.
+                            popUpTo("camera") { inclusive = true }
+                        }
                     }
                 },
                 onBack = { navController.popBackStack() },

@@ -378,7 +378,7 @@ fun ReportScreen(
     val launchGeneration = {
         if (selectedZone != null) {
             when {
-                app.vlmModelManager.isModelAvailable(preferredTier) ->
+                app.vlmModelManager.isAnyVariantAvailable(preferredTier) ->
                     app.launchZoneReportGeneration(buildZoneReportInput(), selectedLanguage)
                 !isDownloading -> showVisionDownloadDialog = true
             }

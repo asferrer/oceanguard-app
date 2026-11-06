@@ -16,9 +16,9 @@ pip install mediapipe
 ## Finetuned LiteRT-LM build (OceanGuard)
 
 Target: `gemma-4-E2B-it-oceanguard.litertlm` (~2.6 GB)
-Adapter: `exp12_vision_lora` — mAP@0.5 = 0.3256 (Δ +0.2189 vs base 0.1067)
-  vision_lora=True: LoRA r=16 on both language tower and SigLIP2 vision encoder.
-HF repo: `asferrer/gemma-4-E2B-it-oceanguard-marine-debris`
+Adapter: `exp11g` — mAP@0.5 on TEST-200 = 0.2941 vs 0.1381 base (x2.13); VAL-100 0.2820 vs 0.1081.
+  LoRA on the language tower, trained on real data plus 5,000 synthetic images (group-aware partition).
+The adapter is not published yet (TODO: add the Hugging Face repository once released); set `--adapter-path` to your copy.
 
 ### Plan A — Direct LoRA conversion via MediaPipe (try first)
 
@@ -37,7 +37,7 @@ python convert_base_model.py
 
 # Step 2 — Convert LoRA adapter on top of base (~15-45 min with GPU)
 python convert_lora_adapter.py \
-    --adapter-path ../finetune/outputs/grid_best/adapter
+    --adapter-path <ADAPTER_DIR>
 
 # Step 3 — Validate
 python validate_converted_model.py \
@@ -60,7 +60,7 @@ The resulting `.litertlm` is self-contained (no runtime LoRA loading needed).
 # Requires HF token for google/gemma-4-E2B-it (gated model):
 #   huggingface-cli login   OR   export HF_TOKEN=hf_...
 python conversion/merge_and_convert.py \
-    --adapter-path finetune/outputs/grid_best/adapter \
+    --adapter-path <ADAPTER_DIR> \
     --base-model-id google/gemma-4-E2B-it \
     --output-dir conversion/outputs/gemma-4-E2B-it-oceanguard-merged \
     --dtype float16
@@ -81,28 +81,11 @@ Expected time (CPU-only): 2-4h merge + 8-12h conversion = 10-16h total
 
 ---
 
-## Upload finetuned model to HuggingFace
+## Publishing the finetuned model
 
-See `docs/submission/upload_to_hf.md` for the full cheatsheet. Quick reference:
-
-```bash
-cd conversion/outputs/
-
-# Requires HF token with write access to asferrer/gemma-4-E2B-it-oceanguard-marine-debris
-hf upload \
-  asferrer/gemma-4-E2B-it-oceanguard-marine-debris \
-  gemma-4-E2B-it-oceanguard.litertlm \
-  gemma-4-E2B-it-oceanguard.litertlm \
-  --repo-type=model \
-  --commit-message "Add LiteRT-LM build of OceanGuard finetuned (exp10)"
-```
-
-Verify after upload:
-
-```bash
-curl -I "https://huggingface.co/asferrer/gemma-4-E2B-it-oceanguard-marine-debris/resolve/main/gemma-4-E2B-it-oceanguard.litertlm"
-# Expect: HTTP/2 200, Content-Length ~2.6 GB
-```
+Nothing is uploaded from this repository. The app downloads the finetuned builds at run time from the URLs declared in
+`VlmModelManager.kt`; while `FINETUNED_LITERTLM_PUBLISHED = false` the app does not offer the `.litertlm` variant.
+TODO: document the final repository once the author publishes the adapter and the GGUF.
 
 ---
 
@@ -122,7 +105,7 @@ python convert_base_model.py    # converts google/gemma-4-E2B-it → .litertlm
 |-----|-------|
 | `base_model.model_id` | `google/gemma-4-E2B-it` |
 | `base_model.variant` | `E2B` |
-| `lora_adapter.adapter_path` | `../finetune/outputs/grid_best/adapter` |
+| `lora_adapter.adapter_path` | `./adapter` (local copy of the adapter) |
 | `lora_adapter.output_file` | `./outputs/gemma-4-E2B-it-oceanguard.litertlm` |
 | `lora_adapter.rank` | `16` |
 | `lora_adapter.alpha` | `32` |

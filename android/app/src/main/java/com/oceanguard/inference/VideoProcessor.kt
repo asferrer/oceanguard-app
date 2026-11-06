@@ -48,7 +48,7 @@ data class VideoProcessingResult(
 class VideoProcessor(
     private val context: Context,
     private val detector: ObjectDetector,
-    private val confidenceThreshold: Float = 0.5f,
+    private val confidenceThreshold: Float = 0.6f,
     /**
      * Number of detector inferences per second of video. The encoder still
      * emits frames at the source frame rate so the output clip stays smooth;

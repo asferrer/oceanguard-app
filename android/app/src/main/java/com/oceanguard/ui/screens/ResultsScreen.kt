@@ -201,7 +201,7 @@ fun ResultsScreen(
 
             // ----------------------------------------------------------------
             // Detecting: detector pass is running. Wording adapts to which
-            // detector is active — RT-DETRv2 (~4 s) vs Gemma 4 Vision (~22 s).
+            // detector is active — RT-DETRv2 vs Gemma 4 Vision.
             // ----------------------------------------------------------------
             is UiState.Detecting, is UiState.ModelLoading -> {
                 val app = LocalContext.current.applicationContext as OceanGuardApp

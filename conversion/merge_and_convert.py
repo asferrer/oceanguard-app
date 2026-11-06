@@ -1,14 +1,14 @@
 """
 OceanGuard AI - Plan B: Merge LoRA adapter into base model.
 
-Merges the exp12_vision_lora LoRA adapter (rank=16, alpha=32, language + vision
-encoder) into Gemma 4 E2B and saves the merged weights as a standalone
+Merges the OceanGuard LoRA adapter (exp11g, language tower; see the adapter's
+adapter_config.json for rank and alpha) into Gemma 4 E2B and saves the merged weights as a standalone
 HuggingFace model directory. The merged directory can then be converted to
 .litertlm with convert_base_model.py.
 
 Usage:
     python conversion/merge_and_convert.py \\
-        --adapter-path finetune/outputs/grid_best/adapter \\
+        --adapter-path <ADAPTER_DIR> \\
         --base-model-id google/gemma-4-E2B-it \\
         --output-dir conversion/outputs/gemma-4-E2B-it-oceanguard-merged
 
@@ -156,13 +156,13 @@ def merge_adapter(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Merge Gemma 4 E2B + exp10 LoRA adapter (Plan B for LiteRT conversion)",
+        description="Merge Gemma 4 E2B + OceanGuard LoRA adapter (Plan B for LiteRT conversion)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
         "--adapter-path",
         type=Path,
-        default=Path("finetune/outputs/grid_best/adapter"),
+        required=True,
         help="Directory containing adapter_model.safetensors and adapter_config.json",
     )
     parser.add_argument(

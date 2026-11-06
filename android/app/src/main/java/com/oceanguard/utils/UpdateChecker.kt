@@ -33,9 +33,9 @@ class UpdateChecker(private val settings: SettingsRepository) {
         const val TAG = "UpdateChecker"
         const val CHECK_INTERVAL_MS = 24 * 3600 * 1000L
         const val RELEASES_URL =
-            "https://api.github.com/repos/asferrer/OceanguardAI/releases/latest"
+            "https://api.github.com/repos/asferrer/oceanguard-app/releases/latest"
         const val DOWNLOAD_URL =
-            "https://github.com/asferrer/OceanguardAI/releases/latest/download/OceanGuard-AI-latest.apk"
+            "https://github.com/asferrer/oceanguard-app/releases/latest/download/OceanGuard-AI-latest.apk"
     }
 
     private val client = OkHttpClient.Builder()

@@ -14,8 +14,9 @@ import kotlinx.coroutines.withContext
 
 /**
  * Orchestrates single-detector inference:
- *  - RT-DETRv2 for fast detection (~30 ms) when Gemma 4 is not downloaded.
- *  - Gemma 4 Vision for open-vocabulary deep analysis (~4-10 s on Exynos).
+ *  - RT-DETRv2 (default) for detection; Gemma 4 then writes the report.
+ *  - Optionally (setting) Gemma 4 refines sub-type/material of the RT-DETRv2 boxes ([refiner]).
+ *  - Gemma 4 Vision as the detector itself for open-vocabulary deep analysis (slower; latency pending measurement).
  *
  * The active detector is chosen at app startup (and updated through
  * [OceanGuardApp.applyDetectorMode] when the user changes settings). Detector
@@ -31,6 +32,13 @@ class DetectionOrchestrator(
     private val context: Context,
     @Volatile var detector: ObjectDetector,
 ) {
+    /**
+     * Optional second stage (multi-model flow): when set and ready, and the main detector is
+     * RT-DETRv2, Gemma 4 runs on the same image and [DetectionRefiner] copies sub-type/material
+     * onto the RT-DETRv2 boxes. Set by [OceanGuardApp.applyDetectorMode]; null = RT-DETRv2 only.
+     */
+    @Volatile var refiner: ObjectDetector? = null
+
     companion object {
         private const val TAG = "DetectionOrchestrator"
     }
@@ -52,7 +60,7 @@ class DetectionOrchestrator(
     suspend fun analyzeImage(
         imageUri: Uri,
         skipVLM: Boolean = false,
-        confidenceThreshold: Float = 0.5f,
+        confidenceThreshold: Float = 0.6f,
     ): AnalysisResult = withContext(Dispatchers.Default) {
         // Yield CPU priority to the UI thread while inference runs on this
         // coroutine. Without this, the worker has the same OS priority as the
@@ -95,13 +103,15 @@ class DetectionOrchestrator(
                 AnalysisState.Detecting
             }
 
-            val detections = detector.detect(bitmap, confidenceThreshold)
+            var detections = detector.detect(bitmap, confidenceThreshold)
+            detections = refineWithGemma(imageUri, detections, deepAnalysis)
             val elapsed = System.currentTimeMillis() - startTime
             Log.i(TAG, "Detection: ${detections.size} objects in ${elapsed}ms")
             _analysisState.value = AnalysisState.DetectionsReady(detections)
 
             val totalTime = System.currentTimeMillis() - startTime
-            val result = buildResult(detections, totalTime, deepAnalysis)
+            val refined = detections.any { it.subType != null || it.rawLabel != null }
+            val result = buildResult(detections, totalTime, deepAnalysis || refined)
             _analysisState.value = AnalysisState.Complete(result)
             Log.i(TAG, "Analysis complete in ${totalTime}ms (deep=$deepAnalysis)")
             result
@@ -117,11 +127,34 @@ class DetectionOrchestrator(
     }
 
     /**
+     * Second stage of the multi-model flow. Never fails the analysis: any error keeps the
+     * RT-DETRv2 detections as they are.
+     */
+    private suspend fun refineWithGemma(
+        imageUri: Uri,
+        detections: List<DetectionResult>,
+        deepAnalysis: Boolean,
+    ): List<DetectionResult> {
+        val second = refiner
+        if (deepAnalysis || second == null || detections.isEmpty() || !second.isReady()) return detections
+        return try {
+            _analysisState.value = AnalysisState.AnalyzingDeep(detections)
+            val bitmap = imagePreprocessor.loadAndPreprocess(imageUri, second.inputSize)
+            val refined = DetectionRefiner.refine(detections, second.detect(bitmap, 0f))
+            Log.i(TAG, "Gemma 4 refined ${refined.count { it.subType != null || it.rawLabel != null }}/${detections.size} boxes")
+            refined
+        } catch (e: Exception) {
+            Log.w(TAG, "Gemma 4 refinement failed, keeping RT-DETRv2 output: ${e.message}", e)
+            detections
+        }
+    }
+
+    /**
      * Quick detection only (no state side-effects). Used by the live preview.
      */
     suspend fun detectOnly(
         imageUri: Uri,
-        confidenceThreshold: Float = 0.5f,
+        confidenceThreshold: Float = 0.6f,
     ): List<DetectionResult> = withContext(Dispatchers.Default) {
         val tid = Process.myTid()
         val originalPriority = runCatching { Process.getThreadPriority(tid) }
@@ -209,7 +242,7 @@ class DetectionOrchestrator(
  *
  * Order roughly: Idle -> LoadingImage -> WarmingUpModel? -> Detecting OR
  * AnalyzingDeep -> DetectionsReady -> Complete. AnalyzingDeep is emitted when
- * the active detector is Gemma 4 Vision (single deep pass, ~4-10 s); Detecting
+ * the active detector is Gemma 4 Vision (single deep pass); Detecting
  * is emitted for the fast RT-DETRv2 path.
  */
 sealed class AnalysisState {

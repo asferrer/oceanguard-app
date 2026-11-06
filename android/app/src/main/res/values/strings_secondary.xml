@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Scan mode selection (Home) -->
+    <string name="scan_mode_title">What do you want to scan?</string>
+    <string name="scan_mode_debris_title">Detect debris</string>
+    <string name="scan_mode_debris_desc">Find and classify marine litter</string>
+    <string name="scan_mode_species_title">Identify species</string>
+    <string name="scan_mode_species_desc">Recognize marine life and add it to your BioDex</string>
+    <string name="biodex_download_pack">Download species pack</string>
 
     <!-- ================================================================== -->
     <!-- Session Detail Screen                                               -->
@@ -135,10 +142,12 @@
     <string name="settings_label_confidence_threshold">Confidence Threshold</string>
     <string name="settings_desc_confidence_threshold">Show only detections with confidence above this value</string>
     <string name="settings_label_detector_precision">Detector Precision</string>
-    <string name="settings_desc_detector_precision">INT8 is smaller (43MB vs 83MB) and may be faster. Requires app restart.</string>
+    <string name="settings_desc_detector_precision">INT8 was removed: the FP16 build is the only one shipped. FP16 weights, FP32 compute.</string>
     <string name="settings_hint_restart">Restart the app to apply the new model precision</string>
     <string name="settings_label_detector_mode">Detection Engine</string>
-    <string name="settings_desc_detector_mode">RT-DETRv2 is fast (~30ms). Gemma 4 Vision uses a VLM for deep analysis (~4--10s per image).</string>
+    <string name="settings_desc_detector_mode">RT-DETRv2 detects on the CPU (default); Gemma 4 then writes the report. Gemma 4 Vision as detector is slower per image.</string>
+    <string name="settings_label_refine_gemma">Refine with Gemma 4</string>
+    <string name="settings_desc_refine_gemma">After RT-DETRv2, Gemma 4 adds sub-type and material to each box (slower per photo; needs Gemma 4 downloaded)</string>
     <string name="settings_label_deep_analysis">Deep Analysis</string>
     <string name="settings_desc_deep_analysis">Run deep AI analysis after detection. Disable for faster results (detection only)</string>
     <string name="settings_label_confirm_capture">Confirm Capture</string>
@@ -192,7 +201,7 @@
     <string name="settings_desc_vlm_variant">Use base Google model or OceanGuard fine-tuned for marine debris</string>
     <string name="vlm_variant_base">Base (Google)</string>
     <string name="vlm_variant_finetuned">Fine-tuned (OceanGuard)</string>
-    <string name="vlm_variant_finetuned_metric">mAP@0.5 0.325 vs Base 0.107</string>
+    <string name="vlm_variant_finetuned_metric">mAP@0.5 0.294 vs Base 0.138 (TEST-200)</string>
     <string name="settings_label_gemma4_mmproj">Vision Projector (mmproj)</string>
     <string name="settings_desc_gemma4_mmproj">Download the vision projector to enable Gemma 4 image analysis capabilities.</string>
 
@@ -662,5 +671,117 @@
     <string name="model_update_later_action">Later</string>
     <string name="model_variant_current">v%1$s — current</string>
     <string name="model_variant_update_available">update to v%1$s available</string>
+
+    <!-- ================================================================== -->
+    <!-- BioDex Screen                                                        -->
+    <!-- ================================================================== -->
+    <string name="biodex_title">BioDex</string>
+    <string name="biodex_home_subtitle">Identify marine species</string>
+    <string name="biodex_empty_title">No species yet</string>
+    <string name="biodex_empty_message">Marine species you identify will appear here. Scan marine life to start your collection.</string>
+    <string name="biodex_cd_go_back">Go back</string>
+    <!-- discovered count label built in code: "$discoveredCount / $total Discovered" -->
+    <string name="biodex_stat_discovered">Discovered</string>
+    <string name="biodex_stat_favorites">Favorites</string>
+    <string name="biodex_stat_observations">Observations</string>
+
+    <!-- ================================================================== -->
+    <!-- BioDex Detail Screen                                                 -->
+    <!-- ================================================================== -->
+    <string name="biodex_detail_cd_go_back">Go back</string>
+    <string name="biodex_detail_cd_remove_favorite">Remove from favorites</string>
+    <string name="biodex_detail_cd_add_favorite">Add to favorites</string>
+    <string name="biodex_detail_tab_info">Info</string>
+    <string name="biodex_detail_tab_gallery">Gallery</string>
+    <string name="biodex_detail_tab_map">Map</string>
+    <string name="biodex_detail_stat_observations">Times\nObserved</string>
+
+    <!-- ================================================================== -->
+    <!-- BioDex Gallery                                                       -->
+    <!-- ================================================================== -->
+    <string name="biodex_gallery_cd_observation">Species observation image</string>
+    <string name="biodex_gallery_empty_title">No observations yet</string>
+    <!-- %1$s is the species common name -->
+    <string name="biodex_gallery_empty_message">No photos recorded for %1$s yet. Capture an image of this species to see it here.</string>
+
+    <!-- ================================================================== -->
+    <!-- BioDex Badges                                                        -->
+    <!-- ================================================================== -->
+    <!-- Shown on gallery thumbnails when idSource is outside the species range -->
+    <string name="biodex_badge_out_of_range">Out of range</string>
+    <!-- Shown in the Info tab when cosmopolitan=true -->
+    <string name="biodex_badge_cosmopolitan">Cosmopolitan</string>
+
+    <!-- ================================================================== -->
+    <!-- BioDex Map Placeholder                                               -->
+    <!-- ================================================================== -->
+    <string name="biodex_map_placeholder">Map coming soon.\nObservation locations will appear here once the map layer is wired.</string>
+    <!-- Shown when none of the observations carry GPS coordinates -->
+    <string name="biodex_map_empty_no_location">None of your observations for this species include location data. Grant location permission before capturing to see GPS markers here.</string>
+    <!-- Shown in Map tab when there are zero observations at all -->
+    <string name="biodex_map_empty_no_obs">No observations recorded yet. Capture an image of this species to populate the map.</string>
+
+    <!-- ================================================================== -->
+    <!-- BioDex Observation Detail (M6)                                      -->
+    <!-- ================================================================== -->
+    <string name="biodex_obs_detail_title">Observation</string>
+    <string name="biodex_obs_detail_label_confidence">Confidence</string>
+    <string name="biodex_obs_detail_label_source">Source</string>
+    <string name="biodex_obs_detail_label_date">Date</string>
+    <string name="biodex_obs_detail_label_location">Location</string>
+    <string name="biodex_obs_detail_label_description">VLM description</string>
+    <string name="biodex_obs_detail_badge_uncatalogued">Uncatalogued</string>
+    <string name="biodex_obs_detail_badge_out_of_range">Out of range</string>
+    <string name="biodex_obs_detail_cd_image">Observation image</string>
+    <string name="biodex_obs_detail_cd_go_back">Go back</string>
+    <!-- lat / lon formatted label: "12.3456, -7.8901" built in code -->
+
+    <!-- ================================================================== -->
+    <!-- BioDex Online Enrichment (M7)                                       -->
+    <!-- ================================================================== -->
+    <string name="settings_species_enrichment_title">Online species info</string>
+    <string name="settings_species_enrichment_subtitle">Identification is 100%% on-device. This only downloads external species records (WoRMS / GBIF / iNaturalist); your image is never sent.</string>
+    <string name="biodex_enrichment_section_title">Online information</string>
+    <string name="biodex_enrichment_label_status">Status</string>
+    <string name="biodex_enrichment_label_distribution">Distribution</string>
+    <string name="biodex_enrichment_source_prefix">Sources: %1$s</string>
+    <string name="biodex_enrichment_disabled_hint">Enable "Online species info" in Settings to load external species records from WoRMS, GBIF and iNaturalist.</string>
+
+    <!-- ================================================================== -->
+    <!-- BioDex Species Identification (M5)                                  -->
+    <!-- ================================================================== -->
+    <!-- FAB label in SpeciesDexScreen — opens PhotoPicker to identify a species -->
+    <string name="biodex_identify_cta">Identify species</string>
+    <!-- TopAppBar title of SpeciesResultScreen -->
+    <string name="biodex_result_title">Identification results</string>
+    <!-- Confidence percentage, e.g. "Confidence: 87%" -->
+    <string name="biodex_result_confidence">Confidence: %1$d%%</string>
+    <!-- Badge shown when result.uncatalogued == true -->
+    <string name="biodex_result_uncatalogued">Uncatalogued</string>
+    <!-- Message shown when the identifier returns an empty list -->
+    <string name="biodex_result_none">No species identified in this image.</string>
+    <!-- Button that pops back to BioDex from SpeciesResultScreen -->
+    <string name="biodex_result_done">Done</string>
+    <!-- Label shown while SpeciesIdentifier is running -->
+    <string name="species_identifying">Identifying species…</string>
+
+    <!-- SpeciesResultScreen — camera single-capture result (mirrors CameraResultScreen) -->
+    <!-- Countdown text after result, e.g. "Scanning again in 5 s…" -->
+    <string name="species_result_auto_return">Scanning again in %1$d s…</string>
+    <!-- Button that navigates back to species camera viewfinder -->
+    <string name="species_result_btn_new_scan">New Scan</string>
+    <!-- Button that navigates to the BioDex gallery -->
+    <string name="species_result_btn_view_biodex">BioDex</string>
+    <!-- Short label when no species found — shown in thumbnail cell bottom strip -->
+    <string name="biodex_result_none_short">No species</string>
+
+    <!-- SpeciesBatchResultScreen — gallery multi-select batch flow -->
+    <string name="species_batch_title">Species Batch</string>
+    <!-- Summary stat labels -->
+    <string name="species_batch_summary_species">Species found</string>
+    <string name="species_batch_summary_images">Images</string>
+    <!-- Action buttons -->
+    <string name="species_batch_btn_new_batch">New Batch</string>
+    <string name="species_batch_btn_view_biodex">View BioDex</string>
 
 </resources>

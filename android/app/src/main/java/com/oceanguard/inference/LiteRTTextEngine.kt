@@ -3,7 +3,6 @@ package com.oceanguard.ai.inference
 import android.graphics.Bitmap
 import android.util.Log
 import com.google.ai.edge.litertlm.Backend
-import com.google.ai.edge.litertlm.Capabilities
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.ConversationConfig
@@ -11,6 +10,8 @@ import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.ExperimentalApi
 import com.google.ai.edge.litertlm.ExperimentalFlags
+import com.google.ai.edge.litertlm.LlmCapability
+import com.google.ai.edge.litertlm.ModelInfo
 import com.google.ai.edge.litertlm.Message
 import com.google.ai.edge.litertlm.MessageCallback
 import com.google.ai.edge.litertlm.SamplerConfig
@@ -29,7 +30,7 @@ import kotlin.coroutines.resumeWithException
  * [VlmTextEngine] implementation backed by LiteRT-LM for Gemma 4 E2B.
  *
  * Uses Google's on-device LLM runtime (Engine + Conversation API).
- * 1.65x faster decode than llama.cpp for the same model on Exynos 2200 CPU.
+ * faster decode than llama.cpp for the same model on the target phone (figure pending measurement).
  *
  * Lifecycle: [initialize] → [warmUp] → N × [generateText] → [release].
  * Thread-safe: all generation runs on [Dispatchers.IO].
@@ -85,6 +86,10 @@ class LiteRTTextEngine(
     @Volatile var speculativeDecodingEnabled: Boolean = false
         private set
 
+    /** Path of the model currently loaded, or null. */
+    @Volatile var loadedModelPath: String? = null
+        private set
+
     override suspend fun initialize(modelPath: String) = withContext(Dispatchers.IO) {
         initMutex.withLock {
             if (isReady()) {
@@ -92,6 +97,7 @@ class LiteRTTextEngine(
                 return@withLock
             }
             doInitialize(modelPath)
+            loadedModelPath = modelPath
         }
     }
 
@@ -104,14 +110,13 @@ class LiteRTTextEngine(
         // process-wide ExperimentalFlag — set it ON before Engine() + reset
         // immediately after initialize() so other engines aren't affected.
         //
-        // We probe Capabilities for diagnostic logging only — the .litertlm of
-        // Gemma 4 E2B (HF: litert-community/gemma-4-E2B-it-litert-lm) ships the
-        // mtp_drafter required for SD. If a future model lacks the drafter,
-        // engine.initialize() falls through harmlessly (the flag becomes a
-        // no-op at the native layer).
+        // The base .litertlm of Gemma 4 E2B (HF: litert-community/gemma-4-E2B-it-litert-lm)
+        // ships the mtp_drafter required for SD. A model without it fails with
+        // "NOT_FOUND: TF_LITE_MTP_DRAFTER not found in the model", as the fine-tuned export does.
         val probeResult = probeSpeculativeDecodingSupport(modelPath)
-        speculativeDecodingEnabled = true   // always opt in; harmless if unsupported
-        Log.i(TAG, "Speculative decoding: ENABLED (probe=$probeResult, model=$modelPath)")
+        val isBaseModel = modelPath.substringAfterLast('/') == VlmModelManager.GEMMA4_LITERTLM_FILENAME
+        speculativeDecodingEnabled = probeResult || isBaseModel
+        Log.i(TAG, "Speculative decoding: $speculativeDecodingEnabled (probe=$probeResult, model=$modelPath)")
 
         // Try GPU first, fall back to CPU if unavailable or initialization fails
         val (backend, visionBackend, backendLabel) = selectBackends()
@@ -165,7 +170,7 @@ class LiteRTTextEngine(
      */
     private fun probeSpeculativeDecodingSupport(modelPath: String): Boolean {
         return try {
-            Capabilities(modelPath).use { it.hasSpeculativeDecodingSupport() }
+            ModelInfo.from(modelPath).use { (it as? LlmCapability)?.hasSpeculativeDecodingSupport() == true }
         } catch (e: Exception) {
             Log.d(TAG, "Capabilities probe failed (assume no SD): ${e.message}")
             false
@@ -203,6 +208,7 @@ class LiteRTTextEngine(
     override fun release() {
         val eng = engine ?: return
         engine = null
+        loadedModelPath = null
         try {
             eng.close()
             Log.i(TAG, "Engine released")
@@ -312,6 +318,16 @@ class LiteRTTextEngine(
         temperature: Double = 0.3,
         /** Sampler top-K. Lower = faster decode with negligible quality loss on structured output. */
         topK: Int = 20,
+        /**
+         * Optional early-stop predicate evaluated on the accumulated output after
+         * every token. When it returns true the in-flight decode is cancelled and
+         * the result returned immediately. Used by the organism locator to abort
+         * as soon as the `box_2d` JSON array is closed, so the model does not keep
+         * decoding trailing whitespace / prose to the EOS — there is no native
+         * per-call max-output-token cap in LiteRT-LM, so this is the cheapest way
+         * to bound a short structured response.
+         */
+        stopWhen: ((String) -> Boolean)? = null,
         onPartialResult: ((String) -> Unit)? = null,
     ): String = withContext(Dispatchers.IO) {
         val eng = engine
@@ -340,10 +356,12 @@ class LiteRTTextEngine(
 
             val accumulated = StringBuilder()
             var lastPartialMs = 0L
+            var earlyStopped = false
 
             suspendCancellableCoroutine { continuation ->
                 conv.sendMessageAsync(contents, object : MessageCallback {
                     override fun onMessage(message: Message) {
+                        if (earlyStopped) return
                         val token = message.contents.toString()
                         accumulated.append(token)
                         val now = System.currentTimeMillis()
@@ -351,23 +369,34 @@ class LiteRTTextEngine(
                             onPartialResult(accumulated.toString())
                             lastPartialMs = now
                         }
+                        if (stopWhen != null && stopWhen(accumulated.toString())) {
+                            earlyStopped = true
+                            // Cancel the native decode before resuming so close()
+                            // in finally does not block on the rest of the stream.
+                            runCatching { conv.cancelProcess() }
+                            if (continuation.isActive) continuation.resume(Unit)
+                        }
                     }
 
                     override fun onDone() {
-                        continuation.resume(Unit)
+                        if (continuation.isActive) continuation.resume(Unit)
                     }
 
                     override fun onError(error: Throwable) {
-                        continuation.resumeWithException(error)
+                        if (continuation.isActive) continuation.resumeWithException(error)
                     }
                 })
             }
 
             val result = accumulated.toString()
             onPartialResult?.invoke(result)
-            Log.d(TAG, "Vision generation complete: ${result.length} chars")
+            Log.d(TAG, "Vision generation complete: ${result.length} chars${if (earlyStopped) " (early-stopped)" else ""}")
             result
         } finally {
+            // Belt-and-braces: cancel any in-flight decode (e.g. when the caller's
+            // coroutine was cancelled mid-stream) before closing, so close() does
+            // not block until the model hits maxTokens.
+            runCatching { conv.cancelProcess() }
             conv.close()
         }
     }

@@ -50,6 +50,7 @@ class SettingsRepository(private val context: Context) {
         val VLM_PROVIDER = stringPreferencesKey("vlm_provider")
         val REPORT_AUDIENCE = stringPreferencesKey("report_audience")
         val DETECTOR_MODE = stringPreferencesKey("detector_mode")
+        val REFINE_WITH_GEMMA = booleanPreferencesKey("refine_with_gemma")
         val VLM_MODEL_VARIANT = stringPreferencesKey("vlm_model_variant")
 
         // Research contribution
@@ -57,6 +58,10 @@ class SettingsRepository(private val context: Context) {
         val CONTRIBUTE_WIFI_ONLY      = booleanPreferencesKey("contribute_wifi_only")
         val CONTRIBUTE_DECLINE_COUNT  = intPreferencesKey("contribute_decline_count")
         val CONTRIBUTE_NEVER_PROMPT   = booleanPreferencesKey("contribute_never_prompt")
+
+        // BioDex species feature
+        val SPECIES_ONLINE_ENRICHMENT_ENABLED = booleanPreferencesKey("species_online_enrichment_enabled")
+        val GEO_FILTER_SENSITIVITY            = stringPreferencesKey("geo_filter_sensitivity")
 
         // Fine-tuned model update checker
         val INSTALLED_FINETUNED_VERSION  = stringPreferencesKey("installed_finetuned_version")
@@ -66,7 +71,7 @@ class SettingsRepository(private val context: Context) {
     }
 
     companion object {
-        const val DEFAULT_CONFIDENCE_THRESHOLD = 0.7f
+        const val DEFAULT_CONFIDENCE_THRESHOLD = 0.6f   // VAL: max F1 of the RT-DETRv2 final model (tools/rtdetrv2/README.md)
         const val DEFAULT_LANGUAGE = "es"
         const val DEFAULT_DARK_MODE = true
         const val DEFAULT_BATCH_MAX_IMAGES = 5
@@ -77,8 +82,17 @@ class SettingsRepository(private val context: Context) {
         const val DEFAULT_VLM_MODEL_TIER = "gemma4_e2b"
         const val DEFAULT_VLM_PROVIDER = "gemma4"
         const val DEFAULT_REPORT_AUDIENCE = "scientific"
-        const val DEFAULT_DETECTOR_MODE = "gemma4"
+        /** RT-DETRv2 detects; Gemma 4 writes the report (multi-model flow). */
+        const val DEFAULT_DETECTOR_MODE = "rtdetr"
+        /** Optional second pass: Gemma 4 refines sub-type/material of the RT-DETRv2 boxes. */
+        const val DEFAULT_REFINE_WITH_GEMMA = false
         const val DEFAULT_VLM_MODEL_VARIANT = "base"
+
+        /**
+         * Default geo-filter sensitivity for the BioDex species RAG pre-filter.
+         * BALANCED = hard-filter at realm level + soft geo-prior.
+         */
+        const val DEFAULT_GEO_FILTER_SENSITIVITY = "BALANCED"
 
         /** Supported audience modes for report generation. Keys match ReportAudience.fromKey(). */
         val REPORT_AUDIENCES = mapOf(
@@ -87,10 +101,10 @@ class SettingsRepository(private val context: Context) {
             "citizen"    to "Citizen",
         )
 
-        /** Supported detector precision modes. INT8 removed: causes native
-         *  SIGABRT on Exynos 2200 NNAPI delegate (irrecoverable crash). */
+        /** Supported detector precision modes. INT8 removed: the old INT8 build caused a
+         *  native SIGABRT on the Exynos 2200 NNAPI delegate (irrecoverable crash). */
         val DETECTOR_PRECISIONS = mapOf(
-            "fp16" to "FP16 (83 MB, NNAPI)",
+            "fp16" to "FP16 (83 MB, NNAPI / XNNPACK)",
         )
 
         /** All screen IDs included in the full guided tour (9 stops). */
@@ -433,7 +447,7 @@ class SettingsRepository(private val context: Context) {
     }
 
     /**
-     * Active detector mode: "rtdetr" (fast, ~30ms) or "gemma4" (deep, ~4-10s).
+     * Active detector mode: "rtdetr" (default) or "gemma4" (deep).
      * Controls which ObjectDetector is used for image analysis and live detection.
      */
     val detectorMode: Flow<String> = context.dataStore.data.map { prefs ->
@@ -447,6 +461,23 @@ class SettingsRepository(private val context: Context) {
     fun getDetectorModeSync(): String {
         val prefs = runBlocking { context.dataStore.data.first() }
         return prefs[Keys.DETECTOR_MODE] ?: DEFAULT_DETECTOR_MODE
+    }
+
+    /**
+     * When the detector is RT-DETRv2, run Gemma 4 on the same image afterwards and copy its
+     * sub-type / material onto the RT-DETRv2 boxes it overlaps (boxes and classes stay RT-DETRv2's).
+     */
+    val refineWithGemma: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.REFINE_WITH_GEMMA] ?: DEFAULT_REFINE_WITH_GEMMA
+    }
+
+    suspend fun setRefineWithGemma(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[Keys.REFINE_WITH_GEMMA] = enabled }
+    }
+
+    fun getRefineWithGemmaSync(): Boolean {
+        val prefs = runBlocking { context.dataStore.data.first() }
+        return prefs[Keys.REFINE_WITH_GEMMA] ?: DEFAULT_REFINE_WITH_GEMMA
     }
 
     // -----------------------------------------------------------------------
@@ -498,6 +529,40 @@ class SettingsRepository(private val context: Context) {
     /** Permanently silence the contribution prompt. Reversible from Settings. */
     suspend fun setContributeNeverPrompt(v: Boolean) {
         context.dataStore.edit { prefs -> prefs[Keys.CONTRIBUTE_NEVER_PROMPT] = v }
+    }
+
+    // -----------------------------------------------------------------------
+    // BioDex species feature
+    // -----------------------------------------------------------------------
+
+    /**
+     * Whether online species enrichment is enabled (WoRMS / GBIF / iNaturalist).
+     * Default: false (privacy-safe, off by default).
+     * When enabled, only taxonomy metadata and AphiaIDs are sent — NEVER the image.
+     */
+    val speciesOnlineEnrichmentEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SPECIES_ONLINE_ENRICHMENT_ENABLED] ?: false
+    }
+
+    /**
+     * Geographic filter sensitivity for the BioDex RAG pre-filter.
+     * Values: "STRICT" | "BALANCED" | "OFF" (see [GeoFilterSensitivity]).
+     * Default: "BALANCED".
+     */
+    val geoFilterSensitivity: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.GEO_FILTER_SENSITIVITY] ?: DEFAULT_GEO_FILTER_SENSITIVITY
+    }
+
+    suspend fun setSpeciesOnlineEnrichmentEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.SPECIES_ONLINE_ENRICHMENT_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setGeoFilterSensitivity(sensitivity: String) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.GEO_FILTER_SENSITIVITY] = sensitivity
+        }
     }
 
     // -----------------------------------------------------------------------

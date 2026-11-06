@@ -13,7 +13,7 @@ data class ModelManifest(
 )
 
 data class BestModel(
-    /** Experiment identifier, e.g. "exp10_real_full_v1". */
+    /** Experiment identifier, e.g. "gemma4_lora_v1". */
     val id: String = "",
     /** Semver string, e.g. "1.0.0". Critical field — used for version comparison. */
     val version: String,

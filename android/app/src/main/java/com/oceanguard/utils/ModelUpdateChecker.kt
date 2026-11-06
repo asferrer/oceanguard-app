@@ -39,6 +39,8 @@ class ModelUpdateChecker(private val settings: SettingsRepository) {
     private companion object {
         const val TAG = "ModelUpdateChecker"
         const val CHECK_INTERVAL_MS = 24 * 3600 * 1000L
+        /** The HF repo has no models_manifest.json yet: no network call and no update prompt until it exists. */
+        const val MANIFEST_PUBLISHED = false
         const val MANIFEST_URL =
             "https://huggingface.co/asferrer/gemma-4-E2B-it-oceanguard-marine-debris/resolve/main/models_manifest.json"
     }
@@ -54,6 +56,7 @@ class ModelUpdateChecker(private val settings: SettingsRepository) {
      * or the user has skipped this version.
      */
     suspend fun check(): ModelUpdate? {
+        if (!MANIFEST_PUBLISHED) return null
         val lastCheck = settings.lastModelCheckMs.first()
         if (System.currentTimeMillis() - lastCheck < CHECK_INTERVAL_MS) return null
 
@@ -87,7 +90,7 @@ class ModelUpdateChecker(private val settings: SettingsRepository) {
      * Returns null only when both network and cache are unavailable.
      */
     suspend fun fetchManifestCached(): ModelManifest? {
-        val live = runCatching { fetchManifest() }.getOrNull()
+        val live = if (MANIFEST_PUBLISHED) runCatching { fetchManifest() }.getOrNull() else null
         if (live != null) {
             settings.setCachedModelManifest(manifestToJson(live))
             return live

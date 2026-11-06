@@ -17,7 +17,7 @@ enum class ReportPhase {
     /** Engine is loading or model warming up. UI shows "Loading analysis engine…". */
     LOADING,
 
-    /** PHASE 1 — Gemma 4 is dispatching typed tools (~20-30 s on Exynos 2200). */
+    /** PHASE 1 — Gemma 4 is dispatching typed tools. */
     PHASE_1_TOOLS,
 
     /** PHASE 2 — fresh conversation writing prose with the bundle in KV cache. */
@@ -617,7 +617,7 @@ class ToolReportGenerator(private val engine: LiteRTTextEngine) {
      * with every @Tool method registered. The model is asked to invoke each
      * required tool ONCE so the UI can stream "Querying <tool>…" banners. Any
      * prose the model tries to emit in this conversation is discarded — its
-     * KV cache is throwaway. Latency: ~5-15 s for 9 sequential dispatches.
+     * KV cache is throwaway.
      *
      * PHASE 2 — Prose writing (clean KV). A FRESH LiteRT-LM conversation B is
      * opened with NO tools. The system message contains only the writing

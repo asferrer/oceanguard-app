@@ -42,7 +42,7 @@ object RTDETRBenchmarkRunner {
     }
 
     /**
-     * Run the full benchmark suite (FP16 + INT8, both delegate strategies).
+     * Run the full benchmark suite (FP16, NNAPI-preferred and XNNPACK-only).
      * Results are logged with TAG [TAG] at INFO level.
      *
      * @return list of [ModelResult], one per (model, delegate) combination.
@@ -58,14 +58,13 @@ object RTDETRBenchmarkRunner {
                     strategy = DelegateStrategy.NNAPI_PREFERRED,
                     label = "FP16",
                 )
-                // INT8 + NNAPI is unsupported on Exynos 2200 (Xclipse 920),
-                // crashes the process during graph build. Use XNNPACK_ONLY which
-                // is the path the production app falls back to on this SoC.
+                // XNNPACK-only is the path the app falls back to when NNAPI is unavailable
+                // or fails to compile the graph; it is the reference CPU latency.
                 results += benchmarkModel(
                     context, testBitmap,
-                    modelPath = RTDETRInference.MODEL_PATH_INT8,
+                    modelPath = RTDETRInference.MODEL_PATH_FP16,
                     strategy = DelegateStrategy.XNNPACK_ONLY,
-                    label = "INT8",
+                    label = "FP16",
                 )
             } finally {
                 testBitmap.recycle()

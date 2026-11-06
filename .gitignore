@@ -32,10 +32,7 @@ android/build/
 *.gguf
 *.safetensors
 
-# Keep small model files in assets if needed
-!android/app/src/main/assets/models/*.tflite
-!android/app/src/main/assets/models/*.param
-!android/app/src/main/assets/models/*.bin
+# Models are downloaded at run time (or copied by scripts/setup-models); never commit them.
 
 # Python
 __pycache__/
@@ -84,24 +81,16 @@ Dockerfile*
 # Screenshots & temp
 screenshots/
 
-# Landing page repo (now a git submodule)
-# OceanguardAI/
-
 # Local tooling and AI-assistant config (kept out of the public repo)
 .cursor/
 .continue/
 
 # Local artifacts that should never reach a public snapshot
 *.html
-!OceanguardAI/index.html
-!docs/submission/*.html
+!docs/gh-pages/index.html
 dumpstate-*.zip
 graphify-out/
 bugreport-*.zip
 
-# Eval set captured images (kept off-repo, distributed as release asset)
-docs/submission/eval_set/images/*.jpg
-docs/submission/eval_set/images/*.jpeg
-docs/submission/eval_set/images/*.png
-docs/submission/eval_set/images/*.heic
-!docs/submission/eval_set/images/.gitkeep
+# Build outputs delivered to the author (APKs, reference images)
+dist/

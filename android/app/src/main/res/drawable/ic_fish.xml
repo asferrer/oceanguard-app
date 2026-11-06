@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BioDex logo: side-view fish (head right) with a fusiform body, a deeply
+     forked caudal fin and an evenOdd eye cut-out. Minimalist silhouette —
+     no dorsal, no pectoral, no anal fins. Tinted via Icon(tint=). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+    <path
+        android:fillColor="@android:color/white"
+        android:fillType="evenOdd"
+        android:pathData="M1.8,5.5
+            L5.6,10.6
+            C7.6,8.6 10,7.4 13,7
+            C16,6.8 18.5,7.5 20.5,8.8
+            C21.8,9.6 22.5,10.7 22.5,12
+            C22.5,13.3 21.8,14.4 20.5,15.2
+            C18.5,16.5 16,17.2 13,17
+            C10,16.6 7.6,15.4 5.6,13.4
+            L1.8,18.5
+            L3.2,12 Z
+
+            M18.5,11
+            a0.7,0.7 0 1,0 -1.4,0
+            a0.7,0.7 0 1,0 1.4,0 Z" />
+</vector>

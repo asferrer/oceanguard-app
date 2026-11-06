@@ -19,8 +19,8 @@ import java.net.URL
  * from HuggingFace (Apache 2.0, no auth required).
  *
  * Three tiers of models:
- * - **Fast text** (~1.0 GB): Qwen3.5-1.5B-Q4_K_M.gguf — snappy reports, ~15–20 tok/s
- * - **Quality text** (~1.9 GB): Qwen3.5-3B-Q4_K_M.gguf — better coherence, ~8–12 tok/s
+ * - **Fast text** (~1.0 GB): Qwen3.5-1.5B-Q4_K_M.gguf — snappy reports
+ * - **Quality text** (~1.9 GB): Qwen3.5-3B-Q4_K_M.gguf — better coherence
  * - **Vision** (~1.6 GB total): Qwen3.5-2B-Q4_K_M.gguf + mmproj — image-aware reports
  *
  * Download state is exposed via [downloadState] for UI and [VlmDownloadService].
@@ -46,7 +46,7 @@ class VlmModelManager(
             "$HF_BASE/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf"
 
         // Gemma 4 E2B — Apache 2.0, LiteRT-LM (.litertlm) for on-device inference
-        // GGUF variant removed: LiteRT-LM is 1.65x faster on Exynos 2200 CPU
+        // GGUF variant removed: LiteRT-LM is faster on the target phone (figure pending measurement)
         private const val GEMMA4_MMPROJ_URL =
             "$HF_BASE/ggml-org/gemma-4-E2B-it-GGUF/resolve/main/mmproj-gemma-4-e2b-it-f16.gguf"
 
@@ -63,17 +63,31 @@ class VlmModelManager(
         const val GEMMA4_LITERTLM_FILENAME = "gemma-4-E2B-it.litertlm"
         private const val MIN_GEMMA4_LITERTLM_BYTES = 2_000_000_000L // 2 GB (~2.58 GB)
 
-        // Gemma 4 — OceanGuard fine-tuned variant (LiteRT-LM, pending upstream converter support)
+        // Gemma 4 — OceanGuard fine-tuned variant (LiteRT-LM, int8, ~5.0 GB, text + vision). NOT published:
+        // the HF repo only holds the adapter and the GGUF. While false, the app neither offers nor downloads
+        // this variant (the fine-tuned model is the GGUF through llama.cpp, tier OCEANGUARD_FT).
+        const val FINETUNED_LITERTLM_PUBLISHED = false
         const val GEMMA4_LITERTLM_FINETUNED_FILENAME = "gemma-4-E2B-it-oceanguard.litertlm"
         private const val GEMMA4_LITERTLM_FINETUNED_URL =
             "$HF_BASE/asferrer/gemma-4-E2B-it-oceanguard-marine-debris/resolve/main/gemma-4-E2B-it-oceanguard.litertlm"
 
-        // OceanGuard fine-tuned GGUF — exp12_vision_lora merged + Q4_K_M, served via llama.cpp
-        // +205% mAP@0.5 vs base on the OceanGuard marine debris held-out eval (n=200).
+        // OceanGuard fine-tuned GGUF — exp11g adapter merged + Q4_K_M, served via llama.cpp
+        // mAP@0.5 on TEST-200: 0.2941 vs 0.1381 base (x2.13); VAL-100: 0.2820 vs 0.1081.
         const val OCEANGUARD_GGUF_FILENAME = "gemma-4-E2B-it-oceanguard-Q4_K_M.gguf"
         private const val OCEANGUARD_GGUF_URL =
             "$HF_BASE/asferrer/gemma-4-E2B-it-oceanguard-marine-debris/resolve/main/gemma-4-E2B-it-oceanguard-Q4_K_M.gguf"
         private const val MIN_OCEANGUARD_GGUF_BYTES = 3_000_000_000L // 3.0 GB minimum (actual 3.42 GB Q4_K_M, large 262k vocab)
+
+        // --- BioDex species pack (M4) ---
+        private const val SPECIES_REPO = "$HF_BASE/asferrer/oceanguard-biodex/resolve/main"
+        // filename -> minimum valid bytes (guards against HF HTML error pages).
+        private val SPECIES_ASSETS = listOf(
+            "clip_vitb32.onnx" to 40_000_000L,        // ~88 MB OpenCLIP ViT-B/32
+            "species_index_v1.bin" to 1_000L,          // small (prototypes + trailer)
+            "species_catalog_v1.json" to 100L,
+            "meow_raster_v1.bin" to 1_000_000L,        // ~2 MB
+            "ecoregion_hierarchy_v1.json" to 100L,
+        )
 
         // Minimum valid file sizes (small files = error HTML pages from HF)
         private val MIN_TEXT_BYTES = mapOf(
@@ -189,6 +203,10 @@ class VlmModelManager(
         return f.exists() && f.length() > minBytes
     }
 
+    /** True if [tier] is downloaded in any variant: a fine-tuned file is enough without the base one. */
+    fun isAnyVariantAvailable(tier: TextModelTier): Boolean =
+        TextModelVariant.entries.any { variant -> isModelAvailable(tier, variant) }
+
     /** True if any text tier/variant is downloaded (fast check for report button). */
     fun isAnyTextModelAvailable(): Boolean =
         TextModelTier.entries.any { tier ->
@@ -210,7 +228,7 @@ class VlmModelManager(
     /**
      * True if the Gemma 4 E2B .litertlm is available (vision is built-in, no mmproj needed).
      */
-    fun isGemma4VisionAvailable(): Boolean = isLiteRTModelAvailable()
+    fun isGemma4VisionAvailable(): Boolean = isAnyVariantAvailable(TextModelTier.GEMMA4_E2B)
 
     /** True if the Gemma 4 mmproj is downloaded (text model checked via isModelAvailable). */
     fun isGemma4MmprojAvailable(): Boolean {
@@ -352,6 +370,44 @@ class VlmModelManager(
     /** Download Gemma 4 E2B .litertlm from HuggingFace (~2.58 GB). */
     suspend fun downloadLiteRTModel(variant: TextModelVariant = TextModelVariant.BASE) =
         downloadModel(TextModelTier.GEMMA4_E2B, variant)
+
+    // -----------------------------------------------------------------------
+    // BioDex species pack (M4)
+    // -----------------------------------------------------------------------
+
+    /** Directory holding the downloadable BioDex assets (`models/species/`). */
+    fun getSpeciesDirectory(): File = File(getModelDirectory(), "species").also { it.mkdirs() }
+
+    /** True once the encoder + index + catalog are present (raster is optional). */
+    fun isSpeciesPackAvailable(): Boolean {
+        val dir = getSpeciesDirectory()
+        return File(dir, "clip_vitb32.onnx").exists() &&
+            File(dir, "species_index_v1.bin").exists() &&
+            File(dir, "species_catalog_v1.json").exists()
+    }
+
+    /**
+     * Download the BioDex species pack (encoder + index + catalog + raster) from
+     * HuggingFace into [getSpeciesDirectory]. Reuses [downloadFile] + [downloadState].
+     * Skips files already present and large enough. Until the HF repo exists this
+     * surfaces a clear download error; the app keeps working via the demo fallback.
+     */
+    suspend fun downloadSpeciesPack() = withContext(Dispatchers.IO) {
+        cancelled = false
+        try {
+            val dir = getSpeciesDirectory()
+            for ((name, minBytes) in SPECIES_ASSETS) {
+                if (cancelled) break
+                val target = File(dir, name)
+                if (target.exists() && target.length() >= minBytes) continue
+                downloadFile(url = "$SPECIES_REPO/$name", target = target, minValidBytes = minBytes, filename = name)
+            }
+            _downloadState.value = VlmDownloadState.Complete
+        } catch (e: VlmDownloadException) {
+            _downloadState.value = VlmDownloadState.Error(e.message ?: "Species pack download failed")
+            throw e
+        }
+    }
 
     // -----------------------------------------------------------------------
     // Internal helpers

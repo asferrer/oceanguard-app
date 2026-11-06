@@ -41,7 +41,7 @@ class LiveDetectionManager(
     private val context: Context? = null,
     private val repository: DetectionRepository? = null,
     private val locationProvider: LocationProvider? = null,
-    var confidenceThreshold: Float = 0.7f,
+    var confidenceThreshold: Float = 0.6f,
 ) {
     companion object {
         private const val TAG = "LiveDetectionManager"
