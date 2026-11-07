@@ -44,6 +44,12 @@
 # LiteRT-LM — Gemma 4 E2B on-device inference
 -keep class com.google.ai.edge.litertlm.** { *; }
 -dontwarn com.google.ai.edge.litertlm.**
+# The SDK finds @Tool methods by reflection, so R8 sees them as unused and strips them,
+# which leaves the zone report with no tools in release builds.
+-keepattributes RuntimeVisibleAnnotations,RuntimeVisibleParameterAnnotations,Signature
+-keep class * implements com.google.ai.edge.litertlm.ToolSet {
+    @com.google.ai.edge.litertlm.Tool <methods>;
+}
 
 # Keep Compose
 -keep class androidx.compose.** { *; }
