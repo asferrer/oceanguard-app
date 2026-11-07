@@ -139,6 +139,7 @@ class SpeciesIdentifierTest {
             confidence = conf,
             describer  = describer,
             locator    = effectiveLocator,
+            isBlankFrame = { false },
         )
     }
 
@@ -298,6 +299,7 @@ class SpeciesIdentifierTest {
             confidence = conf,
             describer  = RecordingDescriberPort(),
             locator    = FixedEmbeddingCropProvider(embedder),
+            isBlankFrame = { false },
         )
         val result = sut.identify(nullBitmap(), location = Location(0.0, 0.0)).first()
 
@@ -338,9 +340,24 @@ class SpeciesIdentifierTest {
             index     = buildIndex(),
             describer = RecordingDescriberPort(),
             locator   = FixedEmbeddingCropProvider(FakeSpeciesEmbedder()),
+            isBlankFrame = { false },
         )
         val results = sut.identify(nullBitmap())
         assertTrue("Expected empty results when embedder not ready", results.isEmpty())
+    }
+
+    @Test
+    fun `blank frame is rejected before encoding even if it would match a species`() = runBlocking {
+        val describer = RecordingDescriberPort()
+        val sut = SpeciesIdentifier(
+            embedder     = FakeSpeciesEmbedder(),
+            index        = buildIndex(),
+            confidence   = conf,
+            describer    = describer,
+            locator      = FixedEmbeddingCropProvider(FakeSpeciesEmbedder()),
+            isBlankFrame = { true },
+        )
+        assertTrue(sut.identify(nullBitmap()).isEmpty())
     }
 
     // -----------------------------------------------------------------------
@@ -361,6 +378,7 @@ class SpeciesIdentifierTest {
             index     = buildIndex(),
             describer = RecordingDescriberPort(),
             locator   = twoCropProvider,
+            isBlankFrame = { false },
         )
         val results = sut.identify(nullBitmap())
         assertEquals("Two crops must produce two results", 2, results.size)

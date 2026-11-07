@@ -59,6 +59,8 @@ data class IdentificationResult(
  * @param confidence Platt calibration + threshold parameters.
  * @param describer  VLM description / confirmation engine ([DescriberPort]).
  * @param locator    Organism detection / cropping engine ([CropProvider]).
+ * @param isBlankFrame Rejects frames without content before any encoding
+ *                   ([ImageContentCheck]); a rejected frame yields no result.
  */
 class SpeciesIdentifier(
     private val embedder:   SpeciesEmbedder,
@@ -67,6 +69,7 @@ class SpeciesIdentifier(
     private val confidence: SpeciesConfidence = SpeciesConfidence(),
     private val describer:  DescriberPort = SpeciesDescriber(),
     private val locator:    CropProvider = OrganismLocator(),
+    private val isBlankFrame: (Bitmap) -> Boolean = ImageContentCheck::isBlank,
 ) {
     companion object {
         private const val TAG = "SpeciesIdentifier"
@@ -99,6 +102,11 @@ class SpeciesIdentifier(
     ): List<IdentificationResult> {
         if (!embedder.isReady) {
             Log.w(TAG, "Embedder not ready — skipping identification")
+            return emptyList()
+        }
+
+        if (isBlankFrame(bitmap)) {
+            Log.d(TAG, "Frame has no content (black / flat) — skipping identification")
             return emptyList()
         }
 
