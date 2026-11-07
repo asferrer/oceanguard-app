@@ -71,7 +71,7 @@ fun ContributionPrompts(
     }
 
     if (showSheet) {
-        ContributionSheet(viewModel, app, (prompt as? ContributePromptState.ShowPrompt)?.sessionIds.orEmpty()) {
+        ContributionSheet(viewModel, (prompt as? ContributePromptState.ShowPrompt)?.sessionIds.orEmpty()) {
             showSheet = false
         }
     }
@@ -79,12 +79,10 @@ fun ContributionPrompts(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ContributionSheet(viewModel: MainViewModel, app: OceanGuardApp, sessionIds: List<Long>, close: () -> Unit) {
-    val scope = rememberCoroutineScope()
+private fun ContributionSheet(viewModel: MainViewModel, sessionIds: List<Long>, close: () -> Unit) {
     val declined = {
         close()
-        scope.launch { app.settingsRepository.incrementContributeDeclineCount() }
-        viewModel.dismissContributePrompt()
+        viewModel.declineContributePrompt()
     }
     ContributeBottomSheet(
         imageCount = sessionIds.size,

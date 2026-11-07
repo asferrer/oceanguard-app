@@ -225,6 +225,19 @@ class MainViewModel(
         _contributePrompt.value = ContributePromptState.None
     }
 
+    /**
+     * The user closed the contribution sheet without consenting ("Not now" or swipe).
+     * Counted in [viewModelScope] on purpose: the sheet's own composition scope is
+     * cancelled as soon as the sheet leaves the screen, which could drop the write
+     * before DataStore commits it and leave the soft cap of three dismissals unreached.
+     */
+    fun declineContributePrompt() {
+        viewModelScope.launch {
+            settingsRepository.incrementContributeDeclineCount()
+        }
+        dismissContributePrompt()
+    }
+
     /** Enqueue sessions for contribution upload by ID. Grants consent and optionally triggers immediate upload. */
     fun enqueueSessions(sessionIds: List<Long>, wifiOnly: Boolean, onComplete: () -> Unit = {}) {
         viewModelScope.launch {
@@ -251,7 +264,7 @@ class MainViewModel(
                 // OR the soft cap of three dismissals. Either suppresses the prompt.
                 val neverPrompt = settingsRepository.contributeNeverPrompt.first()
                 val declineCount = settingsRepository.contributeDeclineCount.first()
-                if (!neverPrompt && declineCount < 3) {
+                if (ContributePromptPolicy.shouldPrompt(neverPrompt, declineCount)) {
                     _contributePrompt.value = ContributePromptState.ShowPrompt(sessionIds, sessionIds.size)
                 }
             }
