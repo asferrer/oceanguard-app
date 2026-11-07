@@ -55,6 +55,9 @@ internal class ToolAgentLoop(
 
     private val gson = Gson()
 
+    /** Set when [sendTurn] ended the turn itself because the model began writing prose in PHASE 1. */
+    private var phase1Aborted = false
+
     /**
      * Run the agent loop and return the final assistant text.
      *
@@ -90,6 +93,10 @@ internal class ToolAgentLoop(
     ): String {
         val phase1Mode = dataBundle != null
         val accumulated = StringBuilder()
+        // Everything is compared in [ToolNames.canonical] form: the SDK names tools
+        // `per-session-details` while the required sets say `get_per_session_details`.
+        val requiredCanonical = ToolNames.canonical(requiredToolNames)
+        val criticalCanonical = ToolNames.canonical(criticalToolNames)
         val calledTools = mutableSetOf<String>()
         var nextInput: Any = prompt   // first turn: text; subsequent: Contents of ToolResponse or redirect String
         var round = 0
@@ -102,9 +109,7 @@ internal class ToolAgentLoop(
         // wrap-up steals ~10 min of CPU on Exynos before the outer-loop check
         // fires, doubling latency on every missed-tool round.
         fun currentCriticalMissing(): Set<String> =
-            criticalToolNames.filterNot { req ->
-                calledTools.any { called -> req == called || req.startsWith(called) || called.startsWith(req) }
-            }.toSet()
+            criticalCanonical.filterNot { it in calledTools }.toSet()
 
         while (round <= maxToolRounds) {
             val toolCalls = sendTurn(
@@ -121,7 +126,7 @@ internal class ToolAgentLoop(
                     return accumulated.toString()
                 }
                 val responses = executeAll(toolCalls, onToolCallStarted)
-                toolCalls.forEach { calledTools.add(it.name) }
+                toolCalls.forEach { calledTools.add(ToolNames.canonical(it.name)) }
                 nextInput = Contents.of(*responses.toTypedArray())
                 round++
                 continue
@@ -129,12 +134,24 @@ internal class ToolAgentLoop(
 
             // Model produced no tool calls this turn. Decide: allow finish, or redirect
             // because required tools are still missing. Gemma 4 sometimes abbreviates
-            // snake_case names (e.g. `get_temporal` instead of `get_temporal_trend`)
-            // which the SDK dispatcher resolves via prefix; treat any called name
-            // that is a prefix of a required name as satisfying that requirement.
-            val missing = requiredToolNames.filterNot { req ->
+            // names (e.g. `temporal` instead of `temporal_trend`) which the SDK dispatcher
+            // resolves via prefix; treat any called name that is a prefix of a required
+            // name as satisfying that requirement.
+            val missing = requiredCanonical.filterNot { req ->
                 calledTools.any { called -> req == called || req.startsWith(called) || called.startsWith(req) }
             }.toSet()
+
+            // The turn was cut by us (PHASE-1 prose abort) and the native decode was
+            // cancelled. Redirecting would send a message onto a conversation whose
+            // cancellation may still be in flight, and that turn would die with
+            // "Task cancelled". PHASE 2 runs on a fresh conversation with the bundle,
+            // so hand off whatever tools ran.
+            if (phase1Aborted) {
+                if (missing.isNotEmpty()) {
+                    Log.w(TAG, "PHASE-1 aborted with tools still missing=$missing (called=$calledTools); handing off to PHASE-2")
+                }
+                return ""
+            }
 
             // PHASE-1 early exit: when a dataBundle was supplied and all required
             // tools have run, stop immediately. The LiteRT-LM Conversation keeps
@@ -173,7 +190,7 @@ internal class ToolAgentLoop(
             val draftLooksLikeReport = accumulated.length >= AGENTIC_KEEP_DRAFT_CHARS ||
                 accumulated.contains("\n## ") ||
                 accumulated.contains("\n### ")
-            val criticalMissing = missing.intersect(criticalToolNames)
+            val criticalMissing = missing.intersect(criticalCanonical)
             if (agenticMode && draftLooksLikeReport && criticalMissing.isEmpty()) {
                 Log.w(TAG, "AgentLoop: accepting partial report (chars=${accumulated.length}) despite missing tools=$missing — only non-critical tools missing")
                 return accumulated.toString()
@@ -190,7 +207,7 @@ internal class ToolAgentLoop(
                 onPartialResult("")
             }
             redirects++
-            val missingList = missing.joinToString(", ")
+            val missingList = missing.joinToString(", ") { it.replace("_", "-") }
             nextInput = "STOP. You have not yet invoked the required tools: $missingList. " +
                 "Invoke each of them now (all of them, in a single turn is fine). " +
                 "Do NOT write any report prose until every required tool has returned its data. " +
@@ -235,6 +252,7 @@ internal class ToolAgentLoop(
                     if (phase1Mode && collectedToolCalls.isEmpty() && accumulated.length >= PHASE1_PROSE_ABORT_CHARS) {
                         Log.i(TAG, "PHASE-1 prose detected (${accumulated.length} chars); aborting turn to hand off to PHASE-2")
                         resumed = true
+                        phase1Aborted = true
                         // CRITICAL: cancel the native decode loop before resuming.
                         // Without this, `conv.close()` in the engine's finally
                         // block waits for the async decode to finish on its own —
