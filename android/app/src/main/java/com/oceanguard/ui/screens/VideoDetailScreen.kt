@@ -21,12 +21,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
+import com.oceanguard.ai.R
 import com.oceanguard.ai.data.RiskLevel
 import com.oceanguard.ai.data.VideoAnalysis
 import com.oceanguard.ai.ui.MainViewModel
@@ -47,6 +49,7 @@ fun VideoDetailScreen(
     var isLoading by remember { mutableStateOf(true) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val shareTitle = stringResource(R.string.video_share)
 
     LaunchedEffect(analysisId) {
         analysis = viewModel.getVideoAnalysis(analysisId)
@@ -56,8 +59,8 @@ fun VideoDetailScreen(
     if (showDeleteDialog && analysis != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Video Analysis") },
-            text = { Text("This action cannot be undone. The record will be permanently removed.") },
+            title = { Text(stringResource(R.string.video_delete_confirm_title)) },
+            text = { Text(stringResource(R.string.video_delete_confirm_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -66,25 +69,25 @@ fun VideoDetailScreen(
                         navController.popBackStack()
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                ) { Text("Delete") }
+                ) { Text(stringResource(R.string.common_delete)) }
             },
-            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Video Analysis") },
+                title = { Text(stringResource(R.string.video_detail_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.session_detail_cd_back))
                     }
                 },
                 actions = {
                     if (analysis != null) {
                         IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.common_delete), tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 },
@@ -101,10 +104,10 @@ fun VideoDetailScreen(
                             putExtra(Intent.EXTRA_STREAM, Uri.parse(outputUri))
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
-                        context.startActivity(Intent.createChooser(intent, "Share video"))
+                        context.startActivity(Intent.createChooser(intent, shareTitle))
                     },
                     containerColor = MaterialTheme.colorScheme.primary,
-                ) { Icon(Icons.Filled.Share, contentDescription = "Share video") }
+                ) { Icon(Icons.Filled.Share, contentDescription = shareTitle) }
             }
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -112,7 +115,7 @@ fun VideoDetailScreen(
         when {
             isLoading -> Box(Modifier.fillMaxSize().padding(padding), Alignment.Center) { CircularProgressIndicator() }
             analysis == null -> Box(Modifier.fillMaxSize().padding(padding), Alignment.Center) {
-                Text("Analysis not found.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.session_detail_empty), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             else -> VideoDetailContent(Modifier.padding(padding), analysis!!)
         }
@@ -193,19 +196,19 @@ private fun DetectionResultsCard(analysis: VideoAnalysis, classCounts: Map<Strin
 
     ElevatedCard(shape = RoundedCornerShape(16.dp), elevation = CardDefaults.elevatedCardElevation(2.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Detection Results", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.video_detection_results), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("${analysis.uniqueDebrisCount}", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("unique debris detected", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.video_unique_detected), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     RiskBadge(riskLevel)
                 }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Health Score", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.video_health_score), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("${analysis.healthScore}/100", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium, color = healthColor)
                 }
                 LinearProgressIndicator(
@@ -218,7 +221,7 @@ private fun DetectionResultsCard(analysis: VideoAnalysis, classCounts: Map<Strin
 
             if (classCounts.isNotEmpty()) {
                 HorizontalDivider()
-                Text("Debris Breakdown", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.video_debris_breakdown), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                 classCounts.forEach { (name, count) ->
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Box(Modifier.size(10.dp).background(classColor(name), CircleShape))
@@ -229,12 +232,12 @@ private fun DetectionResultsCard(analysis: VideoAnalysis, classCounts: Map<Strin
             }
 
             HorizontalDivider()
-            Text("Processing Info", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.video_processing_info), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
             listOf(
-                "Total time" to "${TimeUnit.MILLISECONDS.toSeconds(analysis.totalProcessingTimeMs)}s",
-                "Frames processed" to "${analysis.processedFrameCount} / ${analysis.totalFrameCount}",
-                "Avg time/frame" to "${"%.0f".format(analysis.avgInferenceTimeMs)}ms",
-                "Video duration" to "${TimeUnit.MILLISECONDS.toSeconds(analysis.durationMs)}s",
+                stringResource(R.string.video_total_time) to "${TimeUnit.MILLISECONDS.toSeconds(analysis.totalProcessingTimeMs)}s",
+                stringResource(R.string.video_frames_processed) to "${analysis.processedFrameCount} / ${analysis.totalFrameCount}",
+                stringResource(R.string.video_avg_inference) to "${"%.0f".format(analysis.avgInferenceTimeMs)}ms",
+                stringResource(R.string.video_duration) to "${TimeUnit.MILLISECONDS.toSeconds(analysis.durationMs)}s",
             ).forEach { (label, value) ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -248,10 +251,10 @@ private fun DetectionResultsCard(analysis: VideoAnalysis, classCounts: Map<Strin
 @Composable
 private fun RiskBadge(riskLevel: RiskLevel) {
     val (label, bg, fg) = when (riskLevel) {
-        RiskLevel.LOW      -> Triple("LOW",      Color(0xFF1B5E20), Color(0xFFA5D6A7))
-        RiskLevel.MODERATE -> Triple("MODERATE", Color(0xFF4A3A00), Color(0xFFFFCC02))
-        RiskLevel.HIGH     -> Triple("HIGH",     Color(0xFF4A1000), Color(0xFFFFAB40))
-        RiskLevel.CRITICAL -> Triple("CRITICAL", Color(0xFF4A0000), Color(0xFFEF9A9A))
+        RiskLevel.LOW      -> Triple(stringResource(R.string.history_risk_low).uppercase(),      Color(0xFF1B5E20), Color(0xFFA5D6A7))
+        RiskLevel.MODERATE -> Triple(stringResource(R.string.history_risk_moderate).uppercase(), Color(0xFF4A3A00), Color(0xFFFFCC02))
+        RiskLevel.HIGH     -> Triple(stringResource(R.string.history_risk_high).uppercase(),     Color(0xFF4A1000), Color(0xFFFFAB40))
+        RiskLevel.CRITICAL -> Triple(stringResource(R.string.history_risk_critical).uppercase(), Color(0xFF4A0000), Color(0xFFEF9A9A))
     }
     Surface(shape = RoundedCornerShape(6.dp), color = bg) {
         Text(label, Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = fg, fontWeight = FontWeight.Bold)

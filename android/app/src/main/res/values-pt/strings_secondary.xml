@@ -725,4 +725,12 @@
     <string name="report_cd_session_thumbnail">Ver os detalhes da sessão</string>
     <string name="tour_session_detail_location_title">Localização</string>
     <string name="tour_session_detail_location_desc">Coordenadas GPS onde esta imagem foi captada. Toque em editar para as corrigir.</string>
+    <string name="report_zone_preview_analyses">Análises</string>
+    <string name="report_zone_preview_debris">Resíduos</string>
+    <string name="report_zone_preview_health">Saúde</string>
+    <string name="video_annotated_unavailable">Vídeo anotado indisponível</string>
+    <string name="video_cd_play">Reproduzir</string>
+    <string name="video_cd_pause">Pausar</string>
+    <string name="video_processing_time">Tempo de processamento</string>
+    <string name="video_back">Voltar</string>
 </resources>

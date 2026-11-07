@@ -724,4 +724,12 @@
     <string name="report_cd_session_thumbnail">Vedi i dettagli della sessione</string>
     <string name="tour_session_detail_location_title">Posizione</string>
     <string name="tour_session_detail_location_desc">Coordinate GPS in cui è stata scattata questa immagine. Tocca modifica per correggerle.</string>
+    <string name="report_zone_preview_analyses">Analisi</string>
+    <string name="report_zone_preview_debris">Rifiuti</string>
+    <string name="report_zone_preview_health">Salute</string>
+    <string name="video_annotated_unavailable">Video annotato non disponibile</string>
+    <string name="video_cd_play">Riproduci</string>
+    <string name="video_cd_pause">Pausa</string>
+    <string name="video_processing_time">Tempo di elaborazione</string>
+    <string name="video_back">Indietro</string>
 </resources>

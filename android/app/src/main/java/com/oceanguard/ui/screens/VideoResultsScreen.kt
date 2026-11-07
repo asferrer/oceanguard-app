@@ -288,13 +288,13 @@ private fun VideoPlayerCard(outputVideoUri: String?) {
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        contentDescription = stringResource(if (isPlaying) R.string.video_cd_pause else R.string.video_cd_play),
                         modifier = Modifier.size(28.dp),
                     )
                 }
             } else {
                 Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                    Text("Annotated video unavailable", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.video_annotated_unavailable), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -312,7 +312,7 @@ private fun MetricsCard(state: InferenceServiceState.VideoComplete, analysis: Vi
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("${state.uniqueDebrisCount}", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                Text("unique debris detected", style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.video_unique_detected), style = MaterialTheme.typography.bodyLarge)
             }
 
             analysis?.let { va ->
@@ -328,21 +328,21 @@ private fun MetricsCard(state: InferenceServiceState.VideoComplete, analysis: Vi
                     }
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                MetricRow("Processing time", formatDuration(state.processingTimeMs))
-                MetricRow("Frames processed", "${va.processedFrameCount} / ${va.totalFrameCount}")
-                MetricRow("Video duration", formatSeconds(va.durationMs))
-                MetricRow("Avg inference / frame", "%.0fms".format(va.avgInferenceTimeMs))
+                MetricRow(stringResource(R.string.video_processing_time), formatDuration(state.processingTimeMs))
+                MetricRow(stringResource(R.string.video_frames_processed), "${va.processedFrameCount} / ${va.totalFrameCount}")
+                MetricRow(stringResource(R.string.video_duration), formatSeconds(va.durationMs))
+                MetricRow(stringResource(R.string.video_avg_inference), "%.0fms".format(va.avgInferenceTimeMs))
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                 val scoreColor = healthScoreColor(va.healthScore)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Health score", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.video_health_score), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("${va.healthScore} / 100", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = scoreColor)
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 LinearProgressIndicator(progress = { va.healthScore / 100f }, modifier = Modifier.fillMaxWidth().height(8.dp), color = scoreColor, trackColor = MaterialTheme.colorScheme.surfaceVariant)
             } ?: run {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                MetricRow("Processing time", formatDuration(state.processingTimeMs))
+                MetricRow(stringResource(R.string.video_processing_time), formatDuration(state.processingTimeMs))
             }
         }
     }
@@ -359,6 +359,7 @@ private fun MetricRow(label: String, value: String) {
 @Composable
 private fun ActionButtons(outputVideoUri: String?, onBack: () -> Unit) {
     val context = LocalContext.current
+    val shareTitle = stringResource(R.string.video_share)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (outputVideoUri != null) {
             Button(
@@ -368,18 +369,18 @@ private fun ActionButtons(outputVideoUri: String?, onBack: () -> Unit) {
                         putExtra(Intent.EXTRA_STREAM, Uri.parse(outputVideoUri))
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
-                    context.startActivity(Intent.createChooser(intent, "Share video"))
+                    context.startActivity(Intent.createChooser(intent, shareTitle))
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
             ) {
                 Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Share Video", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.video_share), style = MaterialTheme.typography.titleMedium)
             }
         }
         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
-            Text("Back", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.video_back), style = MaterialTheme.typography.titleMedium)
         }
     }
 }
@@ -397,12 +398,12 @@ private fun ErrorContent(message: String, onBack: () -> Unit) {
     ) {
         Icon(Icons.Default.Error, contentDescription = null, modifier = Modifier.size(72.dp), tint = MaterialTheme.colorScheme.error)
         Spacer(modifier = Modifier.height(24.dp))
-        Text("Analysis failed", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+        Text(stringResource(R.string.cd_analysis_failed), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         Spacer(modifier = Modifier.height(8.dp))
         Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         Spacer(modifier = Modifier.height(32.dp))
         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
-            Text("Back", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.video_back), style = MaterialTheme.typography.titleMedium)
         }
     }
 }

@@ -724,4 +724,12 @@
     <string name="report_cd_session_thumbnail">Sitzungsdetails ansehen</string>
     <string name="tour_session_detail_location_title">Standort</string>
     <string name="tour_session_detail_location_desc">GPS-Koordinaten, an denen dieses Bild aufgenommen wurde. Zum Korrigieren auf Bearbeiten tippen.</string>
+    <string name="report_zone_preview_analyses">Analysen</string>
+    <string name="report_zone_preview_debris">Abfall</string>
+    <string name="report_zone_preview_health">Zustand</string>
+    <string name="video_annotated_unavailable">Annotiertes Video nicht verfügbar</string>
+    <string name="video_cd_play">Wiedergabe</string>
+    <string name="video_cd_pause">Pause</string>
+    <string name="video_processing_time">Verarbeitungszeit</string>
+    <string name="video_back">Zurück</string>
 </resources>

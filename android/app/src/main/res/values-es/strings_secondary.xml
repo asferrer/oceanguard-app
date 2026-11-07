@@ -724,4 +724,12 @@
     <string name="species_batch_btn_view_biodex">Ver BioDex</string>
 
     <string name="report_cd_session_thumbnail">Ver los detalles de la sesión</string>
+    <string name="report_zone_preview_analyses">Análisis</string>
+    <string name="report_zone_preview_debris">Residuos</string>
+    <string name="report_zone_preview_health">Salud</string>
+    <string name="video_annotated_unavailable">Vídeo anotado no disponible</string>
+    <string name="video_cd_play">Reproducir</string>
+    <string name="video_cd_pause">Pausa</string>
+    <string name="video_processing_time">Tiempo de procesamiento</string>
+    <string name="video_back">Volver</string>
 </resources>

@@ -188,15 +188,15 @@ internal fun ZonePreviewCard(
                     value = "$dayCount",
                 )
                 StatItem(
-                    label = "Analyses",
+                    label = stringResource(R.string.report_zone_preview_analyses),
                     value = "${zone.sessions.size}",
                 )
                 StatItem(
-                    label = "Debris",
+                    label = stringResource(R.string.report_zone_preview_debris),
                     value = "$totalDebris",
                 )
                 StatItem(
-                    label = "Health",
+                    label = stringResource(R.string.report_zone_preview_health),
                     value = "${zone.aggregateHealthScore}/100",
                 )
             }

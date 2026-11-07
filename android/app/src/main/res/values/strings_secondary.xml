@@ -749,4 +749,12 @@
     <string name="species_batch_btn_new_batch">New Batch</string>
     <string name="species_batch_btn_view_biodex">View BioDex</string>
 
+    <string name="report_zone_preview_analyses">Analyses</string>
+    <string name="report_zone_preview_debris">Debris</string>
+    <string name="report_zone_preview_health">Health</string>
+    <string name="video_annotated_unavailable">Annotated video unavailable</string>
+    <string name="video_cd_play">Play</string>
+    <string name="video_cd_pause">Pause</string>
+    <string name="video_processing_time">Processing time</string>
+    <string name="video_back">Back</string>
 </resources>
