@@ -732,4 +732,34 @@
     <string name="video_cd_pause">Pause</string>
     <string name="video_processing_time">Verarbeitungszeit</string>
     <string name="video_back">Zurück</string>
+    <string name="trend_title">Verlauf der Gesundheitswertung</string>
+    <string name="trend_none">Keine Analysen erfasst</string>
+    <string name="trend_avg">Ø %1$d</string>
+    <string name="trend_empty">Keine Analysedaten vorhanden.\nSchließe einen Scan ab, um den Verlauf zu sehen.</string>
+    <string name="trend_record_more">Erfasse mehr Analysen, um den Verlauf zu sehen</string>
+    <string name="dist_title">Abfallverteilung</string>
+    <string name="dist_subtitle">Anzahl nach Materialart</string>
+    <string name="dist_empty">Keine Abfalldaten vorhanden</string>
+    <string name="dist_a11y_empty">Diagramm der Abfallverteilung: keine Daten</string>
+    <string name="dist_a11y_items">Diagramm der Abfallverteilung: %1$s</string>
+    <string name="material_wood">Holz</string>
+    <string name="material_paper">Papier</string>
+    <string name="material_ceramic">Keramik</string>
+    <string name="material_hazardous">Gefährlich</string>
+    <string name="quick_new_scan">Neuer Scan</string>
+    <string name="quick_take_photo">Foto aufnehmen</string>
+    <string name="quick_take_photo_desc">Mit der Kamera aufnehmen und in Echtzeit analysieren</string>
+    <string name="quick_gallery">Aus der Galerie wählen</string>
+    <string name="quick_gallery_desc">Ein vorhandenes Foto analysieren</string>
+    <string name="quick_batch">Stapelanalyse</string>
+    <string name="quick_batch_desc">Mehrere Bilder im Hintergrund verarbeiten</string>
+    <string name="quick_files">Aus Dateien wählen</string>
+    <string name="quick_files_desc">Dateien und Dokumente nach Bildern durchsuchen</string>
+    <string name="date_range_prev_month">Vorheriger Monat</string>
+    <string name="date_range_next_month">Nächster Monat</string>
+    <string name="notif_video_progress">Frame %1$d/%2$d - ~%3$dm %4$ds</string>
+    <plurals name="trend_analyses_count">
+        <item quantity="one">%d Analyse</item>
+        <item quantity="other">%d Analysen</item>
+    </plurals>
 </resources>

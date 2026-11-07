@@ -386,7 +386,7 @@ class InferenceService : LifecycleService() {
                         if (progress.totalFrames > 0) {
                             val remainMin = progress.estimatedRemainingMs / 60000
                             val remainSec = (progress.estimatedRemainingMs % 60000) / 1000
-                            val text = "Frame ${progress.currentFrame}/${progress.totalFrames} - ~${remainMin}m ${remainSec}s"
+                            val text = getString(R.string.notif_video_progress, progress.currentFrame, progress.totalFrames, remainMin, remainSec)
                             updateNotification(text, job.deepLinkRoute)
                             app.inferenceServiceState.value =
                                 InferenceServiceState.VideoRunning(

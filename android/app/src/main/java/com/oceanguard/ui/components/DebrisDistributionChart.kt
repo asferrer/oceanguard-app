@@ -1,5 +1,8 @@
 package com.oceanguard.ai.ui.components
 
+import androidx.annotation.StringRes
+import com.oceanguard.ai.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -75,19 +78,20 @@ private fun debrisMaterialColor(material: DebrisMaterial): Color = when (materia
     DebrisMaterial.OTHER       -> MaterialOther
 }
 
-/** Human-readable label for each material enum value. */
-private fun DebrisMaterial.displayLabel(): String = when (this) {
-    DebrisMaterial.PLASTIC     -> "Plastic"
-    DebrisMaterial.METAL       -> "Metal"
-    DebrisMaterial.FABRIC      -> "Fabric"
-    DebrisMaterial.RUBBER      -> "Rubber"
-    DebrisMaterial.GLASS       -> "Glass"
-    DebrisMaterial.FISHING_NET -> "Fishing Net"
-    DebrisMaterial.WOOD        -> "Wood"
-    DebrisMaterial.PAPER       -> "Paper"
-    DebrisMaterial.CERAMIC     -> "Ceramic"
-    DebrisMaterial.CHEMICAL    -> "Hazardous"
-    DebrisMaterial.OTHER       -> "Other"
+/** String resource with the label of each material enum value. */
+@StringRes
+private fun DebrisMaterial.labelRes(): Int = when (this) {
+    DebrisMaterial.PLASTIC     -> R.string.material_plastic
+    DebrisMaterial.METAL       -> R.string.material_metal
+    DebrisMaterial.FABRIC      -> R.string.material_fabric
+    DebrisMaterial.RUBBER      -> R.string.material_rubber
+    DebrisMaterial.GLASS       -> R.string.material_glass
+    DebrisMaterial.FISHING_NET -> R.string.dex_debris_fishing_net
+    DebrisMaterial.WOOD        -> R.string.material_wood
+    DebrisMaterial.PAPER       -> R.string.material_paper
+    DebrisMaterial.CERAMIC     -> R.string.material_ceramic
+    DebrisMaterial.CHEMICAL    -> R.string.material_hazardous
+    DebrisMaterial.OTHER       -> R.string.dex_debris_other
 }
 
 // ---------------------------------------------------------------------------
@@ -161,14 +165,15 @@ fun DebrisDistributionChart(
     }
 
     // Build a single semantic string for accessibility (WCAG 2.1 SC 1.3.1).
-    val a11yDescription = remember(sortedEntries) {
+    val a11yEmpty = stringResource(R.string.dist_a11y_empty)
+    val a11yTemplate = stringResource(R.string.dist_a11y_items, "%1\$s")
+    val a11yLabels = sortedEntries.map { stringResource(it.key.labelRes()) }
+    val a11yDescription = remember(sortedEntries, a11yLabels, a11yEmpty, a11yTemplate) {
         if (sortedEntries.isEmpty()) {
-            "Debris distribution chart: no data available"
+            a11yEmpty
         } else {
-            val items = sortedEntries.joinToString("; ") {
-                "${it.key.displayLabel()} ${it.value}"
-            }
-            "Debris distribution chart: $items"
+            val items = sortedEntries.mapIndexed { i, e -> "${a11yLabels[i]} ${e.value}" }.joinToString("; ")
+            a11yTemplate.replace("%1\$s", items)
         }
     }
 
@@ -191,7 +196,7 @@ fun DebrisDistributionChart(
             // Card title
             // ----------------------------------------------------------------
             Text(
-                text = "Debris Distribution",
+                text = stringResource(R.string.dist_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -200,7 +205,7 @@ fun DebrisDistributionChart(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Count by material type",
+                text = stringResource(R.string.dist_subtitle),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -211,7 +216,7 @@ fun DebrisDistributionChart(
             // Empty state
             // ----------------------------------------------------------------
             if (sortedEntries.isEmpty()) {
-                EmptyChartPlaceholder(message = "No debris data to display")
+                EmptyChartPlaceholder(message = stringResource(R.string.dist_empty))
                 return@Card
             }
 
@@ -257,6 +262,7 @@ private fun HorizontalBarChart(
     val textSizePx      = with(density) { 11.sp.toPx() }
 
     val maxCount = entries.maxOf { it.value }.coerceAtLeast(1)
+    val labels = entries.map { stringResource(it.key.labelRes()) }
 
     // --- Staggered bar entrance animation ---
     var animationTarget by remember { mutableStateOf(0f) }
@@ -302,7 +308,7 @@ private fun HorizontalBarChart(
 
             // Draw the label on the left using nativeCanvas for text.
             drawMaterialLabel(
-                label      = material.displayLabel(),
+                label      = labels[index],
                 x          = 0f,
                 y          = rowTop + barHeightPx / 2f,
                 maxWidth   = labelColWidthPx - 8.dp.toPx(),
@@ -473,7 +479,7 @@ private fun LegendItem(material: DebrisMaterial, count: Int) {
             color = color,
         ) {}
         Text(
-            text = "${material.displayLabel()} ($count)",
+            text = "${stringResource(material.labelRes())} ($count)",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

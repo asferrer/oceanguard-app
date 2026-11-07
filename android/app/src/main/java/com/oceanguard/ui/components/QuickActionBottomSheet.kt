@@ -1,5 +1,7 @@
 package com.oceanguard.ai.ui.components
 
+import com.oceanguard.ai.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -60,7 +62,7 @@ fun QuickActionBottomSheet(
                 .padding(bottom = 32.dp),
         ) {
             Text(
-                text = "New Scan",
+                text = stringResource(R.string.quick_new_scan),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -70,8 +72,8 @@ fun QuickActionBottomSheet(
 
             QuickActionItem(
                 icon = Icons.Filled.CameraAlt,
-                title = "Take Photo",
-                description = "Capture with camera for real-time analysis",
+                title = stringResource(R.string.quick_take_photo),
+                description = stringResource(R.string.quick_take_photo_desc),
                 onClick = {
                     onTakePhoto()
                     onDismiss()
@@ -85,8 +87,8 @@ fun QuickActionBottomSheet(
 
             QuickActionItem(
                 icon = Icons.Filled.Photo,
-                title = "Select from Gallery",
-                description = "Analyse an existing photo",
+                title = stringResource(R.string.quick_gallery),
+                description = stringResource(R.string.quick_gallery_desc),
                 onClick = {
                     onSelectGallery()
                     onDismiss()
@@ -100,8 +102,8 @@ fun QuickActionBottomSheet(
 
             QuickActionItem(
                 icon = Icons.Filled.PhotoLibrary,
-                title = "Batch Analysis",
-                description = "Process multiple images in background",
+                title = stringResource(R.string.quick_batch),
+                description = stringResource(R.string.quick_batch_desc),
                 onClick = {
                     onBatchAnalysis()
                     onDismiss()
@@ -115,8 +117,8 @@ fun QuickActionBottomSheet(
 
             QuickActionItem(
                 icon = Icons.Filled.FolderOpen,
-                title = "Select from Files",
-                description = "Browse files and documents for images",
+                title = stringResource(R.string.quick_files),
+                description = stringResource(R.string.quick_files_desc),
                 onClick = {
                     onSelectFiles()
                     onDismiss()

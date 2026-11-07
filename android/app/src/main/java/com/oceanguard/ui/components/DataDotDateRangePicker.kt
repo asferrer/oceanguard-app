@@ -1,5 +1,7 @@
 package com.oceanguard.ai.ui.components
 
+import com.oceanguard.ai.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -157,6 +159,8 @@ private fun MonthHeader(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
 ) {
+    val previousDescription = stringResource(R.string.date_range_prev_month)
+    val nextDescription = stringResource(R.string.date_range_next_month)
     val label = remember(month) {
         val monthName = month.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
         "$monthName ${month.year}"
@@ -170,7 +174,7 @@ private fun MonthHeader(
         IconButton(
             onClick  = onPrevious,
             modifier = Modifier.semantics {
-                contentDescription = "Previous month"
+                contentDescription = previousDescription
             }
         ) {
             Icon(
@@ -192,7 +196,7 @@ private fun MonthHeader(
         IconButton(
             onClick  = onNext,
             modifier = Modifier.semantics {
-                contentDescription = "Next month"
+                contentDescription = nextDescription
             }
         ) {
             Icon(

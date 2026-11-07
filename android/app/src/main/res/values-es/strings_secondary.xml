@@ -732,4 +732,34 @@
     <string name="video_cd_pause">Pausa</string>
     <string name="video_processing_time">Tiempo de procesamiento</string>
     <string name="video_back">Volver</string>
+    <string name="trend_title">Evolución de la puntuación de salud</string>
+    <string name="trend_none">Sin análisis registrados</string>
+    <string name="trend_avg">media %1$d</string>
+    <string name="trend_empty">No hay datos de análisis.\nCompleta un escaneo para ver la evolución.</string>
+    <string name="trend_record_more">Registra más análisis para ver la evolución</string>
+    <string name="dist_title">Distribución de residuos</string>
+    <string name="dist_subtitle">Recuento por tipo de material</string>
+    <string name="dist_empty">No hay datos de residuos que mostrar</string>
+    <string name="dist_a11y_empty">Gráfico de distribución de residuos: sin datos</string>
+    <string name="dist_a11y_items">Gráfico de distribución de residuos: %1$s</string>
+    <string name="material_wood">Madera</string>
+    <string name="material_paper">Papel</string>
+    <string name="material_ceramic">Cerámica</string>
+    <string name="material_hazardous">Peligroso</string>
+    <string name="quick_new_scan">Nuevo escaneo</string>
+    <string name="quick_take_photo">Hacer foto</string>
+    <string name="quick_take_photo_desc">Captura con la cámara para analizar en tiempo real</string>
+    <string name="quick_gallery">Elegir de la galería</string>
+    <string name="quick_gallery_desc">Analiza una foto existente</string>
+    <string name="quick_batch">Análisis por lotes</string>
+    <string name="quick_batch_desc">Procesa varias imágenes en segundo plano</string>
+    <string name="quick_files">Elegir de los archivos</string>
+    <string name="quick_files_desc">Busca imágenes en archivos y documentos</string>
+    <string name="date_range_prev_month">Mes anterior</string>
+    <string name="date_range_next_month">Mes siguiente</string>
+    <string name="notif_video_progress">Fotograma %1$d/%2$d - ~%3$dm %4$ds</string>
+    <plurals name="trend_analyses_count">
+        <item quantity="one">%d análisis</item>
+        <item quantity="other">%d análisis</item>
+    </plurals>
 </resources>

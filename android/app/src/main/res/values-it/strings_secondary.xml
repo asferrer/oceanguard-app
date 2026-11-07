@@ -732,4 +732,34 @@
     <string name="video_cd_pause">Pausa</string>
     <string name="video_processing_time">Tempo di elaborazione</string>
     <string name="video_back">Indietro</string>
+    <string name="trend_title">Andamento del punteggio di salute</string>
+    <string name="trend_none">Nessuna analisi registrata</string>
+    <string name="trend_avg">media %1$d</string>
+    <string name="trend_empty">Nessun dato di analisi.\nCompleta una scansione per vedere l’andamento.</string>
+    <string name="trend_record_more">Registra più analisi per vedere l’andamento</string>
+    <string name="dist_title">Distribuzione dei rifiuti</string>
+    <string name="dist_subtitle">Conteggio per tipo di materiale</string>
+    <string name="dist_empty">Nessun dato sui rifiuti da mostrare</string>
+    <string name="dist_a11y_empty">Grafico della distribuzione dei rifiuti: nessun dato</string>
+    <string name="dist_a11y_items">Grafico della distribuzione dei rifiuti: %1$s</string>
+    <string name="material_wood">Legno</string>
+    <string name="material_paper">Carta</string>
+    <string name="material_ceramic">Ceramica</string>
+    <string name="material_hazardous">Pericoloso</string>
+    <string name="quick_new_scan">Nuova scansione</string>
+    <string name="quick_take_photo">Scatta una foto</string>
+    <string name="quick_take_photo_desc">Scatta con la fotocamera per un’analisi in tempo reale</string>
+    <string name="quick_gallery">Scegli dalla galleria</string>
+    <string name="quick_gallery_desc">Analizza una foto esistente</string>
+    <string name="quick_batch">Analisi in blocco</string>
+    <string name="quick_batch_desc">Elabora più immagini in background</string>
+    <string name="quick_files">Scegli dai file</string>
+    <string name="quick_files_desc">Cerca immagini tra file e documenti</string>
+    <string name="date_range_prev_month">Mese precedente</string>
+    <string name="date_range_next_month">Mese successivo</string>
+    <string name="notif_video_progress">Fotogramma %1$d/%2$d - ~%3$dm %4$ds</string>
+    <plurals name="trend_analyses_count">
+        <item quantity="one">%d analisi</item>
+        <item quantity="other">%d analisi</item>
+    </plurals>
 </resources>

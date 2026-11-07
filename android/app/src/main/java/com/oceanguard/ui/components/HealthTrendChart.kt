@@ -1,5 +1,8 @@
 package com.oceanguard.ai.ui.components
 
+import androidx.compose.ui.res.pluralStringResource
+import com.oceanguard.ai.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -158,16 +161,16 @@ fun HealthTrendChart(
             ) {
                 Column {
                     Text(
-                        text = "Health Score Trend",
+                        text = stringResource(R.string.trend_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = if (points.isEmpty()) {
-                            "No analyses recorded"
+                            stringResource(R.string.trend_none)
                         } else {
-                            "${points.size} analys${if (points.size != 1) "es" else "is"}"
+                            pluralStringResource(R.plurals.trend_analyses_count, points.size, points.size)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -179,7 +182,7 @@ fun HealthTrendChart(
                     val avg = points.map { it.healthScore }.average().toInt()
                     val avgColor = healthScoreColor(avg)
                     Text(
-                        text = "avg $avg",
+                        text = stringResource(R.string.trend_avg, avg),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = avgColor,
@@ -445,7 +448,7 @@ private fun EmptyTrendPlaceholder() {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "No analysis data available.\nComplete a scan to see the trend.",
+            text = stringResource(R.string.trend_empty),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -483,7 +486,7 @@ private fun SinglePointPlaceholder(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Record more analyses to see the trend",
+                text = stringResource(R.string.trend_record_more),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

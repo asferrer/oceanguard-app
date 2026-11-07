@@ -733,4 +733,34 @@
     <string name="video_cd_pause">Pausar</string>
     <string name="video_processing_time">Tempo de processamento</string>
     <string name="video_back">Voltar</string>
+    <string name="trend_title">Evolução da pontuação de saúde</string>
+    <string name="trend_none">Nenhuma análise registada</string>
+    <string name="trend_avg">média %1$d</string>
+    <string name="trend_empty">Sem dados de análise.\nConclua uma digitalização para ver a evolução.</string>
+    <string name="trend_record_more">Registe mais análises para ver a evolução</string>
+    <string name="dist_title">Distribuição de resíduos</string>
+    <string name="dist_subtitle">Contagem por tipo de material</string>
+    <string name="dist_empty">Sem dados de resíduos para mostrar</string>
+    <string name="dist_a11y_empty">Gráfico de distribuição de resíduos: sem dados</string>
+    <string name="dist_a11y_items">Gráfico de distribuição de resíduos: %1$s</string>
+    <string name="material_wood">Madeira</string>
+    <string name="material_paper">Papel</string>
+    <string name="material_ceramic">Cerâmica</string>
+    <string name="material_hazardous">Perigoso</string>
+    <string name="quick_new_scan">Nova digitalização</string>
+    <string name="quick_take_photo">Tirar foto</string>
+    <string name="quick_take_photo_desc">Capture com a câmara para análise em tempo real</string>
+    <string name="quick_gallery">Escolher da galeria</string>
+    <string name="quick_gallery_desc">Analise uma foto existente</string>
+    <string name="quick_batch">Análise em lote</string>
+    <string name="quick_batch_desc">Processe várias imagens em segundo plano</string>
+    <string name="quick_files">Escolher dos ficheiros</string>
+    <string name="quick_files_desc">Procure imagens em ficheiros e documentos</string>
+    <string name="date_range_prev_month">Mês anterior</string>
+    <string name="date_range_next_month">Mês seguinte</string>
+    <string name="notif_video_progress">Fotograma %1$d/%2$d - ~%3$dm %4$ds</string>
+    <plurals name="trend_analyses_count">
+        <item quantity="one">%d análise</item>
+        <item quantity="other">%d análises</item>
+    </plurals>
 </resources>
