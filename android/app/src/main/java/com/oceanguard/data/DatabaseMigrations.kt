@@ -20,3 +20,16 @@ internal val MIGRATION_12_13 = object : Migration(12, 13) {
         db.execSQL("ALTER TABLE generated_reports ADD COLUMN modelName TEXT")
     }
 }
+
+/**
+ * v13 -> v14: the figures a report states (photos, objects, health) are saved with it, computed
+ * from the sessions it was written from. Nullable: old reports keep NULL and the screen falls
+ * back to the sessions that still exist.
+ */
+internal val MIGRATION_13_14 = object : Migration(13, 14) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE generated_reports ADD COLUMN figPhotos INTEGER")
+        db.execSQL("ALTER TABLE generated_reports ADD COLUMN figObjects INTEGER")
+        db.execSQL("ALTER TABLE generated_reports ADD COLUMN figHealth INTEGER")
+    }
+}

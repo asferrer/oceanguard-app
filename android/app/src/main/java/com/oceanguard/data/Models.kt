@@ -445,7 +445,41 @@ data class GeneratedReport(
     val sessionIds: String? = null,
     // v13: model that really wrote it (AnalysisModels). Null on reports saved before v13.
     val modelName: String? = null,
+    // v14: figures of the sessions the text was written from, frozen at generation. Null on
+    // reports saved before v14.
+    val figPhotos: Int? = null,
+    val figObjects: Int? = null,
+    val figHealth: Int? = null,
 )
+
+/**
+ * The three figures a report states, computed once from the sessions it is written from and
+ * with the same criterion as its text ([com.oceanguard.ai.inference.ToolReportContext]: every
+ * session counts, mean health truncated). Saved with the report because the sessions can be
+ * deleted afterwards and the header must keep saying what the text says.
+ */
+data class ReportFigureValues(val photos: Int, val objects: Int, val health: Int) {
+    companion object {
+        fun of(sessions: List<DetectionSession>) = ReportFigureValues(
+            photos = sessions.size,
+            objects = sessions.sumOf { it.totalCount },
+            health = if (sessions.isEmpty()) 100 else sessions.map { it.healthScore }.average().toInt(),
+        )
+    }
+}
+
+fun GeneratedReport.withFigures(sessions: List<DetectionSession>): GeneratedReport {
+    val f = ReportFigureValues.of(sessions)
+    return copy(figPhotos = f.photos, figObjects = f.objects, figHealth = f.health)
+}
+
+/** The figures saved with the report, or null for reports saved before they were stored. */
+fun GeneratedReport.savedFigures(): ReportFigureValues? {
+    val p = figPhotos ?: return null
+    val o = figObjects ?: return null
+    val h = figHealth ?: return null
+    return ReportFigureValues(p, o, h)
+}
 
 /**
  * Statistics aggregated from multiple sessions

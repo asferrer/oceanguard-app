@@ -5,6 +5,7 @@ import android.util.Log
 import com.oceanguard.ai.data.AnalysisMode
 import com.oceanguard.ai.data.AnalysisModels
 import com.oceanguard.ai.data.DetectionRepository
+import com.oceanguard.ai.data.withFigures
 import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.data.GeneratedReport
 import com.oceanguard.ai.data.OceanGuardDatabase
@@ -1046,7 +1047,7 @@ class OceanGuardApp : Application() {
                         audience     = audience.name.lowercase(),
                         sessionIds   = sessionIdsCsv,
                         modelName    = reportModelName(tier, engine),
-                    )
+                    ).withFigures(sessions)
                     val id = database.generatedReportDao().insert(report)
                     validateAndPersist(id, reportText, sessions, language)
                     reportGenerationState.value = ReportGenerationState.Complete(report.copy(id = id))
@@ -1144,7 +1145,7 @@ class OceanGuardApp : Application() {
                         audience         = audience.name.lowercase(),
                         sessionIds       = zoneSessionIds,
                         modelName        = reportModelName(tier, engine),
-                    )
+                    ).withFigures(input.sessions)
                     val id = database.generatedReportDao().insert(report)
                     validateAndPersist(id, reportText, input.sessions, language)
                     reportGenerationState.value = ReportGenerationState.Complete(report.copy(id = id))

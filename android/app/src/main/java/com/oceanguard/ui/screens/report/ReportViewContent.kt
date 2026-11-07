@@ -50,6 +50,7 @@ import com.oceanguard.ai.data.GeneratedReport
 import com.oceanguard.ai.ui.components.MarkdownText
 import com.oceanguard.ai.ui.components.sonar.SonarCard
 import com.oceanguard.ai.ui.components.sonar.SonarSection
+import com.oceanguard.ai.data.savedFigures
 import com.oceanguard.ai.ui.screens.results.BatchStats
 import com.oceanguard.ai.ui.screens.results.ReportExportFormat
 import com.oceanguard.ai.ui.screens.results.StatTile
@@ -139,7 +140,7 @@ private fun ReportBody(
     onSessionClick: (Long) -> Unit,
     modifier: Modifier,
 ) {
-    val figures = remember(sessions) { reportFigures(sessions) }
+    val figures = remember(report, sessions) { reportFigures(report, sessions) }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -147,7 +148,7 @@ private fun ReportBody(
     ) {
         if (!report.usedAi) item { TemplateBanner() }
         item { ReportHeader(report) }
-        if (sessions.isNotEmpty()) item { FiguresRow(figures) }
+        if (sessions.isNotEmpty() || report.savedFigures() != null) item { FiguresRow(figures) }
         if (sessions.isNotEmpty()) item { AnalysedPhotos(sessions, onSessionClick) }
         item { SonarCard { MarkdownText(text = report.text, modifier = Modifier.fillMaxWidth()) } }
     }
