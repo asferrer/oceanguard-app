@@ -84,7 +84,7 @@
     <string name="onboarding_page3_desc">Nosso Modelo de Linguagem Visual fornece análise ambiental profunda, pontuação de saúde e recomendações práticas.</string>
 
     <!-- Página 4 -->
-    <string name="onboarding_page4_title">100% Offline\ne Privado</string>
+    <string name="onboarding_page4_title" formatted="false">100% Offline\ne Privado</string>
     <string name="onboarding_page4_desc">Todo o processamento acontece no dispositivo. Não precisa de internet. Suas fotos ficam no telefone, a menos que você decida contribuir com elas — ideal para trabalho de campo remoto.</string>
 
     <!-- Página 5 -->

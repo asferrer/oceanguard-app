@@ -84,7 +84,7 @@
     <string name="onboarding_page3_desc">Unser Vision Language Model bietet tiefgehende Umweltanalysen, Gesundheitsbewertungen und umsetzbare Empfehlungen.</string>
 
     <!-- Seite 4 -->
-    <string name="onboarding_page4_title">100% Offline\n&amp; Privat</string>
+    <string name="onboarding_page4_title" formatted="false">100% Offline\n&amp; Privat</string>
     <string name="onboarding_page4_desc">Die gesamte Verarbeitung erfolgt auf dem Gerät. Kein Internet erforderlich. Ihre Fotos bleiben auf dem Telefon, außer Sie entscheiden sich, sie beizutragen — ideal für die Feldarbeit abseits.</string>
 
     <!-- Seite 5 -->

@@ -90,7 +90,7 @@
     <string name="onboarding_page3_desc">Our Vision Language Model provides deep environmental analysis, health scoring, and actionable recommendations.</string>
 
     <!-- Page 4 -->
-    <string name="onboarding_page4_title">100% Offline\n&amp; Private</string>
+    <string name="onboarding_page4_title" formatted="false">100% Offline\n&amp; Private</string>
     <string name="onboarding_page4_desc">All processing happens on-device. No internet required. Your photos stay on your phone unless you choose to contribute them — perfect for remote field work.</string>
 
     <!-- Page 5 -->
