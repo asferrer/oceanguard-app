@@ -43,6 +43,8 @@ import com.oceanguard.ai.inference.LiveDetectionManager
 import com.oceanguard.ai.ui.components.analysis.OnPhoto
 import com.oceanguard.ai.ui.components.analysis.SweepGeometry
 import com.oceanguard.ai.ui.components.analysis.drawEchoLabel
+import com.oceanguard.ai.ui.components.colorForClass
+import com.oceanguard.ai.ui.components.onClassColor
 import com.oceanguard.ai.ui.components.analysis.drawSweepLine
 import com.oceanguard.ai.ui.components.analysis.drawTracedBox
 import com.oceanguard.ai.ui.components.analysis.rememberCountBump
@@ -157,9 +159,13 @@ internal fun LiveDetectionOverlay(
         val frame = SweepGeometry.fillCenter(size, frameSize)
         detections.forEachIndexed { index, detection ->
             val rect = SweepGeometry.boxRect(detection, frame)
-            drawTracedBox(rect, progress = 1f, OnPhoto.echo)
+            val classColor = colorForClass(detection.className)
+            drawTracedBox(rect, progress = 1f, classColor)
             labels.getOrNull(index)?.let {
-                drawEchoLabel(it, rect, Rect(Offset.Zero, size), progress = 1f, OnPhoto.echo)
+                drawEchoLabel(
+                    it, rect, Rect(Offset.Zero, size), progress = 1f, classColor,
+                    textColor = onClassColor(classColor),
+                )
             }
         }
         if (!reduced && sweepAlpha > 0f) {
