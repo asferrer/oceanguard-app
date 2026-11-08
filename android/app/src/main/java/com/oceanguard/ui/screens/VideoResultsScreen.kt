@@ -35,6 +35,8 @@ import com.oceanguard.ai.data.VideoAnalysis
 import com.oceanguard.ai.inference.VideoProgress
 import com.oceanguard.ai.service.InferenceServiceState
 import com.oceanguard.ai.ui.MainViewModel
+import com.oceanguard.ai.ui.components.colorForClass
+import com.oceanguard.ai.ui.components.dex.classDisplayName
 import com.oceanguard.ai.ui.theme.healthScoreColor
 import kotlinx.coroutines.launch
 
@@ -321,8 +323,8 @@ private fun MetricsCard(state: InferenceServiceState.VideoComplete, analysis: Vi
                     HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                     classCounts.forEach { (label, count) ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Box(modifier = Modifier.size(10.dp).background(classColor(label), CircleShape))
-                            Text(label.replace("_", " "), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                            Box(modifier = Modifier.size(10.dp).background(colorForClass(label), CircleShape))
+                            Text(classDisplayName(label), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                             Text("$count", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                         }
                     }
@@ -425,10 +427,3 @@ private fun parseClassCounts(json: String): Map<String, Int> = runCatching {
     Gson().fromJson<Map<String, Int>>(json, object : TypeToken<Map<String, Int>>() {}.type) ?: emptyMap()
 }.getOrDefault(emptyMap())
 
-private val classColorPalette = listOf(
-    Color(0xFFE91E63), Color(0xFF00BCD4), Color(0xFFFF9800), Color(0xFF4CAF50),
-    Color(0xFF9C27B0), Color(0xFF2196F3), Color(0xFFFF5722), Color(0xFF607D8B),
-)
-
-private fun classColor(label: String): Color =
-    classColorPalette[label.hashCode().and(0x7FFFFFFF) % classColorPalette.size]

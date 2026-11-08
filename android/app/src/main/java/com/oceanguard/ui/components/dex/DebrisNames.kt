@@ -33,3 +33,20 @@ fun debrisDisplayName(type: DebrisType): String {
     val res = debrisNameRes(type)
     return if (res != null) stringResource(res) else humanizeEnumName(type.name)
 }
+
+/**
+ * Name resource of a detector class string (`Fishing_Net`, `plastic_debris`), or null when the
+ * string is not a known type or has no translation.
+ */
+@StringRes
+internal fun classNameRes(className: String): Int? {
+    val type = DebrisType.entries.firstOrNull { it.name.equals(className.replace(' ', '_'), ignoreCase = true) }
+    return type?.let { debrisNameRes(it) }
+}
+
+/** Localised name of a detector class string; unknown ones are humanised, never left raw. */
+@Composable
+fun classDisplayName(className: String): String {
+    val res = classNameRes(className)
+    return if (res != null) stringResource(res) else humanizeEnumName(className)
+}

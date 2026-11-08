@@ -32,6 +32,8 @@ import com.oceanguard.ai.R
 import com.oceanguard.ai.data.RiskLevel
 import com.oceanguard.ai.data.VideoAnalysis
 import com.oceanguard.ai.ui.MainViewModel
+import com.oceanguard.ai.ui.components.colorForClass
+import com.oceanguard.ai.ui.components.dex.classDisplayName
 import com.oceanguard.ai.ui.theme.healthScoreColor
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -224,8 +226,8 @@ private fun DetectionResultsCard(analysis: VideoAnalysis, classCounts: Map<Strin
                 Text(stringResource(R.string.video_debris_breakdown), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                 classCounts.forEach { (name, count) ->
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Box(Modifier.size(10.dp).background(classColor(name), CircleShape))
-                        Text(name.replace("_", " "), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        Box(Modifier.size(10.dp).background(colorForClass(name), CircleShape))
+                        Text(classDisplayName(name), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                         Text("\u00d7$count", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -270,12 +272,3 @@ private fun parseClassCounts(json: String): Map<String, Int> = runCatching {
     buildMap { obj.keys().forEach { key -> put(key, obj.getInt(key)) } }
 }.getOrDefault(emptyMap())
 
-private fun classColor(name: String): Color = when (name.lowercase()) {
-    "bottle", "plastic_debris", "mask" -> Color(0xFFE91E63)
-    "glove", "fabric_debris"           -> Color(0xFF3F51B5)
-    "can", "metal_debris"              -> Color(0xFF9E9E9E)
-    "fishing_net"                      -> Color(0xFFFF6F00)
-    "tire"                             -> Color(0xFF795548)
-    "glass_debris"                     -> Color(0xFF00BCD4)
-    else                               -> Color(0xFF607D8B)
-}
