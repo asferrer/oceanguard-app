@@ -84,7 +84,7 @@
     <string name="onboarding_page3_desc">Notre modèle de langage visuel (VLM) fournit une analyse environnementale approfondie, un score de santé et des recommandations concrètes.</string>
 
     <!-- Page 4 -->
-    <string name="onboarding_page4_title">100% Hors ligne\n&amp; Privé</string>
+    <string name="onboarding_page4_title" formatted="false">100% Hors ligne\n&amp; Privé</string>
     <string name="onboarding_page4_desc">Tout le traitement s\'effectue sur l\'appareil. Aucune connexion Internet requise. Vos données ne quittent jamais votre téléphone \u2014 idéal pour le travail de terrain à distance.</string>
 
     <!-- Page 5 -->

@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -184,11 +185,12 @@ private fun LlamaBenchmark(app: OceanGuardApp) {
 @Composable
 private fun DetectorBenchmark(app: OceanGuardApp) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     val state = remember { BenchState() }
     val running = stringResource(R.string.models_bench_detector_running)
     val failed = rememberBenchFailure()
-        BenchmarkCard(
+    BenchmarkCard(
         title = stringResource(R.string.models_bench_detector_title),
         description = stringResource(R.string.models_bench_detector_desc),
         state = state,
@@ -203,7 +205,7 @@ private fun DetectorBenchmark(app: OceanGuardApp) {
                         val p50 = results.firstOrNull()?.p50Ms?.toString() ?: "--"
                         Toast.makeText(
                             context,
-                            context.getString(R.string.models_bench_detector_toast, p50),
+                            resources.getString(R.string.models_bench_detector_toast, p50),
                             Toast.LENGTH_LONG,
                         ).show()
                         results.joinToString("\n") { r ->
@@ -221,8 +223,8 @@ private fun DetectorBenchmark(app: OceanGuardApp) {
 /** Builds the text shown when a benchmark throws, from the exception message. */
 @Composable
 private fun rememberBenchFailure(): (String) -> String {
-    val context = LocalContext.current
-    return remember(context) { { message -> context.getString(R.string.models_bench_failed, message) } }
+    val resources = LocalResources.current
+    return remember(resources) { { message -> resources.getString(R.string.models_bench_failed, message) } }
 }
 
 /** Title, what it measures, its action (or progress while it runs) and the output as text. */

@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalContext
 import com.oceanguard.ai.OceanGuardApp
 import com.oceanguard.ai.R
@@ -56,6 +57,7 @@ internal fun rememberReportZones(
     preselectedName: String?,
 ): ReportZones {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val app = remember(context) { context.applicationContext as OceanGuardApp }
     val located = remember(sessions) { sessions.filter { it.location != null } }
     val clusters = remember(located) { ZoneAggregator.cluster(located) }
@@ -70,9 +72,10 @@ internal fun rememberReportZones(
         }
         loading = true
         names = clusters.mapIndexed { index, zone ->
+            val zoneNumber: Int = index + 1
             async {
                 app.geocoder.reverse(zone.centroidLat, zone.centroidLon)?.toPlaceLabel()
-                    ?: context.getString(R.string.report_zone_fallback, index + 1)
+                    ?: resources.getString(R.string.report_zone_fallback, zoneNumber)
             }
         }.awaitAll()
         loading = false

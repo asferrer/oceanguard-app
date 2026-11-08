@@ -84,7 +84,7 @@
     <string name="onboarding_page3_desc">Nuestro modelo de lenguaje visual proporciona análisis ambiental profundo, puntuación de salud y recomendaciones prácticas.</string>
 
     <!-- Página 4 -->
-    <string name="onboarding_page4_title">100% sin conexión\n&amp; privado</string>
+    <string name="onboarding_page4_title" formatted="false">100% sin conexión\n&amp; privado</string>
     <string name="onboarding_page4_desc">Todo el procesamiento ocurre en el dispositivo. No requiere internet. Tus datos nunca salen del teléfono \u2014 ideal para trabajo de campo remoto.</string>
 
     <!-- Página 5 -->

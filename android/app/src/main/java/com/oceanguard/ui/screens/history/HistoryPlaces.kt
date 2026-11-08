@@ -5,7 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateMap
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.utils.PhotonGeocoderClient
@@ -24,7 +24,7 @@ fun rememberPlaceNames(
     geocoder: PhotonGeocoderClient,
     resetKey: Int,
 ): SnapshotStateMap<Long, String> {
-    val context = LocalContext.current
+    val resources = LocalResources.current
     val names = remember(resetKey) { mutableStateMapOf<Long, String>() }
     val positions = remember(resetKey) { mutableStateMapOf<Long, String>() }
     LaunchedEffect(sessions, resetKey) {
@@ -35,7 +35,7 @@ fun rememberPlaceNames(
             if (positions[session.id] == position) return@forEach
             positions[session.id] = position
             names[session.id] = geocoder.reverse(location.latitude, location.longitude)?.toPlaceLabel()
-                ?: context.getString(R.string.zone_name_unknown)
+                ?: resources.getString(R.string.zone_name_unknown)
         }
         val ids = located.map { it.id }.toSet()
         names.keys.removeAll { it !in ids }

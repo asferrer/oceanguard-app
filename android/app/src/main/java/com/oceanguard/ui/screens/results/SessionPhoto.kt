@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -99,6 +100,7 @@ private fun DetectionSession.toDetections(): List<DetectionResult> = debrisList.
 private fun ResearchUploadButton(session: DetectionSession, modifier: Modifier) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val resources = LocalResources.current
     val app = remember(context) { context.applicationContext as OceanGuardApp }
     // "LOADING" keeps the button disabled while the first status arrives, so the upload icon
     // does not flash as available.
@@ -121,7 +123,7 @@ private fun ResearchUploadButton(session: DetectionSession, modifier: Modifier) 
         onClick = {
             scope.launch {
                 if (!app.contributionRepository.enqueueSession(session)) {
-                    Toast.makeText(context, context.getString(R.string.contribute_enqueue_error), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, resources.getString(R.string.contribute_enqueue_error), Toast.LENGTH_SHORT).show()
                 }
             }
         },
