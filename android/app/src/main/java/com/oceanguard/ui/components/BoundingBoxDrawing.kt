@@ -41,6 +41,7 @@ import com.oceanguard.ai.ui.motion.LocalReducedMotion
 import com.oceanguard.ai.ui.motion.OceanMotion
 import com.oceanguard.ai.ui.motion.motionSpec
 import com.oceanguard.ai.ui.motion.rememberOceanLoop
+import com.oceanguard.ai.ui.theme.ClassPalette
 import com.oceanguard.ai.ui.theme.MaterialFabric
 import com.oceanguard.ai.ui.theme.MaterialFishingNet
 import com.oceanguard.ai.ui.theme.MaterialGlass
@@ -153,7 +154,8 @@ private val CLASS_COLOR_MAP: Map<String, Color> = mapOf(
  * Falls back to [MaterialOther] when no exact match is found.
  */
 internal fun colorForClass(className: String): Color =
-    CLASS_COLOR_MAP[className.lowercase()] ?: MaterialOther
+    ClassPalette.argbOrNull(className)?.let(::Color)
+        ?: CLASS_COLOR_MAP[className.lowercase()] ?: MaterialOther
 
 private val DarkText = Color(0xFF14181C)
 private val LightText = Color(0xFFFFFFFF)
