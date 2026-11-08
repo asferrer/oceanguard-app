@@ -177,7 +177,10 @@ docs/               ARCHITECTURE.md, GEMMA4_DETECTION.md, landing page assets
 ## Privacy
 
 Processing is on device. The app sends no telemetry and has no accounts; photos, GPS and reports stay on the phone. The
-only network access is the model download, the map tiles and the species metadata services (GBIF, iNaturalist, WoRMS).
+only network access is the model download, the map tiles and the species metadata services (GBIF, iNaturalist, WoRMS),
+plus the optional photo contribution when the user turns it on (off by default): each analysed photo goes to the
+research gateway with its EXIF (GPS location unless "Include location" is off, date and time, phone model) and the
+detections. Builds without a configured gateway do not offer it. Details in [docs/CONTRIBUTION.md](docs/CONTRIBUTION.md).
 
 ## License
 
