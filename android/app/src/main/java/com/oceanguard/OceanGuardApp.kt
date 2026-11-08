@@ -320,148 +320,41 @@ class OceanGuardApp : Application() {
     }
 
     /**
-     * BioDex identification pipeline. DEMO wiring: until the real ONNX encoder,
-     * reference index and MEOW raster assets are downloaded, this uses in-memory
-     * [SampleSpeciesData] (4 species) so the biology capture flow is verifiable
-     * end-to-end. TODO(swap to real asset): OnnxSpeciesEmbedder +
-     * SpeciesReferenceIndex.load(file) + MarineRegionResolver, gated on M4 assets.
+     * BioDex identification pipeline for the installed species pack. Rebuilt
+     * whenever the pack changes; null while no pack is installed (there is no
+     * demo fallback: the old one ignored the photo and always answered one of
+     * four hard-coded species).
      */
-    val speciesIdentifier: com.oceanguard.ai.inference.species.SpeciesIdentifier by lazy { buildSpeciesIdentifier() }
-
-    /**
-     * Holds the real ONNX encoder when the on-device species pack is present, so
-     * it can be pre-warmed ([prewarmSpeciesEncoder]) without re-resolving the
-     * identifier graph. Null in the DEMO fallback (deterministic embedder needs
-     * no warm-up). Set inside [buildSpeciesIdentifier].
-     */
-    @Volatile private var speciesOnnxEmbedder: com.oceanguard.ai.inference.species.OnnxSpeciesEmbedder? = null
-    @Volatile private var speciesEncoderPrewarmed = false
-
-    /** Same idea as [speciesOnnxEmbedder] but for the YOLO26-N detector. */
-    @Volatile private var speciesOnnxDetector: com.oceanguard.ai.inference.species.OnnxOrganismDetector? = null
-    @Volatile private var speciesDetectorPrewarmed = false
-
-    /**
-     * Pre-warm the ONNX species encoder off the UI thread when BioDex opens or
-     * the species camera is framed, so the first identify does not pay the
-     * ~multi-second OrtSession load + NNAPI graph compile lazily. Idempotent:
-     * the dummy run fires at most once; the session itself is created exactly
-     * once and reused across every identify / batch image. No-op in DEMO mode
-     * (no ONNX encoder) or when the species pack is not downloaded.
-     *
-     * Mirrors [prewarmGemma4DetectorIfAvailable] — call from a `LaunchedEffect`.
-     */
-    fun prewarmSpeciesEncoder() {
-        // Touch the lazy identifier so both species ONNX members are populated.
-        speciesIdentifier
-
-        if (!speciesEncoderPrewarmed) {
-            val embedder = speciesOnnxEmbedder
-            if (embedder != null) {
-                speciesEncoderPrewarmed = true
-                applicationScope.launch {
-                    try {
-                        Log.i(TAG, "Pre-warming species ONNX encoder in background")
-                        embedder.prewarm()
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Species encoder prewarm failed (non-fatal): ${e.message}")
-                    }
-                }
-            }
-        }
-
-        if (!speciesDetectorPrewarmed) {
-            val detector = speciesOnnxDetector
-            if (detector != null) {
-                speciesDetectorPrewarmed = true
-                applicationScope.launch {
-                    try {
-                        Log.i(TAG, "Pre-warming organism ONNX detector in background")
-                        detector.prewarm()
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Detector prewarm failed (non-fatal): ${e.message}")
-                    }
-                }
-            }
-        }
+    val speciesPipeline: com.oceanguard.ai.inference.species.SpeciesPipelineProvider by lazy {
+        com.oceanguard.ai.inference.species.SpeciesPipelineProvider(
+            dir = { vlmModelManager.getSpeciesDirectory() },
+            catalog = speciesCatalog,
+            // Shared Gemma 4 engine (same instance as the debris flow). When it is
+            // not loaded the locator falls back to a centre crop and the candidate
+            // choice is skipped.
+            vlmEngine = com.oceanguard.ai.inference.species.LiteRTImageEngine(sharedLiteRTEngine),
+        )
     }
 
+    /** Current species identifier, or null without a pack. Call off the main thread. */
+    fun speciesIdentifierOrNull(): com.oceanguard.ai.inference.species.SpeciesIdentifier? =
+        speciesPipeline.current()
+
     /**
-     * Builds the species identifier. M4: when the real downloadable assets
-     * (ONNX encoder + reference index + catalog [+ MEOW raster]) are present in
-     * `models/species/`, use the on-device OpenCLIP encoder + reference index;
-     * otherwise fall back to [SampleSpeciesData] DEMO so the biology flow stays
-     * verifiable end-to-end. The ORT session loads lazily on first embed.
-     * TODO(M4 assets): publish encoder/index/raster/catalog to HF + wire the
-     * download CTA so this path activates on-device.
+     * Pre-warm the species encoder and detector off the UI thread when BioDex
+     * opens or the species camera is framed, so the first identify does not pay
+     * the session load + NNAPI compile + self-test. No-op without a pack.
      */
-    private fun buildSpeciesIdentifier(): com.oceanguard.ai.inference.species.SpeciesIdentifier {
-        val dir = java.io.File(getExternalFilesDir(null) ?: filesDir, "models/species")
-        val encoder = java.io.File(dir, "clip_vitb32.onnx")
-        val indexBin = java.io.File(dir, "species_index_v1.bin")
-        val catalogJson = java.io.File(dir, "species_catalog_v1.json")
-        val raster = java.io.File(dir, "meow_raster_v1.bin")
-        val hierarchy = java.io.File(dir, "ecoregion_hierarchy_v1.json")
-
-        // YOLO26-N marine organism detector (trained outside this repository).
-        // Optional: when the .onnx is present we use it as the primary
-        // localiser (NNAPI). Otherwise the OrganismLocator falls
-        // through to the VLM and finally to a centre-square crop.
-        val detectorFile = java.io.File(dir, "detector_yolo26n_v2.onnx")
-        val detector = if (detectorFile.exists()) {
+    fun prewarmSpeciesEncoder() {
+        applicationScope.launch(Dispatchers.IO) {
             try {
-                com.oceanguard.ai.inference.species.OnnxOrganismDetector(detectorFile).also {
-                    Log.i(TAG, "BioDex: organism detector available at ${detectorFile.name}")
-                    speciesOnnxDetector = it
-                }
-            } catch (e: Throwable) {
-                Log.w(TAG, "Detector init failed; falling back to VLM", e)
-                null
-            }
-        } else null
-
-        // Shared Gemma 4 engine — same instance the debris flow loads. Wrapped
-        // behind the VlmImageEngine port so the organism locator localises the
-        // subject (box_2d) and the describer confirms/describes it. When the
-        // engine is not yet loaded, isReady is false and both degrade safely:
-        // the locator falls back to a center-square crop of the full frame.
-        val vlmEngine = com.oceanguard.ai.inference.species.LiteRTImageEngine(sharedLiteRTEngine)
-        val locator = com.oceanguard.ai.inference.species.OrganismLocator(vlmEngine, detector)
-        val describer = com.oceanguard.ai.inference.species.SpeciesDescriber(vlmEngine)
-
-        if (encoder.exists() && indexBin.exists() && catalogJson.exists()) {
-            try {
-                speciesCatalog.load()
-                val catalogMap = speciesCatalog.all().associateBy { it.speciesKey }
-                val refIndex = com.oceanguard.ai.inference.species.SpeciesReferenceIndex(catalogMap)
-                    .apply { load(indexBin) }
-                val resolver = if (raster.exists() && hierarchy.exists()) {
-                    com.oceanguard.ai.inference.species.MarineRegionResolver(raster, hierarchy).apply { load() }
-                } else null
-                Log.i(TAG, "BioDex: using REAL on-device species encoder + index")
-                val onnxEmbedder = com.oceanguard.ai.inference.species.OnnxSpeciesEmbedder(encoder)
-                speciesOnnxEmbedder = onnxEmbedder   // expose for background pre-warm
-                return com.oceanguard.ai.inference.species.SpeciesIdentifier(
-                    embedder = onnxEmbedder,
-                    index = refIndex,
-                    resolver = resolver,
-                    describer = describer,
-                    locator = locator,
-                )
+                speciesPipeline.current() ?: return@launch
+                speciesPipeline.embedder?.prewarm()
+                speciesPipeline.detector?.prewarm()
             } catch (e: Exception) {
-                Log.w(TAG, "Real species assets present but failed to load; falling back to demo", e)
+                Log.w(TAG, "Species prewarm failed (non-fatal): ${e.message}")
             }
         }
-
-        // DEMO fallback — in-memory sample data (4 species, deterministic embedder).
-        speciesCatalog.seedInMemory(com.oceanguard.ai.data.species.SampleSpeciesData.catalogEntries())
-        return com.oceanguard.ai.inference.species.SpeciesIdentifier(
-            embedder = com.oceanguard.ai.data.species.SampleSpeciesData.embedder(),
-            index = com.oceanguard.ai.data.species.SampleSpeciesData.buildIndex(),
-            resolver = null,
-            describer = describer,
-            locator = locator,
-        )
     }
 
     /** Opt-in online enrichment (WoRMS/GBIF/iNat). Returns null when the flag is

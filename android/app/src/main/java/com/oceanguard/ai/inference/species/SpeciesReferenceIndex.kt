@@ -18,7 +18,8 @@ import java.nio.ByteOrder
  *   [0..3]   magic   = 0x53504558  ("SPEX" in ASCII, uint32)
  *   [4..7]   version = 1           (uint32)
  *   [8..11]  n       = number of prototype rows  (uint32)
- *   [12..15] dim     = embedding dimension, expected 512  (uint32)
+ *   [12..15] dim     = embedding dimension (512 for the v1 pack; any value
+ *                      > 0, it must match the pack encoder output)  (uint32)
  *   [16..31] reserved (zero-padded)
  *
  * Prototype rows (n × dim × 2 bytes each, float16, little-endian):
@@ -35,7 +36,7 @@ import java.nio.ByteOrder
  * ## Search algorithm
  *
  * 1. Deserialize prototypes to float32 (upcast from float16 at load time).
- * 2. For a query embedding q (L2-normalised, dim=512):
+ * 2. For a query embedding q (L2-normalised, length [dimension]):
  *    cosine(p_i, q) = dot(p_i, q)   (both L2-norm → cosine = dot product)
  * 3. Aggregate scores per species by taking the max across its prototypes.
  * 4. Apply geo-filter + soft-prior (multiply by [GeoPrior.g]).
@@ -51,6 +52,8 @@ class SpeciesReferenceIndex(
     companion object {
         private const val MAGIC = 0x53504558.toInt()
         private const val EXPECTED_VERSION = 1
+
+        /** Dimension of the v1 pack and of the in-memory test fixtures. */
         const val EMBEDDING_DIM = 512
 
         /**
@@ -58,7 +61,7 @@ class SpeciesReferenceIndex(
          *
          * @param speciesKey     Key that matches a [SpeciesCatalogEntry].
          * @param scientificName Binomial name copied to index metadata.
-         * @param vector         L2-normalised float32 embedding of length [EMBEDDING_DIM].
+         * @param vector         L2-normalised float32 embedding; all seeds share one length.
          *                       Callers are responsible for normalisation before passing.
          */
         data class ProtoSeed(
@@ -76,16 +79,19 @@ class SpeciesReferenceIndex(
          *
          * @param catalogEntries Map from speciesKey → [SpeciesCatalogEntry].
          * @param prototypes     One or more [ProtoSeed]s (each vector must be
-         *                       L2-normalised and of length [EMBEDDING_DIM]).
+         *                       L2-normalised and of length [dim]).
+         * @param dim            Embedding dimension (default [EMBEDDING_DIM]).
          * @return A fully initialised [SpeciesReferenceIndex].
          * @throws IllegalArgumentException if any vector has the wrong dimension.
          */
         fun inMemory(
             catalogEntries: Map<String, SpeciesCatalogEntry>,
             prototypes: List<ProtoSeed>,
+            dim: Int = EMBEDDING_DIM,
+            confidence: SpeciesConfidence = SpeciesConfidence(),
         ): SpeciesReferenceIndex {
-            val index = SpeciesReferenceIndex(catalogEntries)
-            index.loadFromSeeds(prototypes)
+            val index = SpeciesReferenceIndex(catalogEntries, confidence)
+            index.loadFromSeeds(prototypes, dim)
             return index
         }
     }
@@ -97,6 +103,14 @@ class SpeciesReferenceIndex(
     @Volatile
     private var loaded = false
 
+    /** Embedding dimension of the loaded prototypes (0 until loaded). */
+    var dimension: Int = 0
+        private set
+
+    /** Number of distinct species with at least one prototype. */
+    val speciesCount: Int
+        get() = meta.map { it.speciesKey }.toSet().size
+
     // -----------------------------------------------------------------------
     // Loading
     // -----------------------------------------------------------------------
@@ -107,7 +121,7 @@ class SpeciesReferenceIndex(
      *
      * Reads the binary header, float16 prototype block, and JSON metadata lines.
      *
-     * @throws IllegalStateException if magic/version mismatch or dim != [EMBEDDING_DIM].
+     * @throws IllegalStateException if magic/version mismatch or dim <= 0.
      * @throws java.io.IOException   on any I/O error.
      */
     fun load(indexFile: File) {
@@ -122,7 +136,7 @@ class SpeciesReferenceIndex(
         check(version == EXPECTED_VERSION) { "Unsupported index version $version" }
         val n = buf.int
         val dim = buf.int
-        check(dim == EMBEDDING_DIM) { "Index dim=$dim, expected $EMBEDDING_DIM" }
+        check(dim > 0) { "Index dim=$dim must be positive" }
         buf.position(32) // skip reserved bytes
 
         // Read float16 prototype block
@@ -148,6 +162,7 @@ class SpeciesReferenceIndex(
 
         prototypes = protoProtos
         meta = parsedMeta
+        dimension = dim
         loaded = true
     }
 
@@ -157,11 +172,12 @@ class SpeciesReferenceIndex(
      * Called exclusively by [Companion.inMemory]; idempotent (no-op if already
      * loaded from file or from a prior [loadFromSeeds] call).
      */
-    private fun loadFromSeeds(seeds: List<ProtoSeed>) {
+    private fun loadFromSeeds(seeds: List<ProtoSeed>, dim: Int) {
         if (loaded) return
-        require(seeds.all { it.vector.size == EMBEDDING_DIM }) {
-            "All ProtoSeed vectors must have dimension $EMBEDDING_DIM"
+        require(seeds.all { it.vector.size == dim }) {
+            "All ProtoSeed vectors must have dimension $dim"
         }
+        dimension = dim
         prototypes = Array(seeds.size) { i -> seeds[i].vector.copyOf() }
         meta = Array(seeds.size) { i ->
             ProtoMeta(
@@ -174,6 +190,10 @@ class SpeciesReferenceIndex(
         loaded = true
     }
 
+    /** English common name of [speciesKey] from the catalogue, or null. */
+    fun commonName(speciesKey: String): String? =
+        catalogEntries[speciesKey]?.commonNames?.get("en")?.takeIf { it.isNotBlank() }
+
     // -----------------------------------------------------------------------
     // Search
     // -----------------------------------------------------------------------
@@ -181,7 +201,7 @@ class SpeciesReferenceIndex(
     /**
      * Search the index for the [topK] best-matching species given query [emb].
      *
-     * [emb] must be a L2-normalised float32 vector of dimension [EMBEDDING_DIM].
+     * [emb] must be a L2-normalised float32 vector of length [dimension].
      *
      * When [region] is non-null the geo-filter is applied:
      *  - Hard-filter: species outside the realm (for BALANCED) or province (for STRICT)
@@ -206,10 +226,10 @@ class SpeciesReferenceIndex(
         sensitivity: GeoFilterSensitivity = GeoFilterSensitivity.BALANCED,
         hierarchy: (Int) -> Pair<Int, Int>? = { null },
     ): List<SpeciesMatch> {
-        require(emb.size == EMBEDDING_DIM) {
-            "Query embedding dim=${emb.size}, expected $EMBEDDING_DIM"
-        }
         if (!loaded || prototypes.isEmpty()) return emptyList()
+        require(emb.size == dimension) {
+            "Query embedding dim=${emb.size}, expected $dimension"
+        }
 
         // Score each prototype
         val rawScores = FloatArray(prototypes.size) { i -> dotProduct(prototypes[i], emb) }
@@ -221,6 +241,7 @@ class SpeciesReferenceIndex(
             val current = speciesScores[key] ?: -1f
             if (rawScores[i] > current) speciesScores[key] = rawScores[i]
         }
+        val confOf = confidenceFunction(speciesScores)
 
         // Compute geo match level and apply prior; build candidates list
         fun buildCandidates(useFilter: Boolean): List<SearchCandidate> =
@@ -236,7 +257,7 @@ class SpeciesReferenceIndex(
         // Relajación: if the geo-filtered set is empty OR the best calibrated score is
         // below tauLow, fall back to a global (unfiltered) search so we never return
         // an empty result just because of geography.
-        val bestFilteredConfidence = filtered.maxOfOrNull { confidence.calibrate(it.cosine) } ?: 0f
+        val bestFilteredConfidence = filtered.maxOfOrNull { confOf(it.key, it.cosine) } ?: 0f
         val needsRelaxation = region != null &&
             sensitivity != GeoFilterSensitivity.OFF &&
             (filtered.isEmpty() || confidence.isUnknown(bestFilteredConfidence))
@@ -257,10 +278,26 @@ class SpeciesReferenceIndex(
                 speciesKey     = c.key,
                 scientificName = entry?.scientificName ?: c.key,
                 cosineScore    = c.cosine,
-                confidence     = confidence.calibrate(c.cosine),
+                confidence     = confOf(c.key, c.cosine),
                 geoMatchLevel  = c.level,
             )
         }
+    }
+
+    /**
+     * Confidence of a species given all per-species scores: the softmax over the
+     * species cosines at the pack temperature ([SpeciesConfidence.temperature] > 0),
+     * i.e. how much the best species stands out from the rest, which separates
+     * right from wrong answers much better than the raw cosine (docs/SPECIES_ID.md);
+     * the legacy Platt sigmoid of the cosine otherwise.
+     */
+    private fun confidenceFunction(speciesScores: Map<String, Float>): (String, Float) -> Float {
+        val t = confidence.temperature
+        if (t <= 0f || speciesScores.isEmpty()) return { _, cosine -> confidence.calibrate(cosine) }
+        val max = speciesScores.values.max()
+        val exp = speciesScores.mapValues { (_, s) -> kotlin.math.exp(((s - max) / t).toDouble()) }
+        val sum = exp.values.sum()
+        return { key, _ -> ((exp[key] ?: 0.0) / sum).toFloat() }
     }
 
     // -----------------------------------------------------------------------

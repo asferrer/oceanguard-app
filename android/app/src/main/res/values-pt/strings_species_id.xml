@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="species_pack_missing">Transfira o pacote de espécies (ecrã Modelos) para identificar espécies.</string>
+    <string name="species_unidentified">Espécie não identificada</string>
+    <string name="species_unidentified_hint">Candidatas mais próximas: %1$s</string>
+    <string name="species_badge_unidentified">Não identificada</string>
+    <string name="species_badge_gemma">Escolhida pelo Gemma</string>
+</resources>

@@ -26,4 +26,12 @@ enum class SpeciesIdSource {
      * is typically true for this source.
      */
     VLM_OPENVOCAB,
+
+    /**
+     * Honest negative answer: the visual search found no catalogue species with
+     * enough calibrated confidence (or Gemma rejected every candidate). The
+     * result carries the best candidates as hints but no species, and it is not
+     * added to the BioDex.
+     */
+    UNIDENTIFIED,
 }

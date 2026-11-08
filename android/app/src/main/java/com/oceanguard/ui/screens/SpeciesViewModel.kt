@@ -5,15 +5,19 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.oceanguard.ai.R
+import com.oceanguard.ai.data.Location
 import com.oceanguard.ai.data.species.SpeciesCollectionRepository
 import com.oceanguard.ai.inference.species.IdentificationResult
 import com.oceanguard.ai.inference.species.SpeciesIdentifier
 import com.oceanguard.ai.utils.ImagePreprocessor
 import com.oceanguard.ai.utils.LocationProvider
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 // ---------------------------------------------------------------------------
@@ -91,15 +95,18 @@ sealed interface SpeciesBatchUiState {
  * Orchestrates:
  * 1. Image preprocessing via [ImagePreprocessor].
  * 2. Optional GPS acquisition via [LocationProvider].
- * 3. Inference via [SpeciesIdentifier].
- * 4. Persistence of every result via [SpeciesCollectionRepository.saveObservation].
+ * 3. Inference via the [SpeciesIdentifier] of the installed species pack
+ *    ([identifierProvider]; null when no pack is installed -> error state).
+ * 4. Persistence of every identified result via
+ *    [SpeciesCollectionRepository.saveObservation] (unidentified ones are shown
+ *    but not added to the BioDex).
  *
  * Supports both the camera single-capture path ([identifyFromImage]) and the
  * gallery multi-select batch path ([identifyBatch]).
  */
 class SpeciesViewModel(
     private val appContext: Context,
-    private val identifier: SpeciesIdentifier,
+    private val identifierProvider: () -> SpeciesIdentifier?,
     private val repo: SpeciesCollectionRepository,
     private val imagePreprocessor: ImagePreprocessor,
     private val locationProvider: LocationProvider,
@@ -137,20 +144,14 @@ class SpeciesViewModel(
             runCatching {
                 // Full-resolution load: the organism locator crops the subject
                 // bbox from this frame, so down-scaling here would lose detail.
+                val identifier = requireIdentifier()
                 val bitmap = imagePreprocessor.loadAndPreprocess(uri, FULL_RES)
                 val loc = locationProvider.getLastKnownLocation()
                 val lang = Locale.getDefault().language
                 val imageWidth = bitmap.width
                 val imageHeight = bitmap.height
                 val results = identifier.identify(bitmap, loc, language = lang)
-                results.forEach { result ->
-                    repo.saveObservation(
-                        result = result,
-                        imageUri = uri.toString(),
-                        thumbnailUri = null,
-                        location = loc,
-                    )
-                }
+                saveIdentified(results, uri, loc)
                 _uiState.value = SpeciesUiState.Complete(
                     results = results,
                     imageWidth = imageWidth,
@@ -190,20 +191,14 @@ class SpeciesViewModel(
                 )
                 runCatching {
                     // Full-resolution load: see [identifyFromImage] rationale.
+                    val identifier = requireIdentifier()
                     val bitmap = imagePreprocessor.loadAndPreprocess(uri, FULL_RES)
                     val imageWidth = bitmap.width
                     val imageHeight = bitmap.height
                     val loc = locationProvider.getLastKnownLocation()
                     val lang = Locale.getDefault().language
                     val results = identifier.identify(bitmap, loc, language = lang)
-                    results.forEach { result ->
-                        repo.saveObservation(
-                            result = result,
-                            imageUri = uri.toString(),
-                            thumbnailUri = null,
-                            location = loc,
-                        )
-                    }
+                    saveIdentified(results, uri, loc)
                     items[index] = items[index].copy(
                         state = SpeciesBatchItemState.Done(
                             results = results,
@@ -230,6 +225,18 @@ class SpeciesViewModel(
         }
     }
 
+    /** Identifier of the installed pack (built off the main thread), or an error naming the cause. */
+    private suspend fun requireIdentifier(): SpeciesIdentifier =
+        withContext(Dispatchers.IO) { identifierProvider() }
+            ?: error(appContext.getString(R.string.species_pack_missing))
+
+    /** Persist the identified results; unidentified ones are not added to the BioDex. */
+    private suspend fun saveIdentified(results: List<IdentificationResult>, uri: Uri, loc: Location?) {
+        results.filterNot { it.isUnidentified }.forEach { result ->
+            repo.saveObservation(result = result, imageUri = uri.toString(), thumbnailUri = null, location = loc)
+        }
+    }
+
     /** Reset both UI states back to Idle (e.g. before navigating away). */
     fun resetState() {
         _uiState.value = SpeciesUiState.Idle
@@ -243,7 +250,7 @@ class SpeciesViewModel(
 
     class Factory(
         private val appContext: Context,
-        private val identifier: SpeciesIdentifier,
+        private val identifierProvider: () -> SpeciesIdentifier?,
         private val repo: SpeciesCollectionRepository,
         private val imagePreprocessor: ImagePreprocessor,
         private val locationProvider: LocationProvider,
@@ -253,7 +260,7 @@ class SpeciesViewModel(
             require(modelClass.isAssignableFrom(SpeciesViewModel::class.java))
             return SpeciesViewModel(
                 appContext = appContext,
-                identifier = identifier,
+                identifierProvider = identifierProvider,
                 repo = repo,
                 imagePreprocessor = imagePreprocessor,
                 locationProvider = locationProvider,

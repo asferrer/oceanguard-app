@@ -69,24 +69,31 @@ flowchart LR
     SAVE --> ACH["AchievementChecker<br/>MarineDex entries and achievements"]
 ```
 
-Marine organisms are identified by a separate path (BioDex), not by this chain:
+Marine organisms are identified by a separate path (BioDex), not by this chain. It needs the species pack; without it
+there is no identifier and the screen asks for the download (there is no demo fallback). Detail, evaluation and
+thresholds: [SPECIES_ID.md](SPECIES_ID.md).
 
 ```mermaid
 flowchart LR
     IN2["Photo"] --> SVM["SpeciesViewModel.identifyFromImage"]
-    SVM --> ID["SpeciesIdentifier.identify"]
+    SVM --> PP{"SpeciesPipelineProvider.current<br/>species pack installed?"}
+    PP -- no --> MISS["Error: download the species pack"]
+    PP -- yes --> ID["SpeciesIdentifier.identify"]
     ID --> BL{"Frame has content?"}
     BL -- no --> NONE["No result"]
     BL -- yes --> LOC["OrganismLocator<br/>ONNX organism detector, else Gemma 4, else centre crop"]
-    LOC --> EMB["Embedder<br/>OpenCLIP ViT-B/32 ONNX"]
-    EMB --> IDX["Cosine search in the species index<br/>top 5, filtered by marine region when there is GPS"]
-    IDX --> CONF{"Confidence and margin<br/>of the best match"}
-    CONF -- "high" --> CORE["RAG_CORE<br/>species from the index"]
-    CONF -- "medium" --> TENT["RAG_TENTATIVE<br/>Gemma 4 confirms and describes"]
-    CONF -- "low or no match" --> OPEN["VLM_OPENVOCAB<br/>Gemma 4 names it, uncatalogued"]
+    LOC --> EMB["Image encoder ONNX<br/>contract and self-test from species_pack.json"]
+    EMB --> IDX["Nearest reference prototypes (6 per species)<br/>top 5, geo prior when there is GPS"]
+    IDX --> CONF{"Confidence = softmax over species scores<br/>thresholds from species_pack.json"}
+    CONF -- ">= tauHigh" --> CORE["RAG_CORE<br/>species from the index"]
+    CONF -- "tauLow .. tauHigh" --> GEM{"Gemma choice enabled in the pack<br/>(off by default) and loaded?"}
+    GEM -- no --> TENT["RAG_TENTATIVE<br/>RAG top-1, tentative badge"]
+    GEM -- yes --> CH["Gemma chooses among the top 5<br/>or answers none"]
+    CH -- "pick" --> TENT
+    CH -- "none" --> UNK["UNIDENTIFIED<br/>closest candidates shown as hints,<br/>not added to the BioDex"]
+    CONF -- "< tauLow" --> UNK
     CORE --> SAVE2["SpeciesCollectionRepository.saveObservation"]
     TENT --> SAVE2
-    OPEN --> SAVE2
     SAVE2 --> DB2[("Room<br/>SpeciesObservation, SpeciesDexEntry")]
 ```
 

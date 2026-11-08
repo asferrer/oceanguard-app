@@ -484,15 +484,15 @@ private fun SpeciesSummaryStat(
 private fun speciesBatchNormBoxes(
     done: SpeciesBatchItemState.Done,
     catalog: SpeciesCatalog,
+    unidentifiedLabel: String,
 ): List<NormBox> {
     if (done.imageWidth <= 0 || done.imageHeight <= 0) return emptyList()
     val lang = SpeciesNames.currentLanguage()
     return done.results.mapNotNull { result ->
         val bbox = result.bbox ?: return@mapNotNull null
-        val label = SpeciesNames.commonName(
-            entry = catalog.byKey(result.speciesKey),
-            language = lang,
-            fallback = result.scientificName,
+        val label = SpeciesNames.resultName(
+            result.speciesKey, result.scientificName, result.isUnidentified,
+            catalog, unidentifiedLabel, lang,
         )
         bboxToNormBox(
             x = bbox.x, y = bbox.y, width = bbox.width, height = bbox.height,
@@ -516,7 +516,8 @@ private fun SpeciesBatchThumbnailCard(item: SpeciesBatchItem, catalog: SpeciesCa
     // Detected organism boxes, normalised against the analysed image dimensions.
     // Empty when no bbox (whole-frame fallback) or the size is unknown — the cell
     // then shows the plain cropped thumbnail.
-    val boxes = (state as? SpeciesBatchItemState.Done)?.let { speciesBatchNormBoxes(it, catalog) }
+    val unidentifiedLabel = stringResource(R.string.species_unidentified)
+    val boxes = (state as? SpeciesBatchItemState.Done)?.let { speciesBatchNormBoxes(it, catalog, unidentifiedLabel) }
         ?: emptyList()
 
     Card(
@@ -586,10 +587,10 @@ private fun SpeciesBatchThumbnailCard(item: SpeciesBatchItem, catalog: SpeciesCa
                 if (results.isNotEmpty()) {
                     val lang = Locale.getDefault().language
                     val top = results[0]
-                    val entry = catalog.byKey(top.speciesKey)
-                    val name = entry?.commonNames?.get(lang)
-                        ?: entry?.commonNames?.get("en")
-                        ?: top.scientificName
+                    val name = SpeciesNames.resultName(
+                        top.speciesKey, top.scientificName, top.isUnidentified,
+                        catalog, unidentifiedLabel, lang,
+                    )
 
                     Box(
                         modifier = Modifier
