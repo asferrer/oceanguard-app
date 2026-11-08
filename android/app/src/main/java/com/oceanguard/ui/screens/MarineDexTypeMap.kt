@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.ui.res.stringResource
 import com.oceanguard.ai.R
+import com.oceanguard.ai.ui.components.colorForClass
 import com.oceanguard.ai.ui.components.dex.debrisDisplayName
 import com.oceanguard.ai.ui.components.sonar.SonarEmptyState
 import com.oceanguard.ai.ui.screens.map.MapStyles
@@ -93,7 +94,7 @@ fun MarineDexTypeMap(
 
             DebrisTypeCircleLayer(
                 source = source,
-                pinColor = SonarTheme.colors.echo,
+                pinColor = colorForClass(debrisType.name),
                 outlineColor = SonarTheme.colors.abyss,
                 onSessionClick = onSessionClick,
             )

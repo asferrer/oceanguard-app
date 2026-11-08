@@ -208,6 +208,7 @@ private fun TopDebrisItem(
     val label = remember(type, language) {
         ReportGenerator.translateType(type.name, language)
     }
+    val classColor = colorForClass(type.name)
     val sprite: Painter = painterResource(DexSprites.getSprite(type))
     Surface(
         onClick = onClick,
@@ -223,14 +224,10 @@ private fun TopDebrisItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            // Rank chip (#1 with primary tint, #2 secondary, #3 tertiary)
+            // Rank chip in the colour of the class, the same as its boxes; the number is the rank.
             Surface(
                 shape = CircleShape,
-                color = when (rank) {
-                    1 -> MaterialTheme.colorScheme.primary
-                    2 -> MaterialTheme.colorScheme.secondary
-                    else -> MaterialTheme.colorScheme.tertiary
-                },
+                color = classColor,
                 modifier = Modifier.size(20.dp),
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
@@ -238,11 +235,7 @@ private fun TopDebrisItem(
                         text = "#$rank",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = when (rank) {
-                            1 -> MaterialTheme.colorScheme.onPrimary
-                            2 -> MaterialTheme.colorScheme.onSecondary
-                            else -> MaterialTheme.colorScheme.onTertiary
-                        },
+                        color = onClassColor(classColor),
                     )
                 }
             }
