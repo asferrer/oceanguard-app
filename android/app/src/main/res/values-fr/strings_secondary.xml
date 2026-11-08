@@ -737,15 +737,6 @@
     <string name="trend_avg">moy. %1$d</string>
     <string name="trend_empty">Aucune donnée d’analyse.\nTerminez un scan pour voir l’évolution.</string>
     <string name="trend_record_more">Enregistrez plus d’analyses pour voir l’évolution</string>
-    <string name="dist_title">Répartition des déchets</string>
-    <string name="dist_subtitle">Nombre par type de matériau</string>
-    <string name="dist_empty">Aucune donnée de déchets à afficher</string>
-    <string name="dist_a11y_empty">Graphique de répartition des déchets : aucune donnée</string>
-    <string name="dist_a11y_items">Graphique de répartition des déchets : %1$s</string>
-    <string name="material_wood">Bois</string>
-    <string name="material_paper">Papier</string>
-    <string name="material_ceramic">Céramique</string>
-    <string name="material_hazardous">Dangereux</string>
     <string name="quick_new_scan">Nouveau scan</string>
     <string name="quick_take_photo">Prendre une photo</string>
     <string name="quick_take_photo_desc">Capturez avec l’appareil photo pour une analyse en temps réel</string>

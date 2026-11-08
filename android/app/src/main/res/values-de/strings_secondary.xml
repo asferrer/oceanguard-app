@@ -737,15 +737,6 @@
     <string name="trend_avg">Ø %1$d</string>
     <string name="trend_empty">Keine Analysedaten vorhanden.\nSchließe einen Scan ab, um den Verlauf zu sehen.</string>
     <string name="trend_record_more">Erfasse mehr Analysen, um den Verlauf zu sehen</string>
-    <string name="dist_title">Abfallverteilung</string>
-    <string name="dist_subtitle">Anzahl nach Materialart</string>
-    <string name="dist_empty">Keine Abfalldaten vorhanden</string>
-    <string name="dist_a11y_empty">Diagramm der Abfallverteilung: keine Daten</string>
-    <string name="dist_a11y_items">Diagramm der Abfallverteilung: %1$s</string>
-    <string name="material_wood">Holz</string>
-    <string name="material_paper">Papier</string>
-    <string name="material_ceramic">Keramik</string>
-    <string name="material_hazardous">Gefährlich</string>
     <string name="quick_new_scan">Neuer Scan</string>
     <string name="quick_take_photo">Foto aufnehmen</string>
     <string name="quick_take_photo_desc">Mit der Kamera aufnehmen und in Echtzeit analysieren</string>

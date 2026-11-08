@@ -737,15 +737,6 @@
     <string name="trend_avg">media %1$d</string>
     <string name="trend_empty">Nessun dato di analisi.\nCompleta una scansione per vedere l’andamento.</string>
     <string name="trend_record_more">Registra più analisi per vedere l’andamento</string>
-    <string name="dist_title">Distribuzione dei rifiuti</string>
-    <string name="dist_subtitle">Conteggio per tipo di materiale</string>
-    <string name="dist_empty">Nessun dato sui rifiuti da mostrare</string>
-    <string name="dist_a11y_empty">Grafico della distribuzione dei rifiuti: nessun dato</string>
-    <string name="dist_a11y_items">Grafico della distribuzione dei rifiuti: %1$s</string>
-    <string name="material_wood">Legno</string>
-    <string name="material_paper">Carta</string>
-    <string name="material_ceramic">Ceramica</string>
-    <string name="material_hazardous">Pericoloso</string>
     <string name="quick_new_scan">Nuova scansione</string>
     <string name="quick_take_photo">Scatta una foto</string>
     <string name="quick_take_photo_desc">Scatta con la fotocamera per un’analisi in tempo reale</string>

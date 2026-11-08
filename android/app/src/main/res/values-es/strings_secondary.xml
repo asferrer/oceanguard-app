@@ -737,15 +737,6 @@
     <string name="trend_avg">media %1$d</string>
     <string name="trend_empty">No hay datos de análisis.\nCompleta un escaneo para ver la evolución.</string>
     <string name="trend_record_more">Registra más análisis para ver la evolución</string>
-    <string name="dist_title">Distribución de residuos</string>
-    <string name="dist_subtitle">Recuento por tipo de material</string>
-    <string name="dist_empty">No hay datos de residuos que mostrar</string>
-    <string name="dist_a11y_empty">Gráfico de distribución de residuos: sin datos</string>
-    <string name="dist_a11y_items">Gráfico de distribución de residuos: %1$s</string>
-    <string name="material_wood">Madera</string>
-    <string name="material_paper">Papel</string>
-    <string name="material_ceramic">Cerámica</string>
-    <string name="material_hazardous">Peligroso</string>
     <string name="quick_new_scan">Nuevo escaneo</string>
     <string name="quick_take_photo">Hacer foto</string>
     <string name="quick_take_photo_desc">Captura con la cámara para analizar en tiempo real</string>
