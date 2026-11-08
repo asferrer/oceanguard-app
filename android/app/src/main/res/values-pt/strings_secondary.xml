@@ -594,6 +594,7 @@
     <string name="vlm_download_dialog_confirm">Baixar</string>
     <string name="vlm_download_complete_snackbar">Modelo de IA pronto!</string>
     <string name="vlm_download_error_snackbar">Falha no download: %1$s</string>
+    <string name="vlm_download_retry">Tentar de novo</string>
     <string name="vlm_download_notif_title">Baixando modelo de IA</string>
     <string name="vlm_download_notif_preparing">Preparando download…</string>
     <string name="vlm_download_notif_progress">%1$d / %2$d MB</string>

@@ -208,4 +208,19 @@ class ModelsLogicTest {
         assertFalse(isDownloadBusy(VlmDownloadState.Idle))
         assertFalse(isDownloadBusy(VlmDownloadState.Error("x")))
     }
+
+    @Test fun theReportModelOfATierIsFoundInTheCatalog() {
+        assertEquals(
+            CatalogModel.GEMMA_BASE,
+            CatalogModel.forTier(TextModelTier.GEMMA4_E2B, TextModelVariant.BASE),
+        )
+        assertEquals(
+            CatalogModel.GEMMA_TUNED,
+            CatalogModel.forTier(TextModelTier.GEMMA4_E2B, TextModelVariant.FINETUNED),
+        )
+        assertEquals(
+            CatalogModel.QWEN_FAST,
+            CatalogModel.forTier(TextModelTier.FAST, TextModelVariant.FINETUNED),
+        )
+    }
 }

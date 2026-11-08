@@ -74,9 +74,10 @@ fun HomeStatusBlock(
     app: OceanGuardApp,
     model: HomeModelUi,
     bounds: SnapshotStateMap<String, Rect>,
+    onDownloadReports: () -> Unit,
 ) {
     Box(Modifier.spotlightTarget("home_model_status", bounds)) {
-        HomeEntry(index = 3) { HomeStatusLine(app, model) }
+        HomeEntry(index = 3) { HomeStatusLine(app, model, onDownloadReports) }
     }
 }
 

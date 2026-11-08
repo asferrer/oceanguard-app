@@ -114,3 +114,15 @@ The download state is a `StateFlow` that the UI collects for the progress bar (u
 second). A failed or cancelled download leaves no partial file, and the app checks the size of every file against a
 per-model minimum, which also catches an HTML error page saved as a model. The download starts from the beginning each
 time; it is not resumed.
+
+### Getting the report model
+
+A new install starts in Fast mode (RT-DETRv2 for detection, Gemma 4 E2B for reports), so the only missing piece is the
+Gemma 4 file that writes reports. Every entry point asks for it through `ModelDownloader`, which checks free space and
+the network first and warns on mobile data before it calls `launchVlmDownload`:
+
+- **Home status line.** While the report model is missing, the "Reports" row shows its size and a Download button. It
+  is a quiet row, not a pop-up, so there is nothing to dismiss and it never repeats.
+- **Report screen.** Pressing Generate without the model opens the download dialog. If the download starts, the report
+  starts on its own when it finishes. If it fails, the snackbar offers Retry, which keeps the pending report. Cancelling
+  the dialog leaves the screen as it was.

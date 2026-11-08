@@ -49,6 +49,7 @@ private const val STILL_ALPHA = 0.35f
 fun HomeStatusLine(
     app: OceanGuardApp,
     model: HomeModelUi,
+    onDownloadReports: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SonarCard(modifier = modifier) {
@@ -62,7 +63,7 @@ fun HomeStatusLine(
             } else {
                 DetectorRow(model)
             }
-            ReportsRow(app, model)
+            ReportsRow(app, model, onDownloadReports)
         }
     }
 }
@@ -134,17 +135,27 @@ private fun statusText(model: HomeModelUi): String = when (model.kind) {
 }
 
 @Composable
-private fun ReportsRow(app: OceanGuardApp, model: HomeModelUi) {
+private fun ReportsRow(app: OceanGuardApp, model: HomeModelUi, onDownload: () -> Unit) {
     val text = if (model.reportModelMissing) {
         stringResource(R.string.home_status_reports_missing, reportTier(app).sizeLabel)
     } else {
         stringResource(R.string.home_status_reports_ready)
     }
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        if (HomeLogic.offerReportDownload(model.reportModelMissing, model.kind)) {
+            TextButton(onClick = onDownload) { Text(stringResource(R.string.home_status_reports_download)) }
+        }
+    }
 }
 
 /**

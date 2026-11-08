@@ -12,6 +12,7 @@
     <string name="home_status_needs_download">Nicht heruntergeladen · ~%1$s GB</string>
     <string name="home_status_reports_ready">Berichte: Modell bereit</string>
     <string name="home_status_reports_missing">Berichte: Modell nicht heruntergeladen (%1$s)</string>
+    <string name="home_status_reports_download">Laden</string>
     <string name="home_download_title">Modell herunterladen</string>
     <string name="home_download_message">Der Modus %1$s braucht einen einmaligen Download von etwa %2$s GB. Am besten über WLAN. Jetzt herunterladen?</string>
     <string name="home_achievements_button_cd">Errungenschaften: %1$d von %2$d freigeschaltet</string>

@@ -593,6 +593,7 @@
     <string name="vlm_download_dialog_confirm">Herunterladen</string>
     <string name="vlm_download_complete_snackbar">KI-Modell bereit!</string>
     <string name="vlm_download_error_snackbar">Download-Fehler: %1$s</string>
+    <string name="vlm_download_retry">Erneut versuchen</string>
     <string name="vlm_download_notif_title">KI-Modell herunterladen</string>
     <string name="vlm_download_notif_preparing">Download wird vorbereitet…</string>
     <string name="vlm_download_notif_progress">%1$d / %2$d MB</string>

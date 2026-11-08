@@ -12,6 +12,7 @@
     <string name="home_status_needs_download">Não transferido · ~%1$s GB</string>
     <string name="home_status_reports_ready">Relatórios: modelo pronto</string>
     <string name="home_status_reports_missing">Relatórios: modelo não transferido (%1$s)</string>
+    <string name="home_status_reports_download">Transferir</string>
     <string name="home_download_title">Transferir modelo</string>
     <string name="home_download_message">O modo %1$s precisa de uma transferência única de cerca de %2$s GB. É melhor com Wi-Fi. Transferir agora?</string>
     <string name="home_achievements_button_cd">Conquistas: %1$d de %2$d desbloqueadas</string>

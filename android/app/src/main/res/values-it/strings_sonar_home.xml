@@ -12,6 +12,7 @@
     <string name="home_status_needs_download">Non scaricato · ~%1$s GB</string>
     <string name="home_status_reports_ready">Report: modello pronto</string>
     <string name="home_status_reports_missing">Report: modello non scaricato (%1$s)</string>
+    <string name="home_status_reports_download">Scarica</string>
     <string name="home_download_title">Scarica il modello</string>
     <string name="home_download_message">La modalità %1$s richiede un download una tantum di circa %2$s GB. Meglio con il Wi-Fi. Scaricarlo ora?</string>
     <string name="home_achievements_button_cd">Traguardi: %1$d di %2$d sbloccati</string>

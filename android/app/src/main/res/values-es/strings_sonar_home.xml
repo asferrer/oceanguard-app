@@ -12,6 +12,7 @@
     <string name="home_status_needs_download">Sin descargar · ~%1$s GB</string>
     <string name="home_status_reports_ready">Informes: modelo listo</string>
     <string name="home_status_reports_missing">Informes: modelo sin descargar (%1$s)</string>
+    <string name="home_status_reports_download">Descargar</string>
     <string name="home_download_title">Descargar modelo</string>
     <string name="home_download_message">El modo %1$s necesita una descarga única de unos %2$s GB. Mejor con Wi-Fi. ¿Descargarlo ahora?</string>
     <string name="home_achievements_button_cd">Logros: %1$d de %2$d desbloqueados</string>

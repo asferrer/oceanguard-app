@@ -29,6 +29,10 @@ import com.oceanguard.ai.data.GeneratedReport
 import com.oceanguard.ai.data.SessionDatesHelper
 import com.oceanguard.ai.data.SettingsRepository
 import com.oceanguard.ai.inference.TextModelTier
+import com.oceanguard.ai.inference.TextModelVariant
+import com.oceanguard.ai.ui.screens.models.CatalogModel
+import com.oceanguard.ai.ui.screens.models.ModelDownloader
+import com.oceanguard.ai.ui.screens.models.rememberModelDownloader
 import com.oceanguard.ai.ui.components.DataDotDatePickerDialog
 import com.oceanguard.ai.ui.components.spotlight.GuidedTourTransitionDialog
 import com.oceanguard.ai.ui.components.spotlight.SpotlightController
@@ -47,7 +51,9 @@ internal fun ReportDialogs(
     choices: ReportChoicesState,
     sessions: List<DetectionSession>,
 ) {
-    if (ui.showDownloadDialog) DownloadModelDialog(app, ui)
+    val downloader = rememberModelDownloader()
+    if (ui.showDownloadDialog) DownloadModelDialog(app, ui, downloader)
+    downloader.PreflightDialog()
     ui.reportToDelete?.let { DeleteReportDialog(app, ui, it) }
     if (choices.pickerVisible) {
         val period = choices.choices.period
@@ -62,7 +68,7 @@ internal fun ReportDialogs(
 }
 
 @Composable
-private fun DownloadModelDialog(app: OceanGuardApp, ui: ReportUiState) {
+private fun DownloadModelDialog(app: OceanGuardApp, ui: ReportUiState, downloader: ModelDownloader) {
     val tierKey by app.settingsRepository.vlmModelTier
         .collectAsStateWithLifecycle(initialValue = SettingsRepository.DEFAULT_VLM_MODEL_TIER)
     val tier = TextModelTier.fromKey(tierKey)
@@ -73,8 +79,14 @@ private fun DownloadModelDialog(app: OceanGuardApp, ui: ReportUiState) {
         confirmButton = {
             TextButton(onClick = {
                 ui.showDownloadDialog = false
-                ui.pendingStart = true
-                app.launchVlmDownload(tier)
+                // Checks space and network first; the report starts on its own once it arrives.
+                val model = CatalogModel.forTier(tier, TextModelVariant.BASE)
+                if (model != null) {
+                    downloader.request(model) { ui.pendingStart = true }
+                } else {
+                    ui.pendingStart = true
+                    app.launchVlmDownload(tier)
+                }
             }) { Text(stringResource(R.string.vlm_download_dialog_confirm)) }
         },
         dismissButton = {

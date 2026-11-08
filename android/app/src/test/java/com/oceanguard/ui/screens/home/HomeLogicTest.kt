@@ -107,4 +107,11 @@ class HomeLogicTest {
         assertEquals("50.0 MB / 100.0 MB  (50%)", line)
         assertTrue(HomeLogic.formatBytesLine(0, 0, 1.7f).endsWith("(100%)"))
     }
+
+    @Test fun theReportDownloadIsOfferedOnlyWhileTheModelIsMissingAndIdle() {
+        assertTrue(HomeLogic.offerReportDownload(true, DetectorStatusKind.READY))
+        assertTrue(HomeLogic.offerReportDownload(true, DetectorStatusKind.NEEDS_DOWNLOAD))
+        assertFalse(HomeLogic.offerReportDownload(true, DetectorStatusKind.DOWNLOADING))
+        assertFalse(HomeLogic.offerReportDownload(false, DetectorStatusKind.READY))
+    }
 }

@@ -73,6 +73,14 @@ object HomeLogic {
         }
     }
 
+    /**
+     * Whether the status line offers a one-tap download of the report model: only while it is
+     * missing and nothing is downloading. It is a quiet row, never a pop-up, so there is nothing
+     * to dismiss and no repeated prompt.
+     */
+    fun offerReportDownload(reportModelMissing: Boolean, kind: DetectorStatusKind): Boolean =
+        reportModelMissing && kind != DetectorStatusKind.DOWNLOADING
+
     /** Species do not depend on the debris detector, so they can always be scanned. */
     fun scanEnabled(target: ScanTarget, kind: DetectorStatusKind): Boolean =
         target == ScanTarget.SPECIES || kind.canScan
