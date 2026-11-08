@@ -40,4 +40,5 @@
     <string name="contribute_policy_license_title">Licence</string>
     <string name="contribute_policy_license_body">By contributing you agree that your photos and their annotations may be shared, without EXIF or location, under the Creative Commons Attribution 4.0 International licence (CC BY 4.0), credited to “OceanGuard AI contributors”.</string>
     <string name="contribute_sync_quota">the research server is full for today; it will retry later</string>
+    <string name="contribute_sync_app_not_official">this copy of the app is not the official release (debug build or different signature); only the official APK can contribute</string>
 </resources>

@@ -112,6 +112,15 @@ class ContributionApiClientTest {
     }
 
     @Test
+    fun debugBuildOrResignedApkIsRefusedWithItsOwnReason() {
+        listOf("other app", "other signing certificate").forEach { reason ->
+            worker.registration = MockResponse().setResponseCode(401).setBody("""{"error":"attestation","reason":"$reason"}""")
+            assertEquals(ApiOutcome.Failed(ContributionSyncStatus.APP_NOT_OFFICIAL, 401), upload())
+        }
+        assertTrue("nothing uploaded", server.uploadRequests().isEmpty())
+    }
+
+    @Test
     fun tenMegabyteEnvelopeUsesOneD1RowPerPart() {
         val big = ByteArray(10 * 1024 * 1024) { (it % 251).toByte() }
         worker.enqueue(MockResponse().setResponseCode(201).setBody("{}"))

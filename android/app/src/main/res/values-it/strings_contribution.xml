@@ -40,4 +40,5 @@
     <string name="contribute_policy_license_title">Licenza</string>
     <string name="contribute_policy_license_body">Contribuendo accetti che le tue foto e le loro annotazioni possano essere condivise, senza EXIF né posizione, con la licenza Creative Commons Attribuzione 4.0 Internazionale (CC BY 4.0), con l\'attribuzione «Contributori di OceanGuard AI».</string>
     <string name="contribute_sync_quota">il server di ricerca è pieno per oggi; verrà ritentato più tardi</string>
+    <string name="contribute_sync_app_not_official">questa copia dell\'app non è la versione ufficiale (build di debug o altra firma); solo l\'APK ufficiale può contribuire</string>
 </resources>

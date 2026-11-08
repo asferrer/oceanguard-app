@@ -20,6 +20,9 @@ enum class ContributionSyncStatus {
     /** This phone failed Android key attestation (unlocked, modified or no secure hardware). */
     ATTESTATION,
 
+    /** This copy of the app is not the official release (debug build or another signature). */
+    APP_NOT_OFFICIAL,
+
     /** Too many uploads; the server asked to wait. */
     RATE_LIMITED,
 

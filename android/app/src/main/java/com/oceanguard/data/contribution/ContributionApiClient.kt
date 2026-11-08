@@ -125,7 +125,7 @@ class ContributionApiClient(
                 null
             }
             is Answer.Refused -> {
-                Log.w(TAG, "Device registration refused: ${answer.error}")
+                Log.w(TAG, "Device registration refused: ${answer.error} ${answer.outcome}")
                 answer
             }
         }
@@ -208,12 +208,23 @@ class ContributionApiClient(
         private fun parseObject(text: String): JsonObject? =
             runCatching { JsonParser.parseString(text).takeIf { it.isJsonObject }?.asJsonObject }.getOrNull()
 
+        /**
+         * The Worker's reason when the package or the signing certificate is not the official
+         * one (`other app`, `other signing certificate`): a debug build or a re-signed APK.
+         */
+        private fun isNotOfficialApp(body: String): Boolean {
+            val reason = parseObject(body)?.get("reason")?.takeIf { it.isJsonPrimitive }?.asString.orEmpty()
+            return reason == "other app" || reason == "other signing certificate"
+        }
+
         /** Maps a non-success answer to the contract's categories (section 4). */
         internal fun classifyFailure(code: Int, body: String, retryAfter: String?): ApiOutcome {
             val error = parseObject(body)?.get("error")?.takeIf { it.isJsonPrimitive }?.asString.orEmpty()
             val wait = retryAfter?.trim()?.toLongOrNull()
             return when {
                 code == 411 || code == 413 || code == 415 || code == 422 -> ApiOutcome.Rejected(code)
+                code == 401 && error == "attestation" && isNotOfficialApp(body) ->
+                    ApiOutcome.Failed(ContributionSyncStatus.APP_NOT_OFFICIAL, code)
                 code == 401 && (error == "attestation" || error == "unregistered") ->
                     ApiOutcome.Failed(ContributionSyncStatus.ATTESTATION, code)
                 code == 401 -> ApiOutcome.Failed(ContributionSyncStatus.AUTH, code)

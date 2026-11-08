@@ -200,6 +200,7 @@ internal fun syncStatusText(status: ContributionSyncStatus): Int = when (status)
     ContributionSyncStatus.NOT_CONFIGURED -> R.string.contribute_sync_not_configured
     ContributionSyncStatus.AUTH -> R.string.contribute_sync_auth
     ContributionSyncStatus.ATTESTATION -> R.string.contribute_sync_attestation
+    ContributionSyncStatus.APP_NOT_OFFICIAL -> R.string.contribute_sync_app_not_official
     ContributionSyncStatus.RATE_LIMITED -> R.string.contribute_sync_rate_limited
     ContributionSyncStatus.QUOTA -> R.string.contribute_sync_quota
     ContributionSyncStatus.SERVER -> R.string.contribute_sync_server
