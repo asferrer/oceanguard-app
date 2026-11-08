@@ -179,4 +179,20 @@ class AnalysisModeTest {
         )
         assertTrue(AnalysisModels.hasModelConfidence(null))
     }
+
+    @Test fun aNewInstallDefaultsToFastWithGemmaForReports() {
+        val mode = AnalysisMode.fromSettings(
+            detectorMode = SettingsRepository.DEFAULT_DETECTOR_MODE,
+            refineWithGemma = SettingsRepository.DEFAULT_REFINE_WITH_GEMMA,
+            variant = SettingsRepository.DEFAULT_VLM_MODEL_VARIANT,
+        )
+        assertEquals(AnalysisMode.FAST, mode)
+        assertEquals(TextModelTier.GEMMA4_E2B, TextModelTier.fromKey(SettingsRepository.DEFAULT_VLM_MODEL_TIER))
+        assertFalse(mode.needsGemma)
+    }
+
+    @Test fun anExplicitChoiceIsNotOverriddenByTheDefault() {
+        assertEquals(AnalysisMode.DETAILED, derive("gemma4", false, "base", true))
+        assertEquals(AnalysisMode.REFINED, derive("rtdetr", true, "base", true))
+    }
 }

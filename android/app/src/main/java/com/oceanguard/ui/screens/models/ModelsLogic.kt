@@ -65,6 +65,11 @@ enum class CatalogModel(
     val deletable: Boolean get() = tier != null
 
     companion object {
+        /** The catalog entry of a text model; the base file when that variant is not listed. */
+        fun forTier(tier: TextModelTier, variant: TextModelVariant): CatalogModel? =
+            entries.firstOrNull { it.tier == tier && it.variant == variant }
+                ?: entries.firstOrNull { it.tier == tier && it.variant == TextModelVariant.BASE }
+
         fun forMode(mode: AnalysisMode): CatalogModel? = when {
             !mode.needsGemma -> null
             mode.variant == TextModelVariant.FINETUNED -> GEMMA_TUNED

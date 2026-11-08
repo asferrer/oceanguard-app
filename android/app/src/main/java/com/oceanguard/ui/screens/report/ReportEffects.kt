@@ -90,10 +90,15 @@ private fun onDownloadChanged(
         is VlmDownloadState.Error -> {
             ui.pendingStart = false
             scope.launch {
-                snackbar.showSnackbar(
+                val result = snackbar.showSnackbar(
                     message = context.getString(R.string.vlm_download_error_snackbar, state.message),
+                    actionLabel = context.getString(R.string.vlm_download_retry),
                     duration = SnackbarDuration.Long,
                 )
+                if (result == SnackbarResult.ActionPerformed) {
+                    ui.pendingStart = pending.action != null
+                    app.launchVlmDownload(tier)
+                }
             }
         }
         else -> Unit

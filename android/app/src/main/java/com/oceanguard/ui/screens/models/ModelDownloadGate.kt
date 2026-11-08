@@ -23,6 +23,7 @@ data class PendingDownload(
     val model: CatalogModel,
     val plan: DownloadPlan,
     val freeBytes: Long,
+    val onStart: (() -> Unit)? = null,
 )
 
 /**
@@ -44,24 +45,33 @@ class ModelDownloader internal constructor(private val app: OceanGuardApp) {
         CatalogModel.forMode(mode)?.let(::request)
     }
 
-    fun request(model: CatalogModel) {
+    /**
+     * [onStart] runs only when the download really starts: at once, or after the person accepted
+     * the mobile-data warning. It never runs when there is no room or no connection.
+     */
+    fun request(model: CatalogModel, onStart: (() -> Unit)? = null) {
         requested = model
         val free = app.vlmModelManager.getModelDirectory().usableSpace
         val plan = planDownload(model.approxBytes, free, currentNetworkKind(app))
-        if (plan == DownloadPlan.Proceed) start(model) else pending = PendingDownload(model, plan, free)
+        if (plan == DownloadPlan.Proceed) {
+            start(model, onStart)
+        } else {
+            pending = PendingDownload(model, plan, free, onStart)
+        }
     }
 
     internal fun confirmPending() {
         val held = pending ?: return
         pending = null
-        start(held.model)
+        start(held.model, held.onStart)
     }
 
     internal fun dismissPending() {
         pending = null
     }
 
-    private fun start(model: CatalogModel) {
+    private fun start(model: CatalogModel, onStart: (() -> Unit)? = null) {
+        onStart?.invoke()
         val tier = model.tier
         if (tier == null) app.launchSpeciesPackDownload() else app.launchVlmDownload(tier, model.variant)
     }
