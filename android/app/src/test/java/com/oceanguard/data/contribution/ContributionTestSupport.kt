@@ -46,6 +46,7 @@ class SoftwareDeviceIdentity : DeviceIdentity {
 
     override fun publicKeySpki(): ByteArray = keys().public.encoded
     override fun sign(message: ByteArray): ByteArray = KeystoreDeviceIdentity.signRaw(keys().private, message)
+    override fun attestationChain(): List<ByteArray> = listOf(keys().public.encoded, byteArrayOf(0x30, 0x00))
     override fun reset() {
         pair = null
         resets++
@@ -111,7 +112,7 @@ private const val PLAIN_JPEG_B64 =
     "n6/9oADAMBAAIRAxEAPwDFooor1jzD/9k="
 
 /**
- * MockWebServer dispatcher that behaves like the Worker's part protocol: part requests get
+ * MockWebServer dispatcher that behaves like the Worker: registration is accepted, part requests get
  * 202 unless the next queued answer is a refusal (then the part gets it); the commit, a
  * withdrawal or any other request gets the next queued answer (201 by default).
  */
@@ -124,7 +125,12 @@ class WorkerLikeDispatcher : okhttp3.mockwebserver.Dispatcher() {
 
     private fun code(response: okhttp3.mockwebserver.MockResponse) = response.status.split(" ")[1].toInt()
 
+    /** Answer to POST /v1/devices (registration); accepted unless a test changes it. */
+    var registration: okhttp3.mockwebserver.MockResponse =
+        okhttp3.mockwebserver.MockResponse().setResponseCode(201).setBody("""{"registered":true,"security_level":"tee"}""")
+
     override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): okhttp3.mockwebserver.MockResponse {
+        if (request.path == "/v1/devices") return registration
         if ("/parts/" in request.path.orEmpty()) {
             val head = queue.peek()
             return if (head != null && code(head) !in 200..201) queue.poll()!!
@@ -137,3 +143,7 @@ class WorkerLikeDispatcher : okhttp3.mockwebserver.Dispatcher() {
 /** Contribution id of an upload request (it travels in the path). */
 fun contributionIdOf(request: okhttp3.mockwebserver.RecordedRequest): String? =
     Regex("/v1/contributions/([0-9a-f-]{36})/").find(request.path.orEmpty())?.groupValues?.get(1)
+
+/** Requests other than the device registration, in arrival order. */
+fun okhttp3.mockwebserver.MockWebServer.uploadRequests(): List<okhttp3.mockwebserver.RecordedRequest> =
+    (1..requestCount).map { takeRequest() }.filter { it.path != "/v1/devices" }

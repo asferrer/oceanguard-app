@@ -40,7 +40,6 @@ import com.oceanguard.ai.service.ContributionUploadResult
 import com.oceanguard.ai.service.InferenceServiceState
 import com.oceanguard.ai.service.ReportGenerationService
 import com.oceanguard.ai.service.VlmDownloadService
-import com.oceanguard.ai.data.contribution.AppCheck
 import com.oceanguard.ai.data.contribution.ContributionApiClient
 import com.oceanguard.ai.data.contribution.ContributionConfig
 import com.oceanguard.ai.data.contribution.ContributionEnvelope
@@ -517,13 +516,12 @@ class OceanGuardApp : Application(), ContributionHost {
     val imagePreprocessor: ImagePreprocessor by lazy { ImagePreprocessor(this) }
 
     // Research contribution. No client (and the feature is not offered anywhere) when this
-    // build has no destination, or has no App Check while pointing at a real Worker: the
-    // Worker refuses unattested requests, so offering it would only queue photos for nothing.
+    // build has no destination. Identity and attestation: the Keystore key (DeviceIdentity).
     val contributionQueueDao: ContributionQueueDao by lazy { database.contributionQueueDao() }
     private val contributionPrefs by lazy { SettingsContributionPrefs(settingsRepository) }
     private val contributionConfig by lazy { ContributionConfig.fromBuildConfig() }
     private val contributionApiClient: ContributionApiClient? by lazy {
-        contributionConfig.takeIf { it.isUsable && (AppCheck.AVAILABLE || it.isLoopback) }
+        contributionConfig.takeIf { it.isUsable }
             ?.let { ContributionApiClient(it, KeystoreDeviceIdentity()) }
     }
     val contributionRepository: ContributionRepository by lazy {
@@ -615,8 +613,6 @@ class OceanGuardApp : Application(), ContributionHost {
     override fun onCreate() {
         super.onCreate()
 
-        // Firebase App Check for contribution uploads (no-op in builds without google-services.json)
-        AppCheck.install(this)
         applicationScope.launch {
             try {
                 contributionRepository.reconcile()

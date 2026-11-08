@@ -35,11 +35,15 @@ sealed interface ApiOutcome {
 }
 
 /**
- * Client of the contribution Worker (contract v4). Every request carries:
- * - `X-Firebase-AppCheck`: short-lived token that proves the genuine app on a real device
- *   (the main control; the Worker refuses requests without it);
- * - the device public key and an ECDSA signature by the install's Keystore key over the
- *   canonical string ([ContributionSigner]) — no shared secret exists.
+ * Client of the contribution Worker (contract v4). Identity and attestation both come from
+ * the install's Android Keystore key ([DeviceIdentity]); no shared secret exists and no
+ * Google service is involved, so it works for the APK distributed through GitHub:
+ *
+ * - once (and again when the Worker says `unregistered`), POST /v1/devices sends the key's
+ *   attestation certificate chain; the Worker checks it up to a Google attestation root and
+ *   requires this app, signed by the author, on a locked device with verified boot;
+ * - every request carries the device public key and an ECDSA signature over the canonical
+ *   string ([ContributionSigner]).
  *
  * Uploads carry an envelope already encrypted to the NAS ([ContributionEnvelope]).
  * TLS: system trust store, TLS 1.2+ with modern suites only, no cleartext, no redirects.
@@ -51,16 +55,21 @@ class ContributionApiClient(
     private val config: ContributionConfig,
     private val identity: DeviceIdentity,
     private val http: OkHttpClient = defaultHttpClient(config),
-    private val appCheckToken: suspend () -> String? = { AppCheck.token() },
     private val nowSeconds: () -> Long = { System.currentTimeMillis() / 1000L },
     private val partBytes: Int = PART_BYTES,
 ) {
     private val baseUrl = requireNotNull(config.url) { "contribution URL not allowed: ${config.baseUrl}" }
     private val random = SecureRandom()
 
+    @Volatile
+    private var registered = false
+
     val clientId: String get() = identity.clientId
 
-    fun resetIdentity() = identity.reset()
+    fun resetIdentity() {
+        identity.reset()
+        registered = false
+    }
 
     /**
      * Uploads an envelope sealed for [contributionId] in parts of [partBytes] (one D1 row each,
@@ -72,22 +81,18 @@ class ContributionApiClient(
         val sha = ContributionSigner.sha256Hex(envelope)
         val parts = (envelope.size + partBytes - 1) / partBytes
         val query = "parts=$parts&bytes=${envelope.size}"
-        val token = appCheckToken()
-        if (token == null && !config.isLoopback) return NO_TOKEN
         for (n in 0 until parts) {
             val slice = envelope.copyOfRange(n * partBytes, minOf(envelope.size, (n + 1) * partBytes))
-            val answer = send("/v1/contributions/$contributionId/parts/$n", query, slice, sha, OCTET, contributionId, token)
+            val answer = attested { send("/v1/contributions/$contributionId/parts/$n", query, slice, sha, OCTET, contributionId) }
             if (answer !is Answer.Ok || answer.code != 202) return stored(answer)
         }
-        return stored(send("/v1/contributions/$contributionId/commit", query, ByteArray(0), sha, OCTET, contributionId, token))
+        return stored(attested { send("/v1/contributions/$contributionId/commit", query, ByteArray(0), sha, OCTET, contributionId) })
     }
 
     /** POST /v1/withdrawals: deletes every photo this install sent. */
     suspend fun withdraw(): ApiOutcome {
         val body = "{}".toByteArray()
-        val token = appCheckToken()
-        if (token == null && !config.isLoopback) return NO_TOKEN
-        return when (val answer = send("/v1/withdrawals", null, body, ContributionSigner.sha256Hex(body), JSON, null, token)) {
+        return when (val answer = attested { send("/v1/withdrawals", null, body, ContributionSigner.sha256Hex(body), JSON, null) }) {
             is Answer.Ok -> {
                 val n = parseObject(answer.text)?.get("pending_deleted")?.takeIf { it.isJsonPrimitive }
                 ApiOutcome.Withdrawn(runCatching { n?.asInt }.getOrNull() ?: 0)
@@ -96,9 +101,39 @@ class ContributionApiClient(
         }
     }
 
+    /** Registers first if needed; re-registers once if the Worker forgot this device. */
+    private suspend fun attested(request: suspend () -> Answer): Answer {
+        if (!registered) register()?.let { return it }
+        val answer = request()
+        if (answer is Answer.Refused && answer.error == "unregistered") {
+            registered = false
+            register()?.let { return it }
+            return request()
+        }
+        return answer
+    }
+
+    /** POST /v1/devices with the attestation chain; null when registered. */
+    private suspend fun register(): Answer? {
+        val chain = withContext(Dispatchers.IO) { identity.attestationChain() }
+        val body = JsonObject().apply {
+            add("chain", com.google.gson.JsonArray().apply { chain.forEach { add(Base64.getEncoder().encodeToString(it)) } })
+        }.toString().toByteArray()
+        return when (val answer = send("/v1/devices", null, body, ContributionSigner.sha256Hex(body), JSON, null)) {
+            is Answer.Ok -> {
+                registered = true
+                null
+            }
+            is Answer.Refused -> {
+                Log.w(TAG, "Device registration refused: ${answer.error}")
+                answer
+            }
+        }
+    }
+
     private sealed interface Answer {
         data class Ok(val code: Int, val text: String) : Answer
-        data class Refused(val outcome: ApiOutcome) : Answer
+        data class Refused(val outcome: ApiOutcome, val error: String = "") : Answer
     }
 
     private fun stored(answer: Answer): ApiOutcome = when (answer) {
@@ -119,7 +154,6 @@ class ContributionApiClient(
         payloadSha: String,
         type: okhttp3.MediaType,
         contributionId: String?,
-        token: String?,
     ): Answer = withContext(Dispatchers.IO) {
         val timestamp = nowSeconds()
         val nonce = ByteArray(12).also { random.nextBytes(it) }.joinToString("") { "%02x".format(it) }
@@ -132,7 +166,6 @@ class ContributionApiClient(
             .header("X-OG-Nonce", nonce)
             .header("X-OG-Payload-SHA256", payloadSha)
             .header("X-OG-Signature", B64URL.encodeToString(identity.sign(message)))
-            .apply { if (token != null) header("X-Firebase-AppCheck", token) }
             .post(body.toRequestBody(type))
             .build()
         try {
@@ -141,7 +174,8 @@ class ContributionApiClient(
                 if (response.code in 200..202) {
                     Answer.Ok(response.code, text)
                 } else {
-                    Answer.Refused(classifyFailure(response.code, text, response.header("Retry-After")))
+                    val error = parseObject(text)?.get("error")?.takeIf { it.isJsonPrimitive }?.asString.orEmpty()
+                    Answer.Refused(classifyFailure(response.code, text, response.header("Retry-After")), error)
                 }
             }
         } catch (e: IOException) {
@@ -152,13 +186,6 @@ class ContributionApiClient(
 
     companion object {
         private const val TAG = "ContribApiClient"
-
-        /**
-         * No App Check token on this phone right now (Play Integrity quota of 10 000 requests per
-         * day, no Play services, no network): nothing is sent, and the runner waits without
-         * spending the photo's attempts. httpCode 0 marks that it never reached the Worker.
-         */
-        val NO_TOKEN = ApiOutcome.Failed(ContributionSyncStatus.ATTESTATION, 0)
 
         /** Part size the Worker expects: one D1 row (2 000 000-byte limit) per part. */
         const val PART_BYTES = 1_900_000
@@ -187,7 +214,8 @@ class ContributionApiClient(
             val wait = retryAfter?.trim()?.toLongOrNull()
             return when {
                 code == 411 || code == 413 || code == 415 || code == 422 -> ApiOutcome.Rejected(code)
-                code == 401 && error == "attestation" -> ApiOutcome.Failed(ContributionSyncStatus.ATTESTATION, code)
+                code == 401 && (error == "attestation" || error == "unregistered") ->
+                    ApiOutcome.Failed(ContributionSyncStatus.ATTESTATION, code)
                 code == 401 -> ApiOutcome.Failed(ContributionSyncStatus.AUTH, code)
                 code == 429 -> ApiOutcome.Failed(ContributionSyncStatus.RATE_LIMITED, code, wait)
                 code == 503 && error == "quota" -> ApiOutcome.Failed(ContributionSyncStatus.QUOTA, code, wait)

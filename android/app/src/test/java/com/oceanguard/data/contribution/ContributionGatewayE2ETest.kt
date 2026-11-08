@@ -41,7 +41,7 @@ class ContributionGatewayE2ETest {
     @Test
     fun tenMegabyteUploadsWithAndWithoutLocationAndARetry() = runBlocking {
         val config = configOrSkip()
-        val client = ContributionApiClient(config, SoftwareDeviceIdentity(), appCheckToken = { null })
+        val client = ContributionApiClient(config, SoftwareDeviceIdentity())
         val photo = largeSyntheticJpeg(tmp.root, "e2e.jpg") // >= 10 MiB, several parts
         val withGps = ContributionImage.prepare(photo, includeLocation = true, workDir = tmp.newFolder("a"))
         val withoutGps = ContributionImage.prepare(photo, includeLocation = false, workDir = tmp.newFolder("b"))
@@ -59,7 +59,7 @@ class ContributionGatewayE2ETest {
     @Test
     fun withdrawalDeletesWhatThatDeviceLeftInTheBuffer() = runBlocking {
         val config = configOrSkip()
-        val client = ContributionApiClient(config, SoftwareDeviceIdentity(), appCheckToken = { null })
+        val client = ContributionApiClient(config, SoftwareDeviceIdentity())
         val id = UUID.randomUUID().toString()
         val photo = syntheticJpeg(tmp.root, "w.jpg", withGps = false).readBytes()
         val stored = client.upload(ContributionEnvelope.seal(config.recipientSpki!!, id, meta(id), photo), id)

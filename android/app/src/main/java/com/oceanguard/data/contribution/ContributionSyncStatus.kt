@@ -17,7 +17,7 @@ enum class ContributionSyncStatus {
     /** Device signature rejected (usually the phone clock is far off). */
     AUTH,
 
-    /** App Check token missing or rejected. */
+    /** This phone failed Android key attestation (unlocked, modified or no secure hardware). */
     ATTESTATION,
 
     /** Too many uploads; the server asked to wait. */

@@ -22,17 +22,6 @@ fun contribSetting(key: String): String =
 fun javaString(value: String): String =
     "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
-// Firebase App Check (contract section 3b). Applied only when android/app/google-services.json
-// exists (git-ignored): the APK then carries the App Check SDK and sends X-Firebase-AppCheck.
-// Without the file the APK contains no Firebase code and signs requests with HMAC only.
-// -Poceanguard.appcheck=true compiles the App Check sources without the file (build check only;
-// at run time FirebaseApp is absent and no token is sent).
-val googleServicesFile = file("google-services.json")
-val appCheckEnabled = googleServicesFile.exists() ||
-    (findProperty("oceanguard.appcheck")?.toString() == "true")
-if (googleServicesFile.exists()) {
-    apply(plugin = "com.google.gms.google-services")
-}
 
 /**
  * Derives version from the latest git tag.
@@ -106,10 +95,9 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Research contribution (contract v4): Worker URL and NAS public key. Both public;
-        // no secret is embedded in the APK (identity = Keystore key, attestation = App Check).
+        // no secret is embedded in the APK (identity and attestation: Android Keystore key).
         buildConfigField("String", "CONTRIB_API_URL", javaString(contribSetting("CONTRIBUTION_API_URL")))
         buildConfigField("String", "CONTRIB_RECIPIENT_KEY", javaString(contribSetting("CONTRIBUTION_RECIPIENT_KEY")))
-        buildConfigField("boolean", "CONTRIB_APP_CHECK", appCheckEnabled.toString())
 
         vectorDrawables {
             useSupportLibrary = true
@@ -182,16 +170,6 @@ android {
 
     // Asset pack configuration (for large model files)
     assetPacks += mutableSetOf()
-
-    // App Check sources: real ones (debug provider in debug, Play Integrity in release) when
-    // enabled, a no-op stub otherwise. Same class name in both, so callers need no condition.
-    sourceSets {
-        getByName("main").java.srcDir(if (appCheckEnabled) "src/appcheck/java" else "src/noappcheck/java")
-        if (appCheckEnabled) {
-            getByName("debug").java.srcDir("src/appcheckDebug/java")
-            getByName("release").java.srcDir("src/appcheckRelease/java")
-        }
-    }
 
     testOptions {
         unitTests {
@@ -314,13 +292,6 @@ dependencies {
     // OkHttp: used directly by the contribution client (explicit, not via Coil)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // Firebase App Check, only when enabled (see appCheckEnabled at the top)
-    if (appCheckEnabled) {
-        implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
-        implementation("com.google.firebase:firebase-appcheck")
-        debugImplementation("com.google.firebase:firebase-appcheck-debug")
-        releaseImplementation("com.google.firebase:firebase-appcheck-playintegrity")
-    }
 
     // Testing
     testImplementation("junit:junit:4.13.2")

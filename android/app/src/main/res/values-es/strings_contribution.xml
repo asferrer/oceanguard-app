@@ -9,7 +9,7 @@
     <string name="contribute_sync_ok">enviado correctamente</string>
     <string name="contribute_sync_not_configured">esta versión no tiene servidor de investigación</string>
     <string name="contribute_sync_auth">el servidor rechazó la firma de este teléfono; revisa la fecha y la hora</string>
-    <string name="contribute_sync_attestation">no se pudo verificar la app; se reintentará</string>
+    <string name="contribute_sync_attestation">no se pudo verificar este teléfono (cargador de arranque desbloqueado, sistema modificado o sin hardware seguro); se reintentará</string>
     <string name="contribute_sync_rate_limited">demasiados envíos; se reintentará más tarde</string>
     <string name="contribute_sync_server">error del servidor; se reintentará más tarde</string>
     <string name="contribute_sync_network">sin conexión con el servidor; se reintentará</string>
@@ -28,7 +28,7 @@
     <string name="contribute_policy_close">Cerrar</string>
     <string name="contribute_policy_title">Privacidad: contribución de fotos</string>
     <string name="contribute_policy_what_title">Qué se recoge</string>
-    <string name="contribute_policy_what_body">Solo si activas la contribución: cada foto analizada a resolución completa con sus metadatos EXIF (ubicación GPS salvo que desactives «Incluir ubicación», fecha y hora, marca y modelo del teléfono, orientación), los objetos detectados (clase, recuadro y confianza), la versión de la app y un identificador anónimo de instalación (derivado de una clave que nunca sale del teléfono). Ni nombre, ni cuenta, ni correo, ni contactos.</string>
+    <string name="contribute_policy_what_body">Solo si activas la contribución: cada foto analizada a resolución completa con sus metadatos EXIF (ubicación GPS salvo que desactives «Incluir ubicación», fecha y hora, marca y modelo del teléfono, orientación), los objetos detectados (clase, recuadro y confianza), la versión de la app y un identificador anónimo de instalación (derivado de una clave que nunca sale del teléfono). Ni nombre, ni cuenta, ni correo, ni contactos. Una vez, el teléfono envía además un certificado de su hardware seguro que demuestra que la app es auténtica y el teléfono no está modificado (estado de arranque y nivel de parche; sin identificadores).</string>
     <string name="contribute_policy_why_title">Para qué</string>
     <string name="contribute_policy_why_body">Para mejorar los modelos de detección y de especies de OceanGuard y calcular estadísticas (por ejemplo, dónde y cuándo aparecen residuos y con qué teléfonos). No se vende nada ni se usa para publicidad.</string>
     <string name="contribute_policy_where_title">Dónde se guarda</string>

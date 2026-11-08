@@ -7,8 +7,6 @@ android/.gradle/
 android/.idea/
 android/.kotlin/
 android/local.properties
-# Firebase client config for App Check (per developer, downloaded from the Firebase console)
-android/app/google-services.json
 android/app/build/
 android/app/.cxx/
 android/build/

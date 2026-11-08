@@ -50,7 +50,6 @@ class ContributionUploadRunnerTest {
     private fun client() = ContributionApiClient(
         testConfig("http://127.0.0.1:${server.port}/"),
         identity,
-        appCheckToken = { "token" },
     )
 
     private fun runner(
@@ -96,7 +95,7 @@ class ContributionUploadRunnerTest {
         ids.forEach { assertEquals("DONE", statusOf(it).first) }
         assertEquals(ContributionSyncStatus.OK, prefs.statuses.last())
         assertEquals(identity.clientId, prefs.id)
-        val first = server.takeRequest()
+        val first = server.uploadRequests().first()
         assertTrue(contributionIdOf(first) != null)
         assertTrue(first.path!!.contains("/parts/0?parts=1&bytes="))
         assertTrue("envelope, not the photo", first.body.readByteArray().copyOfRange(0, 4).contentEquals("OGC1".toByteArray()))
@@ -144,7 +143,7 @@ class ContributionUploadRunnerTest {
         assertEquals(RunOutcome.DONE, last.outcome)
         assertEquals("FAILED", statusOf(ids[0]).first)
         assertEquals(ContributionSyncStatus.AUTH, prefs.statuses.last())
-        assertEquals(ContributionUploadRunner.MAX_RETRIES, server.requestCount)
+        assertEquals(ContributionUploadRunner.MAX_RETRIES, server.uploadRequests().size)
     }
 
     @Test
@@ -157,22 +156,13 @@ class ContributionUploadRunnerTest {
     }
 
     @Test
-    fun missingAppCheckTokenWaitsWithoutSpendingAttempts() = runBlocking {
-        val ids = queue("a.jpg")
-        val offline = ContributionApiClient(testConfig("https://oceanguard-contrib.example.workers.dev/"), identity, appCheckToken = { null })
-        assertEquals(RunOutcome.RETRY, runner(client = offline).run().outcome)
-        assertEquals("PENDING" to 0, statusOf(ids[0]))
-        assertEquals(ContributionSyncStatus.ATTESTATION, prefs.statuses.last())
-    }
-
-    @Test
     fun retriesKeepTheSameContributionId() = runBlocking {
         queue("a.jpg")
         worker.enqueue(MockResponse().setResponseCode(500))
         worker.enqueue(MockResponse().setResponseCode(201).setBody("{}"))
         runner().run()
         runner().run()
-        val ids = (1..server.requestCount).map { contributionIdOf(server.takeRequest()) }.toSet()
+        val ids = server.uploadRequests().map { contributionIdOf(it) }.toSet()
         assertEquals("every request of both attempts names the same contribution", 1, ids.size)
     }
 
@@ -189,12 +179,22 @@ class ContributionUploadRunnerTest {
         val report = runner(prepare = { f, include -> ContributionImage.prepare(f, include, work) }).run()
         assertEquals(RunReport(1, 0, RunOutcome.DONE), report)
         assertEquals("DONE", statusOf(id).first)
-        val requests = (1..server.requestCount).map { server.takeRequest() }
+        val requests = server.uploadRequests()
         val parts = requests.filter { "/parts/" in it.path!! }
         assertEquals(6, parts.size)
         assertTrue("one D1 row per part", parts.all { it.bodySize <= 2_000_000 })
         assertTrue(requests.last().path!!.contains("/commit?parts=6&bytes="))
         assertTrue("the temporary copy without GPS is gone", work.listFiles().orEmpty().isEmpty())
+    }
+
+    @Test
+    fun deviceThatFailsAttestationSpendsAttemptsAndSaysWhy() = runBlocking {
+        val ids = queue("a.jpg")
+        worker.registration = MockResponse().setResponseCode(401).setBody("""{"error":"attestation","reason":"bootloader unlocked"}""")
+        assertEquals(RunOutcome.RETRY, runner().run().outcome)
+        assertEquals("PENDING" to 1, statusOf(ids[0]))
+        assertEquals(ContributionSyncStatus.ATTESTATION, prefs.statuses.last())
+        assertTrue("nothing uploaded", server.uploadRequests().isEmpty())
     }
 
     @Test
@@ -214,6 +214,6 @@ class ContributionUploadRunnerTest {
         worker.enqueue(MockResponse().setResponseCode(201).setBody("{}"))
         runner(prepare = { f, include -> seen += include; f.readBytes() }).run()
         assertEquals(listOf(false), seen)
-        assertTrue(server.takeRequest().getHeader("X-OG-Signature")!!.isNotEmpty())
+        assertTrue(server.uploadRequests().first().getHeader("X-OG-Signature")!!.isNotEmpty())
     }
 }

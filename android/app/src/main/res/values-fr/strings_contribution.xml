@@ -9,7 +9,7 @@
     <string name="contribute_sync_ok">envoi réussi</string>
     <string name="contribute_sync_not_configured">pas de serveur de recherche dans cette version</string>
     <string name="contribute_sync_auth">le serveur a refusé la signature de ce téléphone ; vérifiez la date et l\'heure</string>
-    <string name="contribute_sync_attestation">l\'application n\'a pas pu être vérifiée ; nouvel essai prévu</string>
+    <string name="contribute_sync_attestation">ce téléphone n\'a pas pu être vérifié (chargeur d\'amorçage déverrouillé, système modifié ou pas de matériel sécurisé) ; nouvel essai prévu</string>
     <string name="contribute_sync_rate_limited">trop d\'envois ; nouvel essai plus tard</string>
     <string name="contribute_sync_server">erreur du serveur ; nouvel essai plus tard</string>
     <string name="contribute_sync_network">pas de connexion au serveur ; nouvel essai prévu</string>
@@ -28,7 +28,7 @@
     <string name="contribute_policy_close">Fermer</string>
     <string name="contribute_policy_title">Confidentialité : partage de photos</string>
     <string name="contribute_policy_what_title">Ce qui est collecté</string>
-    <string name="contribute_policy_what_body">Seulement si vous activez la contribution : chaque photo analysée en pleine résolution avec ses métadonnées EXIF (position GPS sauf si vous désactivez « Inclure la position », date et heure, marque et modèle du téléphone, orientation), les objets détectés (classe, cadre et confiance), la version de l\'application et un identifiant d\'installation anonyme (dérivé d\'une clé qui ne quitte jamais le téléphone). Ni nom, ni compte, ni e-mail, ni contacts.</string>
+    <string name="contribute_policy_what_body">Seulement si vous activez la contribution : chaque photo analysée en pleine résolution avec ses métadonnées EXIF (position GPS sauf si vous désactivez « Inclure la position », date et heure, marque et modèle du téléphone, orientation), les objets détectés (classe, cadre et confiance), la version de l\'application et un identifiant d\'installation anonyme (dérivé d\'une clé qui ne quitte jamais le téléphone). Ni nom, ni compte, ni e-mail, ni contacts. Une fois, le téléphone envoie aussi un certificat de son matériel sécurisé prouvant que l\'application est authentique et le téléphone non modifié (état de démarrage et niveau de correctif ; aucun identifiant).</string>
     <string name="contribute_policy_why_title">Pour quoi faire</string>
     <string name="contribute_policy_why_body">Pour améliorer les modèles de détection et d\'espèces d\'OceanGuard et établir des statistiques (par exemple où et quand des déchets sont trouvés et avec quels téléphones). Rien n\'est vendu ni utilisé à des fins publicitaires.</string>
     <string name="contribute_policy_where_title">Où c\'est conservé</string>

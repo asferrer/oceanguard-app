@@ -30,21 +30,22 @@ CONTRIBUTION_API_URL=https://oceanguard-contrib.<account>.workers.dev
 CONTRIBUTION_RECIPIENT_KEY=<NAS public key from contribution-api/deploy/generate_keys.py>
 ```
 
-`android/app/google-services.json` (git-ignored) turns on Firebase App Check: the build applies
-the google-services plugin, adds the App Check SDK (debug provider in debug builds, Play
-Integrity in release builds) and attaches `X-Firebase-AppCheck` to every request. Without the
-file the APK contains no Firebase code and **does not offer contribution** (the Worker refuses
-unattested requests), except against a local test Worker on `127.0.0.1`.
-`-Poceanguard.appcheck=true` compiles the App Check sources without the file, to check that they
-build.
+**Attestation without Google services.** The Keystore key is generated with an attestation
+challenge. Before its first request (and whenever the Worker answers `unregistered`) the app
+sends the key's certificate chain to `POST /v1/devices`; the Worker checks it up to a Google
+attestation root and requires the key in TEE or StrongBox, a locked bootloader with verified
+boot, and this app (`com.oceanguard.ai`) signed with the author's release certificate. It
+works for the APK distributed through GitHub: no Firebase, no Play Console, no quota. A phone
+that fails (rooted, unlocked, no secure hardware) cannot contribute; Settings says why.
 
 Without a destination, the Settings switch is disabled with an explanation, the post-analysis
 sheet never appears, nothing is queued and anything left in the queue is removed at start-up.
 
 ## Security decisions
 
-- **No secret in the APK.** No HMAC, no API key. Identity = Keystore key (ECDSA signature on every
-  request); attestation = App Check (the main control). The Worker only holds public keys.
+- **No secret in the APK.** No HMAC, no API key, no Firebase. Identity and attestation = the
+  Keystore key (Android key attestation once, ECDSA signature on every request). The Worker only
+  holds public keys.
 - **End-to-end encryption** to the NAS: a compromise of the Cloudflare account or a TLS
   interception reveals no photo and no location.
 - **TLS**: system trust store, TLS 1.2+ with restricted suites (`ConnectionSpec.RESTRICTED_TLS`),
@@ -61,17 +62,15 @@ item and install, so a retry after a lost answer is a duplicate, not a second co
 `ContributionApiClient` sends the envelope in parts of 1 900 000 bytes (one D1 row each, the
 Worker's limit is 2 000 000 bytes per row) and then a commit; photos up to 40 MiB (a 108 MP
 JPEG) are accepted, larger ones are marked FAILED without being sent. The EXIF is never
-touched by the splitting: the parts are slices of the encrypted envelope. Without an App Check
-token (for example, Play Integrity's 10 000 requests a day exhausted) nothing is sent and no
-attempt is spent.
+touched by the splitting: the parts are slices of the encrypted envelope.
 
 | Worker answer | Item | Pass |
 |---|---|---|
 | 201, or 200 duplicate | DONE | continues |
 | 411 / 413 / 415 / 422, photo missing, location not removable, not sealable | FAILED | continues |
-| 401 (App Check or signature), 5xx, network | stays PENDING, one attempt spent | stops, WorkManager retries (backoff 5 min, doubling) |
+| 401 (attestation refused or signature), 5xx, network | stays PENDING, one attempt spent | stops, WorkManager retries (backoff 5 min, doubling) |
 | 409 (upload interrupted) | stays PENDING, one attempt spent | stops, the next attempt starts at part 0 |
-| 429, 503 quota, or no App Check token | stays PENDING, no attempt spent | stops, retried later |
+| 429 or 503 quota | stays PENDING, no attempt spent | stops, retried later |
 
 After 5 attempts the item becomes FAILED, so nothing stays PENDING forever. Settings shows the
 counts, the last result in words, **Upload now**, **Retry failed**, the anonymous contributor

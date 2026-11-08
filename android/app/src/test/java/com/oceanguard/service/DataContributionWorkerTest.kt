@@ -67,7 +67,7 @@ class DataContributionWorkerTest {
 
     private fun useRunner(configured: Boolean) {
         val client = if (configured) {
-            ContributionApiClient(testConfig("http://127.0.0.1:${server.port}/"), SoftwareDeviceIdentity(), appCheckToken = { "token" })
+            ContributionApiClient(testConfig("http://127.0.0.1:${server.port}/"), SoftwareDeviceIdentity())
         } else {
             null
         }

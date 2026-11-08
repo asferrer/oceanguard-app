@@ -97,8 +97,7 @@ class ContributionUploadRunner(
             }
             is ApiOutcome.Failed -> {
                 val waitOnly = outcome.status == ContributionSyncStatus.RATE_LIMITED ||
-                    outcome.status == ContributionSyncStatus.QUOTA ||
-                    outcome == ContributionApiClient.NO_TOKEN
+                    outcome.status == ContributionSyncStatus.QUOTA
                 if (!waitOnly) dao.incrementRetry(item.id)
                 prefs.recordSync(outcome.status)
                 Log.w(TAG, "Upload of ${item.id} failed: ${outcome.status} (${outcome.httpCode})")

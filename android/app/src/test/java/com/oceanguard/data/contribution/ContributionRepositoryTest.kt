@@ -55,7 +55,7 @@ class ContributionRepositoryTest {
         prefs = prefs,
         context = context,
         client = if (available) {
-            ContributionApiClient(testConfig("http://127.0.0.1:${server.port}/"), identity, appCheckToken = { "token" })
+            ContributionApiClient(testConfig("http://127.0.0.1:${server.port}/"), identity)
         } else {
             null
         },
@@ -135,7 +135,7 @@ class ContributionRepositoryTest {
         worker.enqueue(MockResponse().setResponseCode(202).setBody("""{"status":"accepted","pending_deleted":1}"""))
 
         assertEquals(WithdrawResult.Done(1), repository().withdrawAll())
-        assertEquals("/v1/withdrawals", server.takeRequest().path)
+        assertEquals("/v1/withdrawals", server.uploadRequests().single().path)
         assertEquals(0, dao.getDoneCount())
         assertFalse(prefs.consent)
         assertNull(prefs.id)

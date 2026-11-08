@@ -9,7 +9,7 @@
     <string name="contribute_sync_ok">inviato correttamente</string>
     <string name="contribute_sync_not_configured">nessun server di ricerca in questa versione</string>
     <string name="contribute_sync_auth">il server ha rifiutato la firma di questo telefono; controlla data e ora</string>
-    <string name="contribute_sync_attestation">non è stato possibile verificare l\'app; verrà ritentato</string>
+    <string name="contribute_sync_attestation">non è stato possibile verificare questo telefono (bootloader sbloccato, sistema modificato o senza hardware sicuro); verrà ritentato</string>
     <string name="contribute_sync_rate_limited">troppi invii; verrà ritentato più tardi</string>
     <string name="contribute_sync_server">errore del server; verrà ritentato più tardi</string>
     <string name="contribute_sync_network">nessuna connessione al server; verrà ritentato</string>
@@ -28,7 +28,7 @@
     <string name="contribute_policy_close">Chiudi</string>
     <string name="contribute_policy_title">Privacy: invio di foto</string>
     <string name="contribute_policy_what_title">Cosa viene raccolto</string>
-    <string name="contribute_policy_what_body">Solo se attivi la contribuzione: ogni foto analizzata a piena risoluzione con i suoi metadati EXIF (posizione GPS, a meno che tu non disattivi «Includi posizione», data e ora, marca e modello del telefono, orientamento), gli oggetti rilevati (classe, riquadro e confidenza), la versione dell\'app e un identificativo anonimo di installazione (derivato da una chiave che non lascia mai il telefono). Nessun nome, account, e-mail o contatto.</string>
+    <string name="contribute_policy_what_body">Solo se attivi la contribuzione: ogni foto analizzata a piena risoluzione con i suoi metadati EXIF (posizione GPS, a meno che tu non disattivi «Includi posizione», data e ora, marca e modello del telefono, orientamento), gli oggetti rilevati (classe, riquadro e confidenza), la versione dell\'app e un identificativo anonimo di installazione (derivato da una chiave che non lascia mai il telefono). Nessun nome, account, e-mail o contatto. Una volta, il telefono invia anche un certificato del suo hardware sicuro che dimostra che l\'app è autentica e il telefono non è modificato (stato di avvio e livello di patch; nessun identificativo).</string>
     <string name="contribute_policy_why_title">A cosa serve</string>
     <string name="contribute_policy_why_body">Per migliorare i modelli di rilevamento e delle specie di OceanGuard e calcolare statistiche (per esempio dove e quando si trovano rifiuti e con quali telefoni). Nulla viene venduto o usato per pubblicità.</string>
     <string name="contribute_policy_where_title">Dove viene conservato</string>
