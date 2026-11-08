@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Research contribution: settings, sync state, withdrawal and privacy policy. -->
+<resources>
+    <string name="contribute_unavailable_desc">Not available in this version of the app: it has no research server configured. Nothing is sent.</string>
+    <string name="contribute_include_location_label">Include location</string>
+    <string name="contribute_include_location_desc">Send the photo\'s GPS coordinates. When off they are removed from the uploaded copy; the photo on your phone keeps them.</string>
+    <string name="contribute_retry_failed_btn">Retry failed</string>
+    <string name="contribute_sync_line">Last attempt %2$s: %1$s</string>
+    <string name="contribute_sync_ok">sent correctly</string>
+    <string name="contribute_sync_not_configured">no research server in this version</string>
+    <string name="contribute_sync_auth">the server rejected the app key; an app update may be needed</string>
+    <string name="contribute_sync_attestation">the app could not be verified; it will retry</string>
+    <string name="contribute_sync_rate_limited">too many uploads; it will retry later</string>
+    <string name="contribute_sync_server">server error; it will retry later</string>
+    <string name="contribute_sync_network">no connection to the server; it will retry</string>
+    <string name="contribute_sync_rejected">the server refused a photo</string>
+    <string name="contribute_client_id_line">Anonymous contributor ID: %1$s</string>
+    <string name="contribute_withdraw_btn">Delete my contributed photos</string>
+    <string name="contribute_withdraw_title">Delete your contributed photos?</string>
+    <string name="contribute_withdraw_body">The photos and data this phone sent are deleted from the research server, the queue on this phone is emptied and contribution is turned off. Photos already included in a published dataset (without EXIF or location) cannot be removed from copies others downloaded.</string>
+    <string name="contribute_withdraw_confirm">Delete</string>
+    <string name="contribute_withdraw_done">%1$d photo(s) deleted from the research server</string>
+    <string name="contribute_withdraw_failed">Could not reach the server. Try again later.</string>
+    <string name="contribute_reset_prompts_btn">Reset contribution prompts</string>
+    <string name="contribute_reset_prompts_done">The contribution prompt will appear again after analyses</string>
+    <string name="contribute_privacy_exif">Sent with its EXIF: GPS location, date and time, phone model. You can leave the location out in Settings</string>
+    <string name="contribute_policy_link">Privacy policy</string>
+    <string name="contribute_policy_close">Close</string>
+    <string name="contribute_policy_title">Privacy: photo contribution</string>
+    <string name="contribute_policy_what_title">What is collected</string>
+    <string name="contribute_policy_what_body">Only if you turn contribution on: each analysed photo at full resolution with its EXIF metadata (GPS location unless you turn off “Include location”, date and time, phone make and model, orientation), the detected objects (class, box and confidence), the app version and an anonymous install ID. No name, account, e-mail or contacts.</string>
+    <string name="contribute_policy_why_title">What for</string>
+    <string name="contribute_policy_why_body">To improve the OceanGuard detection and species models and to compute statistics (for example where and when debris is found and with which phones). Nothing is sold or used for advertising.</string>
+    <string name="contribute_policy_where_title">Where it is kept</string>
+    <string name="contribute_policy_where_body">On a private server of the OceanGuard research project, reached only over HTTPS. The original photos with their EXIF are accessible only to the research team and are never served publicly.</string>
+    <string name="contribute_policy_publish_title">What may be published</string>
+    <string name="contribute_policy_publish_body">A research dataset may be published with the photos stripped of all EXIF and location, and their annotations. Real locations are never published, nor the install ID or the phone model.</string>
+    <string name="contribute_policy_withdraw_title">How to withdraw</string>
+    <string name="contribute_policy_withdraw_body">Turn contribution off in Settings to stop sending. “Delete my contributed photos” deletes from the server everything this phone sent. You can also ask the project to do it, giving the anonymous contributor ID shown in Settings.</string>
+    <string name="contribute_policy_license_title">Licence</string>
+    <string name="contribute_policy_license_body">By contributing you agree that your photos and their annotations may be shared, without EXIF or location, under the Creative Commons Attribution 4.0 International licence (CC BY 4.0), credited to “OceanGuard AI contributors”.</string>
+</resources>

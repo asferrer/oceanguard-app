@@ -54,6 +54,10 @@ interface ContributionQueueDao {
     @Query("DELETE FROM contribution_queue WHERE status IN ('DONE', 'FAILED') AND createdAt < :cutoffMs")
     suspend fun purgeOlderThan(cutoffMs: Long)
 
+    /** "Retry failed" in Settings: failed items get a fresh attempt budget. */
+    @Query("UPDATE contribution_queue SET status = 'PENDING', retryCount = 0 WHERE status = 'FAILED'")
+    suspend fun resetFailed(): Int
+
     /** Delete all pending items (used when user revokes consent). */
     @Query("DELETE FROM contribution_queue WHERE status = 'PENDING'")
     suspend fun deletePending()

@@ -102,8 +102,11 @@ fun OnboardingScreen(onComplete: (WelcomeResult) -> Unit) {
             when (val page = PAGES[index]) {
                 is WelcomePage.Info -> InfoPage(page.icon, page.title, page.body)
                 WelcomePage.Models -> ModelsPage(options, selected) { selected = it }
-                WelcomePage.Contribute -> ContributePage(contribute) { enabled ->
-                    scope.launch { app.settingsRepository.setContributeConsentGiven(enabled) }
+                WelcomePage.Contribute -> {
+                    val available = app.contributionRepository.isAvailable
+                    ContributePage(contribute, available) { enabled ->
+                        if (available) scope.launch { app.settingsRepository.setContributeConsentGiven(enabled) }
+                    }
                 }
                 WelcomePage.Tour -> TourPage()
             }

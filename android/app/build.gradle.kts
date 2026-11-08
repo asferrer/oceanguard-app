@@ -7,10 +7,31 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
-// Research contribution: NAS credentials injected from local.properties (never committed)
+// Research contribution: gateway settings from local.properties (never committed) or, for CI,
+// from environment variables of the same name. Empty values build an APK that does not offer
+// the feature at all.
 val contribProps = Properties().apply {
     val f = rootProject.file("local.properties")
-    if (f.exists()) load(f.inputStream())
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
+fun contribSetting(key: String): String =
+    (contribProps.getProperty(key) ?: System.getenv(key) ?: "").trim()
+
+/** Value as a Java string literal for buildConfigField. */
+fun javaString(value: String): String =
+    "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
+// Firebase App Check (contract section 3b). Applied only when android/app/google-services.json
+// exists (git-ignored): the APK then carries the App Check SDK and sends X-Firebase-AppCheck.
+// Without the file the APK contains no Firebase code and signs requests with HMAC only.
+// -Poceanguard.appcheck=true compiles the App Check sources without the file (build check only;
+// at run time FirebaseApp is absent and no token is sent).
+val googleServicesFile = file("google-services.json")
+val appCheckEnabled = googleServicesFile.exists() ||
+    (findProperty("oceanguard.appcheck")?.toString() == "true")
+if (googleServicesFile.exists()) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 /**
@@ -84,10 +105,11 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Research contribution: WebDAV credentials (read from local.properties)
-        buildConfigField("String", "CONTRIB_URL",  "\"${contribProps.getProperty("CONTRIBUTION_WEBDAV_URL", "")}\"")
-        buildConfigField("String", "CONTRIB_USER", "\"${contribProps.getProperty("CONTRIBUTION_WEBDAV_USER", "")}\"")
-        buildConfigField("String", "CONTRIB_PASS", "\"${contribProps.getProperty("CONTRIBUTION_WEBDAV_PASS", "")}\"")
+        // Research contribution: gateway URL and HMAC key (contract section 7)
+        buildConfigField("String", "CONTRIB_API_URL", javaString(contribSetting("CONTRIBUTION_API_URL")))
+        buildConfigField("String", "CONTRIB_API_KEY_ID", javaString(contribSetting("CONTRIBUTION_API_KEY_ID")))
+        buildConfigField("String", "CONTRIB_API_SECRET", javaString(contribSetting("CONTRIBUTION_API_SECRET")))
+        buildConfigField("boolean", "CONTRIB_APP_CHECK", appCheckEnabled.toString())
 
         vectorDrawables {
             useSupportLibrary = true
@@ -161,9 +183,21 @@ android {
     // Asset pack configuration (for large model files)
     assetPacks += mutableSetOf()
 
+    // App Check sources: real ones (debug provider in debug, Play Integrity in release) when
+    // enabled, a no-op stub otherwise. Same class name in both, so callers need no condition.
+    sourceSets {
+        getByName("main").java.srcDir(if (appCheckEnabled) "src/appcheck/java" else "src/noappcheck/java")
+        if (appCheckEnabled) {
+            getByName("debug").java.srcDir("src/appcheckDebug/java")
+            getByName("release").java.srcDir("src/appcheckRelease/java")
+        }
+    }
+
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            // Robolectric tests (contribution queue, worker, EXIF) read the merged resources.
+            isIncludeAndroidResources = true
         }
     }
 }
@@ -277,8 +311,25 @@ dependencies {
     // WorkManager — background upload scheduling (ktx merged into runtime since 2.9.0)
     implementation("androidx.work:work-runtime-ktx:2.11.2")
 
+    // OkHttp: used directly by the contribution client (explicit, not via Coil)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // Firebase App Check, only when enabled (see appCheckEnabled at the top)
+    if (appCheckEnabled) {
+        implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
+        implementation("com.google.firebase:firebase-appcheck")
+        debugImplementation("com.google.firebase:firebase-appcheck-debug")
+        releaseImplementation("com.google.firebase:firebase-appcheck-playintegrity")
+    }
+
     // Testing
     testImplementation("junit:junit:4.13.2")
+    // Contribution: queue, worker and EXIF tests on the JVM
+    testImplementation("org.robolectric:robolectric:4.16.1")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.work:work-testing:2.11.2")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     // Mockito 5 (inline mock maker by default) — used to mock final android.* stub
     // classes such as Bitmap in pure-JVM unit tests (no Robolectric needed).
     testImplementation("org.mockito:mockito-core:5.14.2")

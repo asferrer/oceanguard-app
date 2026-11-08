@@ -91,7 +91,7 @@
 
     <!-- Page 4 -->
     <string name="onboarding_page4_title">100% Offline\n&amp; Private</string>
-    <string name="onboarding_page4_desc">All processing happens on-device. No internet required. Your data never leaves your phone \u2014 perfect for remote field work.</string>
+    <string name="onboarding_page4_desc">All processing happens on-device. No internet required. Your photos stay on your phone unless you choose to contribute them — perfect for remote field work.</string>
 
     <!-- Page 5 -->
     <string name="onboarding_page5_title">Earn\nAchievements</string>
@@ -99,7 +99,7 @@
 
     <!-- Page 6 – Research Contribution -->
     <string name="onboarding_contribute_title">Help Improve Detection</string>
-    <string name="onboarding_contribute_body">Opt in to contribute your analyzed images to model research. Only detection data is shared \u2014 no location, no personal info, fully optional.</string>
+    <string name="onboarding_contribute_body">Optional. If you turn this on, each analysed photo is sent to the OceanGuard research server with its EXIF metadata (GPS location, date and time, phone model) and the detections, to improve the detection and species models and for statistics. In Settings you can leave the location out, stop at any time or delete the photos you sent.</string>
     <string name="onboarding_contribute_toggle">Contribute my images</string>
 
     <!-- Buttons -->
@@ -309,13 +309,13 @@
 
     <!-- Consent dialog -->
     <string name="contribute_consent_title">Contribute to Research</string>
-    <string name="contribute_consent_body">Your full-resolution images and detection bounding boxes will be sent exclusively to improve the OceanGuard AI model. No GPS coordinates, notes, or personal identifiers are included. You can withdraw consent at any time from Settings.</string>
+    <string name="contribute_consent_body">Each analysed photo will be sent at full resolution to the OceanGuard research server with its EXIF metadata (GPS location, date and time, phone make and model) and the detected objects. They are used to improve the detection and species models and for statistics. Real locations are never published. At any time in Settings you can turn off “Include location”, withdraw consent or delete the photos you sent.</string>
     <string name="contribute_consent_accept">I Consent</string>
     <string name="contribute_consent_dismiss">Cancel</string>
 
     <!-- Post-analysis prompt (bottom sheet) -->
     <string name="contribute_prompt_title">Help Improve OceanGuard AI</string>
-    <string name="contribute_prompt_body">Your analyzed image(s) could help train better marine debris detection. Only the image and detected objects are shared \u2014 no location, no personal data.</string>
+    <string name="contribute_prompt_body">Your analysed photo(s) can help train better marine debris and species detection. Each photo is sent with its EXIF metadata (location, date and time, phone model) and the detected objects.</string>
     <string name="contribute_prompt_wifi">Upload on WiFi</string>
     <string name="contribute_prompt_now">Upload now</string>
     <string name="contribute_prompt_skip">Not now</string>
@@ -346,7 +346,6 @@
     <string name="contribute_enqueue_error">Could not prepare image for upload</string>
 
     <!-- Privacy bullets in bottom sheet -->
-    <string name="contribute_privacy_no_location">No GPS coordinates or location data</string>
-    <string name="contribute_privacy_no_personal">No personal identifiers included</string>
-    <string name="contribute_privacy_research_only">Used exclusively for model research</string>
+    <string name="contribute_privacy_no_personal">No name, account or contact details; only an anonymous install ID</string>
+    <string name="contribute_privacy_research_only">Used only for research: better models and statistics. Locations are never published</string>
 </resources>

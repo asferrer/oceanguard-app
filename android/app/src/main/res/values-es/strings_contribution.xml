@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Research contribution: settings, sync state, withdrawal and privacy policy. -->
+<resources>
+    <string name="contribute_unavailable_desc">No disponible en esta versión de la app: no tiene un servidor de investigación configurado. No se envía nada.</string>
+    <string name="contribute_include_location_label">Incluir ubicación</string>
+    <string name="contribute_include_location_desc">Envía las coordenadas GPS de la foto. Si lo desactivas, se quitan de la copia que se sube; la foto del teléfono las conserva.</string>
+    <string name="contribute_retry_failed_btn">Reintentar fallidas</string>
+    <string name="contribute_sync_line">Último intento %2$s: %1$s</string>
+    <string name="contribute_sync_ok">enviado correctamente</string>
+    <string name="contribute_sync_not_configured">esta versión no tiene servidor de investigación</string>
+    <string name="contribute_sync_auth">el servidor rechazó la clave de la app; puede hacer falta actualizarla</string>
+    <string name="contribute_sync_attestation">no se pudo verificar la app; se reintentará</string>
+    <string name="contribute_sync_rate_limited">demasiados envíos; se reintentará más tarde</string>
+    <string name="contribute_sync_server">error del servidor; se reintentará más tarde</string>
+    <string name="contribute_sync_network">sin conexión con el servidor; se reintentará</string>
+    <string name="contribute_sync_rejected">el servidor rechazó una foto</string>
+    <string name="contribute_client_id_line">Identificador anónimo de contribuyente: %1$s</string>
+    <string name="contribute_withdraw_btn">Borrar mis fotos aportadas</string>
+    <string name="contribute_withdraw_title">¿Borrar tus fotos aportadas?</string>
+    <string name="contribute_withdraw_body">Se borran del servidor de investigación las fotos y datos que envió este teléfono, se vacía la cola del teléfono y se desactiva la contribución. Las fotos ya incluidas en un conjunto de datos publicado (sin EXIF ni ubicación) no se pueden quitar de las copias que otros hayan descargado.</string>
+    <string name="contribute_withdraw_confirm">Borrar</string>
+    <string name="contribute_withdraw_done">%1$d foto(s) borrada(s) del servidor de investigación</string>
+    <string name="contribute_withdraw_failed">No se pudo contactar con el servidor. Inténtalo más tarde.</string>
+    <string name="contribute_reset_prompts_btn">Restablecer avisos de contribución</string>
+    <string name="contribute_reset_prompts_done">El aviso de contribución volverá a aparecer tras los análisis</string>
+    <string name="contribute_privacy_exif">Se envía con su EXIF: ubicación GPS, fecha y hora, modelo del teléfono. Puedes quitar la ubicación en Ajustes</string>
+    <string name="contribute_policy_link">Política de privacidad</string>
+    <string name="contribute_policy_close">Cerrar</string>
+    <string name="contribute_policy_title">Privacidad: contribución de fotos</string>
+    <string name="contribute_policy_what_title">Qué se recoge</string>
+    <string name="contribute_policy_what_body">Solo si activas la contribución: cada foto analizada a resolución completa con sus metadatos EXIF (ubicación GPS salvo que desactives «Incluir ubicación», fecha y hora, marca y modelo del teléfono, orientación), los objetos detectados (clase, recuadro y confianza), la versión de la app y un identificador anónimo de instalación. Ni nombre, ni cuenta, ni correo, ni contactos.</string>
+    <string name="contribute_policy_why_title">Para qué</string>
+    <string name="contribute_policy_why_body">Para mejorar los modelos de detección y de especies de OceanGuard y calcular estadísticas (por ejemplo, dónde y cuándo aparecen residuos y con qué teléfonos). No se vende nada ni se usa para publicidad.</string>
+    <string name="contribute_policy_where_title">Dónde se guarda</string>
+    <string name="contribute_policy_where_body">En un servidor privado del proyecto de investigación OceanGuard, al que solo se llega por HTTPS. Las fotos originales con su EXIF solo son accesibles para el equipo de investigación y nunca se sirven públicamente.</string>
+    <string name="contribute_policy_publish_title">Qué puede publicarse</string>
+    <string name="contribute_policy_publish_body">Puede publicarse un conjunto de datos de investigación con las fotos sin ningún EXIF ni ubicación y sus anotaciones. Nunca se publican ubicaciones reales, ni el identificador de instalación ni el modelo del teléfono.</string>
+    <string name="contribute_policy_withdraw_title">Cómo retirarlas</string>
+    <string name="contribute_policy_withdraw_body">Desactiva la contribución en Ajustes para dejar de enviar. «Borrar mis fotos aportadas» borra del servidor todo lo que envió este teléfono. También puedes pedírselo al proyecto indicando el identificador anónimo de contribuyente que aparece en Ajustes.</string>
+    <string name="contribute_policy_license_title">Licencia</string>
+    <string name="contribute_policy_license_body">Al contribuir aceptas que tus fotos y sus anotaciones puedan compartirse, sin EXIF ni ubicación, con la licencia Creative Commons Atribución 4.0 Internacional (CC BY 4.0), con el reconocimiento «Contribuyentes de OceanGuard AI».</string>
+</resources>

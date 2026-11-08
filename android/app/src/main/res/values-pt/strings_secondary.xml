@@ -435,7 +435,7 @@
     <string name="tour_settings_tours_title">Tours Guiados</string>
     <string name="tour_settings_tours_desc">Repita os tours guiados a qualquer momento para rever todas as funcionalidades da app.</string>
     <string name="tour_settings_contribution_title">Contribuição para a Investigação</string>
-    <string name="tour_settings_contribution_desc">Opte por partilhar as suas imagens analisadas com a equipa de investigação OceanGuard através do seu próprio servidor NAS. Sem dados GPS ou pessoais - apenas a imagem e as deteções.</string>
+    <string name="tour_settings_contribution_desc">Compartilhe suas fotos analisadas com a equipe de pesquisa do OceanGuard. Elas vão com seus metadados EXIF (localização, data, modelo do telefone) e as detecções; você pode retirar a localização.</string>
 
     <!-- Tour do MarineDex -->
     <string name="tour_marinedex_progress_title">Progresso da Coleção</string>

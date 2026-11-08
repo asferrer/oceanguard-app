@@ -436,7 +436,7 @@
     <string name="tour_settings_tours_title">Guided Tours</string>
     <string name="tour_settings_tours_desc">Replay the guided tours at any time to revisit all app features.</string>
     <string name="tour_settings_contribution_title">Research Contribution</string>
-    <string name="tour_settings_contribution_desc">Opt in to share your analyzed images with the OceanGuard research team via your own NAS server. No GPS or personal data - only the image and detections.</string>
+    <string name="tour_settings_contribution_desc">Opt in to share your analysed photos with the OceanGuard research team. They travel with their EXIF metadata (location, date, phone model) and the detections; you can leave the location out.</string>
 
     <!-- MarineDex tour -->
     <string name="tour_marinedex_progress_title">Collection Progress</string>

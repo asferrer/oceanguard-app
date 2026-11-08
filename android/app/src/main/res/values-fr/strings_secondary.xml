@@ -436,7 +436,7 @@
     <string name="tour_settings_tours_title">Visites Guidées</string>
     <string name="tour_settings_tours_desc">Rejouez les visites guidées à tout moment pour revoir toutes les fonctionnalités.</string>
     <string name="tour_settings_contribution_title">Contribution à la Recherche</string>
-    <string name="tour_settings_contribution_desc">Partagez vos images analysées avec l\'équipe OceanGuard via votre NAS. Sans GPS ni données personnelles - uniquement l\'image et les détections.</string>
+    <string name="tour_settings_contribution_desc">Partagez vos photos analysées avec l\'équipe de recherche d\'OceanGuard. Elles partent avec leurs métadonnées EXIF (position, date, modèle du téléphone) et les détections ; vous pouvez retirer la position.</string>
 
     <!-- Visite du MarineDex -->
     <string name="tour_marinedex_progress_title">Progression de la collection</string>

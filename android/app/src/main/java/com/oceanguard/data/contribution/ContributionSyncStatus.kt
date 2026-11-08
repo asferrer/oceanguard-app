@@ -1,0 +1,40 @@
+package com.oceanguard.ai.data.contribution
+
+/**
+ * Last result of talking to the gateway, shown in Settings so a stuck queue is never silent.
+ * Stored by name; unknown names read as [NEVER].
+ */
+enum class ContributionSyncStatus {
+    /** No upload attempted yet. */
+    NEVER,
+
+    /** Last upload accepted. */
+    OK,
+
+    /** This build has no destination (no URL or key). */
+    NOT_CONFIGURED,
+
+    /** Signature rejected: revoked key or clock far off. */
+    AUTH,
+
+    /** App Check token missing or rejected. */
+    ATTESTATION,
+
+    /** Too many uploads; the server asked to wait. */
+    RATE_LIMITED,
+
+    /** Server error; retried later. */
+    SERVER,
+
+    /** No connection or timeout; retried later. */
+    NETWORK,
+
+    /** A photo was refused for its content (size, type, annotations). */
+    REJECTED,
+    ;
+
+    companion object {
+        fun fromName(name: String?): ContributionSyncStatus =
+            entries.firstOrNull { it.name == name } ?: NEVER
+    }
+}

@@ -85,7 +85,7 @@
 
     <!-- Page 4 -->
     <string name="onboarding_page4_title">100% Hors ligne\n&amp; Privé</string>
-    <string name="onboarding_page4_desc">Tout le traitement s\'effectue sur l\'appareil. Aucune connexion Internet requise. Vos données ne quittent jamais votre téléphone \u2014 idéal pour le travail de terrain à distance.</string>
+    <string name="onboarding_page4_desc">Tout le traitement s\'effectue sur l\'appareil. Aucune connexion Internet requise. Vos photos restent sur votre téléphone, sauf si vous choisissez de les partager — idéal pour le travail de terrain à distance.</string>
 
     <!-- Page 5 -->
     <string name="onboarding_page5_title">Gagnez des\nrécompenses</string>
@@ -93,7 +93,7 @@
 
     <!-- Page 6 – Contribution à la recherche -->
     <string name="onboarding_contribute_title">Améliorer la Détection</string>
-    <string name="onboarding_contribute_body">Optez pour contribuer vos images analysées à la recherche sur le modèle. Seules les données de détection sont partagées \u2014 sans localisation, sans informations personnelles, entièrement facultatif.</string>
+    <string name="onboarding_contribute_body">Facultatif. Si vous l\'activez, chaque photo analysée est envoyée au serveur de recherche d\'OceanGuard avec ses métadonnées EXIF (position GPS, date et heure, modèle du téléphone) et les détections, pour améliorer les modèles de détection et d\'espèces et pour des statistiques. Dans les Paramètres, vous pouvez retirer la position, arrêter à tout moment ou supprimer les photos envoyées.</string>
     <string name="onboarding_contribute_toggle">Contribuer mes images</string>
 
     <!-- Boutons -->
@@ -292,11 +292,11 @@
     <string name="contribute_all_synced">Toutes les images synchronisées ✓</string>
     <string name="contribute_upload_now_btn">Envoyer maintenant</string>
     <string name="contribute_consent_title">Contribuer à la Recherche</string>
-    <string name="contribute_consent_body">Vos images haute résolution et les cadres de détection seront envoyés exclusivement pour améliorer le modèle OceanGuard AI. Aucune coordonnée GPS, note ou identifiant personnel n\'est inclus. Vous pouvez retirer votre consentement à tout moment depuis les Paramètres.</string>
+    <string name="contribute_consent_body">Chaque photo analysée sera envoyée en pleine résolution au serveur de recherche d\'OceanGuard avec ses métadonnées EXIF (position GPS, date et heure, marque et modèle du téléphone) et les objets détectés. Elles servent à améliorer les modèles de détection et d\'espèces et à établir des statistiques. Les positions réelles ne sont jamais publiées. À tout moment, dans les Paramètres, vous pouvez désactiver « Inclure la position », retirer votre consentement ou supprimer les photos envoyées.</string>
     <string name="contribute_consent_accept">Je consens</string>
     <string name="contribute_consent_dismiss">Annuler</string>
     <string name="contribute_prompt_title">Aider à Améliorer OceanGuard AI</string>
-    <string name="contribute_prompt_body">Vos images analysées pourraient aider à entraîner une meilleure détection des débris marins. Seules l\'image et les objets détectés sont partagés \u2014 sans localisation, sans données personnelles.</string>
+    <string name="contribute_prompt_body">Vos photos analysées peuvent aider à entraîner une meilleure détection des déchets marins et des espèces. Chaque photo est envoyée avec ses métadonnées EXIF (position, date et heure, modèle du téléphone) et les objets détectés.</string>
     <string name="contribute_prompt_wifi">Envoyer en WiFi</string>
     <string name="contribute_prompt_now">Envoyer maintenant</string>
     <string name="contribute_prompt_skip">Pas maintenant</string>
@@ -316,9 +316,8 @@
     <string name="contribute_status_done">Contribué ✓</string>
     <string name="contribute_status_failed">Réessayer l\'envoi</string>
     <string name="contribute_enqueue_error">Impossible de préparer l\'image pour l\'envoi</string>
-    <string name="contribute_privacy_no_location">Aucune coordonnée GPS ni données de localisation</string>
-    <string name="contribute_privacy_no_personal">Aucun identifiant personnel inclus</string>
-    <string name="contribute_privacy_research_only">Utilisé exclusivement pour la recherche sur le modèle</string>
+    <string name="contribute_privacy_no_personal">Ni nom, ni compte, ni coordonnées ; seulement un identifiant d\'installation anonyme</string>
+    <string name="contribute_privacy_research_only">Uniquement pour la recherche : de meilleurs modèles et des statistiques. Les positions ne sont jamais publiées</string>
     <string name="contribute_prompt_dont_ask_again">Ne plus me demander</string>
     <string name="home_model_download_downloading">Téléchargement du modèle…</string>
     <string name="home_model_download_installing">Installation du modèle…</string>

@@ -100,6 +100,11 @@ private fun ResearchUploadButton(session: DetectionSession, modifier: Modifier) 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val app = remember(context) { context.applicationContext as OceanGuardApp }
+    // Only with a destination in this build and the user's consent (given in Settings or in
+    // the post-analysis sheet, which explain what is sent).
+    val consent by app.settingsRepository.contributeConsentGiven.collectAsStateWithLifecycle(initialValue = false)
+    if (!app.contributionRepository.isAvailable || !consent) return
+    val enqueueError = stringResource(R.string.contribute_enqueue_error)
     // "LOADING" keeps the button disabled while the first status arrives, so the upload icon
     // does not flash as available.
     val status by app.contributionRepository
@@ -121,7 +126,7 @@ private fun ResearchUploadButton(session: DetectionSession, modifier: Modifier) 
         onClick = {
             scope.launch {
                 if (!app.contributionRepository.enqueueSession(session)) {
-                    Toast.makeText(context, context.getString(R.string.contribute_enqueue_error), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, enqueueError, Toast.LENGTH_SHORT).show()
                 }
             }
         },

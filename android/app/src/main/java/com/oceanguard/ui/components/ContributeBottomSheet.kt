@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.NoPhotography
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material3.ButtonDefaults
@@ -40,7 +40,10 @@ import com.oceanguard.ai.R
  *  - upload on WiFi (primary)
  *  - upload now (secondary)
  *  - not now (tertiary, dismiss this prompt only)
- *  - don't ask again (last, permanent opt-out — reversible in Settings)
+ *  - don't ask again (last; "Reset contribution prompts" in Settings brings it back)
+ *
+ * The bullets say what is sent: the photo with its EXIF (location, date and time, phone
+ * model) and the detections. The privacy policy opens from the link under them.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,7 +94,7 @@ fun ContributeBottomSheet(
 
             // Privacy bullets
             val bullets = listOf(
-                Icons.Filled.Lock to stringResource(R.string.contribute_privacy_no_location),
+                Icons.Filled.LocationOn to stringResource(R.string.contribute_privacy_exif),
                 Icons.Filled.NoPhotography to stringResource(R.string.contribute_privacy_no_personal),
                 Icons.Filled.Science to stringResource(R.string.contribute_privacy_research_only),
             )
@@ -119,7 +122,9 @@ fun ContributeBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            ContributionPrivacyLink()
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Primary action: upload on WiFi
             FilledTonalButton(
