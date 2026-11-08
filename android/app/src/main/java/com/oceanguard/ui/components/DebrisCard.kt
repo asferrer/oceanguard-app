@@ -116,7 +116,7 @@ fun DebrisCard(
     debris  : Debris,
     modifier: Modifier = Modifier
 ) {
-    val color     = materialColor(debris.material)
+    val color     = colorForClassOrMaterial(debris.type.name, debris.material)
     val risk      = riskIndicator(debris.getRiskScore())
     val confidePct = (debris.confidence * 100).toInt()
 
@@ -298,7 +298,7 @@ fun DetectionCard(
     modifier : Modifier = Modifier
 ) {
     val material   = classNameToMaterial(detection.className)
-    val color      = materialColor(material)
+    val color      = colorForClass(detection.className)
     val risk       = riskIndicator(detectionRiskScore(detection))
     val confidePct = (detection.confidence * 100).toInt()
     val typeName   = formatClassName(detection.className)

@@ -41,6 +41,7 @@ import com.oceanguard.ai.ui.motion.LocalReducedMotion
 import com.oceanguard.ai.ui.motion.OceanMotion
 import com.oceanguard.ai.ui.motion.motionSpec
 import com.oceanguard.ai.ui.motion.rememberOceanLoop
+import com.oceanguard.ai.data.DebrisMaterial
 import com.oceanguard.ai.ui.theme.ClassPalette
 import com.oceanguard.ai.ui.theme.MaterialFabric
 import com.oceanguard.ai.ui.theme.MaterialFishingNet
@@ -49,6 +50,7 @@ import com.oceanguard.ai.ui.theme.MaterialMetal
 import com.oceanguard.ai.ui.theme.MaterialOther
 import com.oceanguard.ai.ui.theme.MaterialPlastic
 import com.oceanguard.ai.ui.theme.MaterialRubber
+import com.oceanguard.ai.ui.theme.materialColor
 
 // ---------------------------------------------------------------------------
 // Colour mapping: RT-DETR class name -> material colour
@@ -156,6 +158,13 @@ private val CLASS_COLOR_MAP: Map<String, Color> = mapOf(
 internal fun colorForClass(className: String): Color =
     ClassPalette.argbOrNull(className)?.let(::Color)
         ?: CLASS_COLOR_MAP[className.lowercase()] ?: MaterialOther
+
+/**
+ * Colour of a detection or debris object: its class colour when the class is one of the
+ * detector's eight, otherwise the colour of its [material] family (extended Gemma classes).
+ */
+internal fun colorForClassOrMaterial(className: String, material: DebrisMaterial): Color =
+    ClassPalette.argbOrNull(className)?.let(::Color) ?: materialColor(material)
 
 private val DarkText = Color(0xFF14181C)
 private val LightText = Color(0xFFFFFFFF)

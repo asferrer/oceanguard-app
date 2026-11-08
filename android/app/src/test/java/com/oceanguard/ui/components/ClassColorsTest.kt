@@ -2,8 +2,10 @@ package com.oceanguard.ai.ui.components
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import com.oceanguard.ai.data.DebrisMaterial
 import com.oceanguard.ai.inference.DebrisClasses
 import com.oceanguard.ai.ui.theme.MaterialOther
+import com.oceanguard.ai.ui.theme.materialColor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -36,6 +38,12 @@ class ClassColorsTest {
     @Test
     fun lookupIsCaseInsensitive() {
         assertEquals(colorForClass("fishing_net"), colorForClass("Fishing_Net"))
+    }
+
+    @Test
+    fun paletteClassesIgnoreTheMaterialAndExtendedOnesKeepTheirFamilyColour() {
+        assertEquals(colorForClass("Bottle"), colorForClassOrMaterial("BOTTLE", DebrisMaterial.GLASS))
+        assertEquals(materialColor(DebrisMaterial.GLASS), colorForClassOrMaterial("GLASS_JAR", DebrisMaterial.GLASS))
     }
 
     @Test

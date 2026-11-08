@@ -34,6 +34,7 @@ import com.oceanguard.ai.ui.components.DexSpriteImage
 import com.oceanguard.ai.ui.components.HealthScoreGauge
 import com.oceanguard.ai.ui.components.sonar.SonarCard
 import com.oceanguard.ai.ui.theme.SonarTheme
+import com.oceanguard.ai.ui.components.colorForClassOrMaterial
 import com.oceanguard.ai.ui.theme.materialColor
 
 /** Short figure with its caption: the same tile in a single result, a saved photo and a batch. */
@@ -176,7 +177,7 @@ fun FindingCard(debris: Debris, modelName: String?, modifier: Modifier = Modifie
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .background(materialColor(debris.material).copy(alpha = 0.15f), CircleShape),
+                    .background(colorForClassOrMaterial(debris.type.name, debris.material).copy(alpha = 0.15f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 DexSpriteImage(debrisType = debris.type.canonical(), size = 28.dp)

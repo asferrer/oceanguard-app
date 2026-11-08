@@ -27,7 +27,7 @@ import com.oceanguard.ai.ui.components.dex.tileTextColor
 import com.oceanguard.ai.ui.components.sonar.SonarEmptyState
 import com.oceanguard.ai.ui.navigation.OceanSharedKeys
 import com.oceanguard.ai.ui.navigation.oceanSharedElement
-import com.oceanguard.ai.ui.theme.materialColor
+import com.oceanguard.ai.ui.components.colorForClassOrMaterial
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -84,7 +84,7 @@ private fun GalleryItem(
     }
     val highConfidence = remember(matching) { matching.any { it.confidence >= HIGH_CONFIDENCE } }
     val borderColor = if (highConfidence && dominantMaterial != null) {
-        materialColor(dominantMaterial)
+        colorForClassOrMaterial(debrisType.name, dominantMaterial)
     } else {
         Color.Transparent
     }
