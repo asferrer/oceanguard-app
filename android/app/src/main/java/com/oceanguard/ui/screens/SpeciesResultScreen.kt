@@ -116,8 +116,9 @@ fun SpeciesResultScreen(
         // overlaid; while identifying/error we keep the uncropped backdrop.
         val completeState = uiState as? SpeciesUiState.Complete
         if (completeState != null && capturedUri != null) {
-            val boxes = remember(completeState, catalog) {
-                speciesNormBoxes(completeState, catalog)
+            val unidentifiedLabel = stringResource(R.string.species_unidentified)
+            val boxes = remember(completeState, catalog, unidentifiedLabel) {
+                speciesNormBoxes(completeState, catalog, unidentifiedLabel)
             }
             SpeciesFitWidthBoxOverlay(
                 imageUri = capturedUri.toString(),
@@ -229,15 +230,15 @@ fun SpeciesResultScreen(
 internal fun speciesNormBoxes(
     state: SpeciesUiState.Complete,
     catalog: SpeciesCatalog,
+    unidentifiedLabel: String,
 ): List<NormBox> {
     if (state.imageWidth <= 0 || state.imageHeight <= 0) return emptyList()
     val lang = SpeciesNames.currentLanguage()
     return state.results.mapNotNull { result ->
         val bbox = result.bbox ?: return@mapNotNull null
-        val label = SpeciesNames.commonName(
-            entry = catalog.byKey(result.speciesKey),
-            language = lang,
-            fallback = result.scientificName,
+        val label = SpeciesNames.resultName(
+            result.speciesKey, result.scientificName, result.isUnidentified,
+            catalog, unidentifiedLabel, lang,
         )
         bboxToNormBox(
             x = bbox.x, y = bbox.y, width = bbox.width, height = bbox.height,
@@ -325,10 +326,14 @@ private fun SpeciesResultSummary(results: List<IdentificationResult>, catalog: S
 @Composable
 private fun CompactSpeciesResultCard(result: IdentificationResult, catalog: SpeciesCatalog) {
     val lang = Locale.getDefault().language
-    val entry = catalog.byKey(result.speciesKey)
-    val commonName = entry?.commonNames?.get(lang)
-        ?: entry?.commonNames?.get("en")
-        ?: result.scientificName
+    val commonName = SpeciesNames.resultName(
+        result.speciesKey, result.scientificName, result.isUnidentified,
+        catalog, stringResource(R.string.species_unidentified), lang,
+    )
+    // Unidentified: show the closest catalogue candidates as hints, not as an answer.
+    val subtitle = if (result.isUnidentified) {
+        stringResource(R.string.species_unidentified_hint, result.candidates.take(3).joinToString { it.scientificName })
+    } else result.scientificName
     val confidencePct = (result.confidence * 100).toInt()
 
     SonarCard {
@@ -340,9 +345,9 @@ private fun CompactSpeciesResultCard(result: IdentificationResult, catalog: Spec
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = result.scientificName,
+                text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                fontStyle = FontStyle.Italic,
+                fontStyle = if (result.isUnidentified) FontStyle.Normal else FontStyle.Italic,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(
@@ -365,18 +370,22 @@ private fun IdSourceBadgeRow(result: IdentificationResult) {
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         val sourceLabel = when (result.idSource) {
             SpeciesIdSource.RAG_CORE      -> "RAG Core"
-            SpeciesIdSource.RAG_TENTATIVE -> "RAG Tentative"
+            SpeciesIdSource.RAG_TENTATIVE ->
+                if (result.vlmChosen) stringResource(R.string.species_badge_gemma) else "RAG Tentative"
             SpeciesIdSource.VLM_OPENVOCAB -> "Open Vocab"
+            SpeciesIdSource.UNIDENTIFIED  -> stringResource(R.string.species_badge_unidentified)
         }
         val containerColor = when (result.idSource) {
             SpeciesIdSource.RAG_CORE      -> MaterialTheme.colorScheme.primaryContainer
             SpeciesIdSource.RAG_TENTATIVE -> MaterialTheme.colorScheme.secondaryContainer
             SpeciesIdSource.VLM_OPENVOCAB -> MaterialTheme.colorScheme.tertiaryContainer
+            SpeciesIdSource.UNIDENTIFIED  -> MaterialTheme.colorScheme.surfaceVariant
         }
         val labelColor = when (result.idSource) {
             SpeciesIdSource.RAG_CORE      -> MaterialTheme.colorScheme.onPrimaryContainer
             SpeciesIdSource.RAG_TENTATIVE -> MaterialTheme.colorScheme.onSecondaryContainer
             SpeciesIdSource.VLM_OPENVOCAB -> MaterialTheme.colorScheme.onTertiaryContainer
+            SpeciesIdSource.UNIDENTIFIED  -> MaterialTheme.colorScheme.onSurfaceVariant
         }
         AssistChip(
             onClick = {},

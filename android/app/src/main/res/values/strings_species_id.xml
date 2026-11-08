@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Species identification: honest "not identified" answer and pack state. -->
+<resources>
+    <string name="species_pack_missing">Download the species pack (Models screen) to identify species.</string>
+    <string name="species_unidentified">Species not identified</string>
+    <string name="species_unidentified_hint">Closest candidates: %1$s</string>
+    <string name="species_badge_unidentified">Not identified</string>
+    <string name="species_badge_gemma">Chosen by Gemma</string>
+</resources>

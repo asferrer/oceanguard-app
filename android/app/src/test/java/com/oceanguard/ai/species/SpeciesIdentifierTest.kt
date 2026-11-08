@@ -16,6 +16,9 @@ import com.oceanguard.ai.inference.species.OrganismCrop
 import com.oceanguard.ai.inference.species.RegionResolverPort
 import com.oceanguard.ai.inference.species.SpeciesConfidence
 import com.oceanguard.ai.inference.species.SpeciesIdResult
+import com.oceanguard.ai.inference.species.IdentificationResult
+import com.oceanguard.ai.inference.species.SpeciesCandidate
+import com.oceanguard.ai.inference.species.VlmChoice
 import com.oceanguard.ai.inference.species.SpeciesIdentifier
 import com.oceanguard.ai.inference.species.SpeciesReferenceIndex
 import java.io.File
@@ -130,6 +133,7 @@ class SpeciesIdentifierTest {
         embedder: SpeciesEmbedder,
         describer: DescriberPort = RecordingDescriberPort(),
         locator: CropProvider? = null,
+        vlmChoiceTopK: Int = 5,
     ): SpeciesIdentifier {
         val effectiveLocator = locator ?: FixedEmbeddingCropProvider(embedder)
         return SpeciesIdentifier(
@@ -140,6 +144,8 @@ class SpeciesIdentifierTest {
             describer  = describer,
             locator    = effectiveLocator,
             isBlankFrame = { false },
+            vlmChoiceTopK = vlmChoiceTopK,
+            vlmCropper = { _, crop -> crop.crop },
         )
     }
 
@@ -177,97 +183,96 @@ class SpeciesIdentifierTest {
     }
 
     // -----------------------------------------------------------------------
-    // Tests: RAG_TENTATIVE path
+    // Tests: RAG_TENTATIVE path (Gemma chooses among the RAG candidates)
     // -----------------------------------------------------------------------
 
-    /**
-     * When cosine is mid-range (0.35 → calibrated ≈ 0.5, in [tauLow, tauHigh)),
-     * idSource must be RAG_TENTATIVE and the describer's confirmOrDescribe
-     * must be invoked.
-     */
+    /** Mid-range cosine (0.35 -> calibrated 0.5) without Gemma keeps the RAG top-1 as tentative. */
     @Test
-    fun `RAG_TENTATIVE when cosine in mid range and describer is called`() = runBlocking {
-        val describer = RecordingDescriberPort(
-            onConfirmOrDescribe = { key, _ -> SpeciesIdResult(description = "Mid-range match", confirmedKey = key) },
-        )
-        // A mid-range cosine means the query vector is partially aligned with sp_A.
-        // Use seed=0.35f / sqrt(512 dims) ≈ not a pure spike, cosine ~0.35 with sp_A.
-        val embedder = PartialAlignmentEmbedder(targetSpikeIdx = 0, cosineTarget = 0.35f)
-        val sut = buildIdentifier(embedder, describer)
+    fun `RAG_TENTATIVE without Gemma keeps the RAG top-1`() = runBlocking {
+        val describer = RecordingDescriberPort(choiceReady = false)
+        val sut = buildIdentifier(PartialAlignmentEmbedder(targetSpikeIdx = 0, cosineTarget = 0.35f), describer)
 
-        val results = sut.identify(nullBitmap())
-        assertEquals(1, results.size)
-        assertEquals(SpeciesIdSource.RAG_TENTATIVE, results[0].idSource)
-        assertTrue("Describer confirmOrDescribe must be called", describer.wasCalledForConfirmation)
-        assertNotNull("vlmDescription must be populated", results[0].vlmDescription)
+        val result = sut.identify(nullBitmap()).single()
+        assertEquals(SpeciesIdSource.RAG_TENTATIVE, result.idSource)
+        assertEquals("sp_A", result.speciesKey)
+        assertFalse(result.vlmChosen)
+        assertFalse("Gemma must not be asked when it is not loaded", describer.wasAskedToChoose)
     }
 
     @Test
-    fun `RAG_TENTATIVE - VLM description is attached to result`() = runBlocking {
-        val expectedDesc = "Definitely a white species."
-        val describer = RecordingDescriberPort(
-            onConfirmOrDescribe = { key, _ ->
-                SpeciesIdResult(description = expectedDesc, confirmedKey = key)
-            },
-        )
-        val embedder = PartialAlignmentEmbedder(targetSpikeIdx = 0, cosineTarget = 0.35f)
-        val sut = buildIdentifier(embedder, describer)
+    fun `RAG_TENTATIVE - Gemma pick replaces the RAG top-1`() = runBlocking {
+        val describer = RecordingDescriberPort(choice = VlmChoice.Picked(1))
+        val sut = buildIdentifier(PartialAlignmentEmbedder(targetSpikeIdx = 0, cosineTarget = 0.35f), describer)
 
-        val result = sut.identify(nullBitmap()).first()
-        assertEquals(expectedDesc, result.vlmDescription)
+        val result = sut.identify(nullBitmap()).single()
+        val offered = describer.lastCandidates
+        assertTrue(describer.wasAskedToChoose)
+        assertEquals("sp_A", offered.first().speciesKey)
+        assertEquals("White Species", offered.first().commonName)
+        assertEquals(SpeciesIdSource.RAG_TENTATIVE, result.idSource)
+        assertEquals(offered[1].speciesKey, result.speciesKey)
+        assertTrue(result.vlmChosen)
+    }
+
+    @Test
+    fun `RAG_TENTATIVE - Gemma answering none gives UNIDENTIFIED`() = runBlocking {
+        val describer = RecordingDescriberPort(choice = VlmChoice.NoneOfThem)
+        val sut = buildIdentifier(PartialAlignmentEmbedder(targetSpikeIdx = 0, cosineTarget = 0.35f), describer)
+
+        val result = sut.identify(nullBitmap()).single()
+        assertEquals(SpeciesIdSource.UNIDENTIFIED, result.idSource)
+        assertTrue(result.isUnidentified)
+        assertEquals("sp_A", result.candidates.first().speciesKey)
+    }
+
+    @Test
+    fun `RAG_TENTATIVE - unparseable Gemma answer keeps the RAG top-1`() = runBlocking {
+        val describer = RecordingDescriberPort(choice = null, choiceReady = true)
+        val sut = buildIdentifier(PartialAlignmentEmbedder(targetSpikeIdx = 0, cosineTarget = 0.35f), describer)
+
+        val result = sut.identify(nullBitmap()).single()
+        assertTrue(describer.wasAskedToChoose)
+        assertEquals("sp_A", result.speciesKey)
+        assertFalse(result.vlmChosen)
+    }
+
+    @Test
+    fun `Gemma step disabled by the pack is never called`() = runBlocking {
+        val describer = RecordingDescriberPort(choice = VlmChoice.Picked(1))
+        val sut = buildIdentifier(PartialAlignmentEmbedder(0, 0.35f), describer, vlmChoiceTopK = 0)
+
+        val result = sut.identify(nullBitmap()).single()
+        assertFalse(describer.wasAskedToChoose)
+        assertEquals("sp_A", result.speciesKey)
     }
 
     // -----------------------------------------------------------------------
-    // Tests: VLM_OPENVOCAB path
+    // Tests: honest "not identified" answer
     // -----------------------------------------------------------------------
 
-    /**
-     * When cosine is very low (< tauLow), idSource must be VLM_OPENVOCAB
-     * and describeOpenVocab must be invoked.
-     */
+    /** A query orthogonal to every prototype (cosine 0, below tauLow) is not forced into a species. */
     @Test
-    fun `VLM_OPENVOCAB when cosine is below tauLow`() = runBlocking {
-        val describer = RecordingDescriberPort(
-            onOpenVocab = { SpeciesIdResult(description = "Probably a jellyfish.", freeLabel = "Aurelia aurita") },
-        )
-        // A query perfectly orthogonal to all index prototypes: spike@300
-        // (no prototype there → cosine = 0 for all species → score below tauLow).
-        val embedder = SpikeEmbedder(spikeIdx = 300)
-        val sut = buildIdentifier(embedder, describer)
+    fun `UNIDENTIFIED when cosine is below tauLow`() = runBlocking {
+        val describer = RecordingDescriberPort()
+        val sut = buildIdentifier(SpikeEmbedder(spikeIdx = 300), describer)
 
-        val results = sut.identify(nullBitmap())
-        assertEquals(1, results.size)
-        assertEquals(SpeciesIdSource.VLM_OPENVOCAB, results[0].idSource)
-        assertTrue("uncatalogued flag must be true", results[0].uncatalogued)
-        assertTrue("Describer open-vocab must be called", describer.wasCalledForOpenVocab)
+        val result = sut.identify(nullBitmap()).single()
+        assertEquals(SpeciesIdSource.UNIDENTIFIED, result.idSource)
+        assertEquals(IdentificationResult.UNIDENTIFIED_KEY, result.speciesKey)
+        assertTrue(result.uncatalogued)
+        assertFalse(describer.wasAskedToChoose)
+        assertFalse(describer.wasCalledForOpenVocab)
         assertFalse(describer.wasCalledForConfirmation)
     }
 
     @Test
-    fun `VLM_OPENVOCAB - freeLabel and description propagated from describer`() = runBlocking {
-        val describer = RecordingDescriberPort(
-            onOpenVocab = {
-                SpeciesIdResult(description = "Jellyfish desc.", freeLabel = "Aurelia aurita")
-            },
-        )
-        val embedder = SpikeEmbedder(spikeIdx = 300)
-        val sut = buildIdentifier(embedder, describer)
+    fun `UNIDENTIFIED keeps the closest candidates as hints`() = runBlocking {
+        val sut = buildIdentifier(SpikeEmbedder(spikeIdx = 300))
 
-        val result = sut.identify(nullBitmap()).first()
-        assertEquals("Aurelia aurita", result.freeLabel)
-        assertEquals("Jellyfish desc.", result.vlmDescription)
-        assertEquals("Aurelia aurita", result.scientificName)
-        assertTrue(result.speciesKey.startsWith("uncat:"))
-    }
-
-    @Test
-    fun `VLM_OPENVOCAB has zero cosine and confidence`() = runBlocking {
-        val embedder = SpikeEmbedder(spikeIdx = 300)
-        val sut = buildIdentifier(embedder)
-
-        val result = sut.identify(nullBitmap()).first()
+        val result = sut.identify(nullBitmap()).single()
         assertEquals(0f, result.cosineScore, 1e-6f)
-        assertEquals(0f, result.confidence, 1e-6f)
+        assertEquals(setOf("sp_A", "sp_B", "sp_C"), result.candidates.map { it.speciesKey }.toSet())
+        assertEquals("", result.scientificName)
     }
 
     // -----------------------------------------------------------------------
@@ -460,7 +465,27 @@ class SpeciesIdentifierTest {
     private inner class RecordingDescriberPort(
         private val onConfirmOrDescribe: (suspend (key: String, name: String) -> SpeciesIdResult)? = null,
         private val onOpenVocab: (suspend () -> SpeciesIdResult)? = null,
+        private val choice: VlmChoice? = null,
+        private val choiceReady: Boolean = choice != null,
     ) : DescriberPort {
+
+        var wasAskedToChoose = false
+            private set
+        var lastCandidates: List<SpeciesCandidate> = emptyList()
+            private set
+
+        override val canChoose: Boolean get() = choiceReady
+
+        override suspend fun chooseAmong(
+            crop: Bitmap,
+            candidates: List<SpeciesCandidate>,
+            region: MarineRegion?,
+            language: String,
+        ): VlmChoice? {
+            wasAskedToChoose = true
+            lastCandidates = candidates
+            return choice
+        }
 
         var wasCalledForConfirmation = false
             private set

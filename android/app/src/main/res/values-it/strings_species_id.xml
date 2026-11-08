@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="species_pack_missing">Scarica il pacchetto delle specie (schermata Modelli) per identificare le specie.</string>
+    <string name="species_unidentified">Specie non identificata</string>
+    <string name="species_unidentified_hint">Candidate più vicine: %1$s</string>
+    <string name="species_badge_unidentified">Non identificata</string>
+    <string name="species_badge_gemma">Scelta da Gemma</string>
+</resources>

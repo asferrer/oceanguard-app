@@ -39,6 +39,33 @@ class SpeciesDescriber(
         private const val TAG = "SpeciesDescriber"
         private const val MAX_TOKENS = 200
         private const val TEMPERATURE = 0.25
+        private const val CHOICE_MAX_TOKENS = 6
+
+        internal const val CHOICE_SYSTEM =
+            "You are a marine biologist. You identify marine species from photos. " +
+            "Answer with a single number and nothing else."
+
+        /** Numbered options; must match tools/species/gemma_rerank.py::choice_prompt. */
+        internal fun buildChoicePrompt(candidates: List<SpeciesCandidate>): String {
+            val lines = candidates.mapIndexed { i, c ->
+                if (c.commonName.isNullOrBlank()) "${i + 1}. ${c.scientificName}"
+                else "${i + 1}. ${c.scientificName} (${c.commonName})"
+            }
+            return "Which of these species is the main organism in the photo?\n" +
+                lines.joinToString("\n") +
+                "\n0. None of them, or the species cannot be told from the photo.\n" +
+                "Answer with the number only."
+        }
+
+        /** First integer in [raw]: 1..k -> pick, 0 -> none; null when absent or out of range. */
+        internal fun parseChoice(raw: String, k: Int): VlmChoice? {
+            val n = Regex("\\d+").find(raw)?.value?.toIntOrNull() ?: return null
+            return when (n) {
+                0 -> VlmChoice.NoneOfThem
+                in 1..k -> VlmChoice.Picked(n - 1)
+                else -> null
+            }
+        }
 
         internal const val ORGANISM_DESCRIBER_SYSTEM =
             "You are a marine biologist assistant. Describe marine organisms briefly and accurately. " +
@@ -116,6 +143,40 @@ class SpeciesDescriber(
 
         val raw = safeGenerate(vlm, crop, prompt)
         return interpretOpenVocab(raw)
+    }
+
+    override val canChoose: Boolean
+        get() = engine?.isReady == true
+
+    /**
+     * Gemma picks the organism among the visual-RAG [candidates] or answers 0
+     * ("none of them / cannot tell"). Greedy decoding, a few tokens: the
+     * answer is a number. Same prompt as `tools/species/gemma_rerank.py`, where
+     * this step was evaluated.
+     */
+    override suspend fun chooseAmong(
+        crop: Bitmap,
+        candidates: List<SpeciesCandidate>,
+        region: MarineRegion?,
+        language: String,
+    ): VlmChoice? {
+        val vlm = engine
+        if (vlm == null || !vlm.isReady || candidates.isEmpty()) return null
+        val raw = try {
+            vlm.generateWithImage(
+                bitmap = crop,
+                prompt = buildChoicePrompt(candidates),
+                systemMessage = CHOICE_SYSTEM,
+                maxTokens = CHOICE_MAX_TOKENS,
+                temperature = 0.0,
+                topK = 1,
+                stopWhen = { it.any(Char::isDigit) },
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "VLM choice failed: ${e.message}")
+            return null
+        }
+        return parseChoice(raw, candidates.size)
     }
 
     // -----------------------------------------------------------------------

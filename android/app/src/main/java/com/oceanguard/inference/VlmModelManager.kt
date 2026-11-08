@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import com.oceanguard.ai.data.SettingsRepository
 import com.oceanguard.ai.data.model.BestModel
+import com.oceanguard.ai.inference.species.SpeciesPackAssets
+import com.oceanguard.ai.inference.species.SpeciesPackConfig
 import com.oceanguard.ai.utils.ModelUpdateChecker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,13 +83,7 @@ class VlmModelManager(
         // --- BioDex species pack (M4) ---
         private const val SPECIES_REPO = "$HF_BASE/asferrer/oceanguard-biodex/resolve/main"
         // filename -> minimum valid bytes (guards against HF HTML error pages).
-        private val SPECIES_ASSETS = listOf(
-            "clip_vitb32.onnx" to 40_000_000L,        // ~88 MB OpenCLIP ViT-B/32
-            "species_index_v1.bin" to 1_000L,          // small (prototypes + trailer)
-            "species_catalog_v1.json" to 100L,
-            "meow_raster_v1.bin" to 1_000_000L,        // ~2 MB
-            "ecoregion_hierarchy_v1.json" to 100L,
-        )
+        // The file list lives in SpeciesPackAssets (v1 layout or species_pack.json).
 
         // Minimum valid file sizes (small files = error HTML pages from HF)
         private val MIN_TEXT_BYTES = mapOf(
@@ -267,7 +263,7 @@ class VlmModelManager(
     }
 
     /** Names of the files that make up the BioDex species pack. */
-    val speciesFileNames: List<String> get() = SPECIES_ASSETS.map { it.first }
+    val speciesFileNames: List<String> get() = SpeciesPackAssets.fileNames(getSpeciesDirectory())
 
     /** Bytes the species pack takes on disk. */
     fun speciesPackBytes(): Long =
@@ -415,25 +411,22 @@ class VlmModelManager(
     /** Directory holding the downloadable BioDex assets (`models/species/`). */
     fun getSpeciesDirectory(): File = File(getModelDirectory(), "species").also { it.mkdirs() }
 
-    /** True once the encoder + index + catalog are present (raster is optional). */
-    fun isSpeciesPackAvailable(): Boolean {
-        val dir = getSpeciesDirectory()
-        return File(dir, "clip_vitb32.onnx").exists() &&
-            File(dir, "species_index_v1.bin").exists() &&
-            File(dir, "species_catalog_v1.json").exists()
-    }
+    /** True once the encoder + index + catalog of the pack are present (raster is optional). */
+    fun isSpeciesPackAvailable(): Boolean = SpeciesPackConfig.load(getSpeciesDirectory()) != null
 
     /**
-     * Download the BioDex species pack (encoder + index + catalog + raster) from
-     * HuggingFace into [getSpeciesDirectory]. Reuses [downloadFile] + [downloadState].
-     * Skips files already present and large enough. Until the HF repo exists this
-     * surfaces a clear download error; the app keeps working via the demo fallback.
+     * Download the BioDex species pack from Hugging Face into [getSpeciesDirectory].
+     * First `species_pack.json` (encoder contract + calibrated thresholds); when
+     * the repository has none, the published v1 layout. Skips files already
+     * present and large enough. Without a pack, species identification is
+     * unavailable (there is no demo fallback any more).
      */
     suspend fun downloadSpeciesPack() = withContext(Dispatchers.IO) {
         cancelled = false
         try {
             val dir = getSpeciesDirectory()
-            for ((name, minBytes) in SPECIES_ASSETS) {
+            val assets = speciesManifest(dir)?.let(SpeciesPackAssets::forConfig) ?: SpeciesPackAssets.V1
+            for ((name, minBytes) in assets) {
                 if (cancelled) break
                 val target = File(dir, name)
                 if (target.exists() && target.length() >= minBytes) continue
@@ -443,6 +436,24 @@ class VlmModelManager(
         } catch (e: VlmDownloadException) {
             _downloadState.value = VlmDownloadState.Error(e.message ?: "Species pack download failed", e.kind)
             throw e
+        }
+    }
+
+    /** Fetch and parse the remote `species_pack.json`; null (and no file left) when absent or invalid. */
+    private suspend fun speciesManifest(dir: File): SpeciesPackConfig? {
+        val name = SpeciesPackConfig.MANIFEST
+        val target = File(dir, name)
+        try {
+            downloadFile(url = "$SPECIES_REPO/$name", target = target, minValidBytes = 50L, filename = name)
+        } catch (e: VlmDownloadException) {
+            // Keep a manifest installed earlier (e.g. offline retry); otherwise v1.
+            Log.i(TAG, "No $name downloaded (${e.message}); using the installed one or the v1 layout")
+            return target.takeIf { it.exists() }?.let { SpeciesPackConfig.parse(it.readText(Charsets.UTF_8)) }
+        }
+        return SpeciesPackConfig.parse(target.readText(Charsets.UTF_8)) ?: run {
+            Log.w(TAG, "Invalid $name; using the v1 layout")
+            target.delete()
+            null
         }
     }
 

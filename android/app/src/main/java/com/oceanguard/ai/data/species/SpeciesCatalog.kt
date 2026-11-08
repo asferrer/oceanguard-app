@@ -17,7 +17,7 @@ import java.io.File
  *
  * @param catalogFile  Path to the downloaded JSON catalog file.
  */
-class SpeciesCatalog(private val catalogFile: File) {
+class SpeciesCatalog(@Volatile private var catalogFile: File) {
 
     private val gson = Gson()
     private val catalogFileType = object : TypeToken<CatalogFile>() {}.type
@@ -53,6 +53,14 @@ class SpeciesCatalog(private val catalogFile: File) {
         entries = parsed.species.associateBy { it.speciesKey }
     }
 
+    /** Drop the cached entries and parse [file] (the species pack changed). */
+    @Synchronized
+    fun reload(file: File = catalogFile) {
+        catalogFile = file
+        entries = null
+        load()
+    }
+
     /**
      * Returns the [SpeciesCatalogEntry] for [speciesKey], or null if not found
      * or the catalog has not been loaded yet.
@@ -81,8 +89,8 @@ class SpeciesCatalog(private val catalogFile: File) {
      * (i.e. [isLoaded] == false).  Idempotent: calling it multiple times with
      * the same data is safe.
      *
-     * Use this in demo/integration scenarios (e.g. with [SampleSpeciesData])
-     * where the real downloaded asset is not yet available.
+     * Use this in tests (e.g. with `SampleSpeciesData` from the test sources)
+     * where the real downloaded asset is not available.
      *
      * @param entries List of [SpeciesCatalogEntry]; entries are keyed by
      *                [SpeciesCatalogEntry.speciesKey].

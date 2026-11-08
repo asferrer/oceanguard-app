@@ -1,9 +1,10 @@
 package com.oceanguard.ai.data.species
 
-// TODO: swap this entire file for a real downloaded asset once the OpenCLIP encoder
-//       (ViT-B/32, dim=512) and the reference-bank binary are available in production.
-//       This file is DEMO ONLY — it wires 4 hard-coded species so the BioDex UI and
-//       the RAG pipeline are exercisable end-to-end without any downloaded models.
+// TEST FIXTURE ONLY. Until v1.1.1 this object lived in the main sources and was
+// the production fallback whenever the species pack was not installed when the
+// app started: its embedder ignores the photo (abs(bitmap.hashCode()) % 4), so
+// every capture was "identified" as one of these four species with ~100 %
+// confidence. See SpeciesDemoRootCauseTest and docs/SPECIES_ID.md.
 
 import android.graphics.Bitmap
 import com.oceanguard.ai.inference.species.SpeciesEmbedder

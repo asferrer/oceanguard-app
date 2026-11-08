@@ -9,19 +9,21 @@ import com.oceanguard.ai.data.species.SpeciesIdSource
 /**
  * Immutable result of one organism identification within a single image.
  *
- * @param speciesKey      Matched species key (from catalogue), or a generated
- *                        "uncat:<slug>" key for uncatalogued organisms.
- * @param scientificName  Scientific name (from catalogue or VLM suggestion).
+ * @param speciesKey      Matched catalogue key, or [UNIDENTIFIED_KEY] when the
+ *                        organism could not be identified.
+ * @param scientificName  Scientific name; empty when unidentified.
  * @param idSource        How the identification was produced.
- * @param cosineScore     Raw cosine similarity (0 when VLM_OPENVOCAB).
- * @param confidence      Platt-calibrated probability in [0, 1].
- * @param vlmDescription  Description / confirmation text. Null when VLM not invoked.
- * @param bbox            Organism bounding box in original image pixels; null
- *                        when the full frame was used (no localisation).
- * @param geoMatchLevel   Name of [GeoMatchLevel] enum entry; null = no GPS.
- * @param outOfRange      True when matched outside known distribution range.
- * @param uncatalogued    True for open-vocab VLM results with no catalogue entry.
- * @param freeLabel       VLM-suggested organism name for open-vocab results.
+ * @param cosineScore     Top-1 cosine similarity of the visual search.
+ * @param confidence      Calibrated probability that the top-1 is right, in [0, 1].
+ * @param vlmDescription  Text from the VLM, when it was invoked. Null otherwise.
+ * @param bbox            Organism bounding box in original image pixels.
+ * @param geoMatchLevel   Name of [GeoMatchLevel] entry; null = no GPS.
+ * @param outOfRange      True when matched outside the known distribution range.
+ * @param uncatalogued    True for results that are not a catalogue species.
+ * @param freeLabel       VLM-suggested organism name for legacy open-vocab rows.
+ * @param candidates      Best catalogue candidates of the visual search (top-k),
+ *                        also kept for unidentified results as "possible" hints.
+ * @param vlmChosen       True when Gemma chose this species among [candidates].
  */
 data class IdentificationResult(
     val speciesKey: String,
@@ -35,64 +37,71 @@ data class IdentificationResult(
     val outOfRange: Boolean = false,
     val uncatalogued: Boolean = false,
     val freeLabel: String? = null,
-)
+    val candidates: List<SpeciesMatch> = emptyList(),
+    val vlmChosen: Boolean = false,
+) {
+    /** True when the pipeline gave no species (honest "not identified" answer). */
+    val isUnidentified: Boolean get() = idSource == SpeciesIdSource.UNIDENTIFIED
+
+    companion object {
+        const val UNIDENTIFIED_KEY = "unidentified"
+    }
+}
 
 /**
- * Orchestrates the full BioDex identification pipeline for a single image.
+ * Orchestrates the BioDex identification pipeline for a single image.
  *
- * Sequence (per crop from [locator]):
- * 1. Resolve GPS → [MarineRegion] (if [resolver] + [Location] are available).
- * 2. Embed crop with [embedder].
- * 3. Search [index] with optional region + [sensitivity].
- * 4. Decide [SpeciesIdSource] via [confidence]:
- *    - RAG_CORE      → emit result immediately (no VLM to save latency).
- *    - RAG_TENTATIVE → call [describer.confirmOrDescribe]; attach description.
- *    - null (unknown)→ call [describer.describeOpenVocab] → VLM_OPENVOCAB.
- * 5. Propagate [outOfRange] when geo-filter fell back to GLOBAL.
+ * Per crop from [locator]:
+ * 1. Embed the crop with [embedder] and search the reference [index] (visual
+ *    RAG: k-nearest reference photos, best score per species, geo prior).
+ * 2. Decide with the calibrated [confidence] of the top-1 and its margin:
+ *    - confident (>= tauHigh and margin >= delta) -> [SpeciesIdSource.RAG_CORE];
+ *    - tentative (>= tauLow) -> the RAG top-1 as [SpeciesIdSource.RAG_TENTATIVE].
+ *      Optionally (pack `vlmChoiceTopK` > 0, off by default because Gemma 4 E2B
+ *      measured worse than the RAG ranking) Gemma ([describer]) chooses among
+ *      the top candidates or answers "none" ([SpeciesIdSource.UNIDENTIFIED]);
+ *    - below tauLow -> [SpeciesIdSource.UNIDENTIFIED]. The app never forces a
+ *      species on a photo the index does not recognise.
  *
- * All dependencies are injected through interfaces — no I/O, no Room, no
- * Android Context required. Fully testable on plain JVM.
+ * The thresholds are calibrated per species pack (species_pack.json). All
+ * dependencies are injected, so the class is testable on plain JVM.
  *
- * @param embedder   L2-normalised image embedding.
- * @param index      Brute-force cosine index over reference prototypes.
- * @param resolver   Optional MEOW raster resolver; null = skip geo-filter.
- * @param confidence Platt calibration + threshold parameters.
- * @param describer  VLM description / confirmation engine ([DescriberPort]).
- * @param locator    Organism detection / cropping engine ([CropProvider]).
- * @param isBlankFrame Rejects frames without content before any encoding
- *                   ([ImageContentCheck]); a rejected frame yields no result.
+ * @param vlmChoiceTopK Candidates offered to Gemma in the tentative band (0 = off).
+ * @param vlmCropper    Builds the (larger) crop shown to Gemma from the full frame.
  */
 class SpeciesIdentifier(
-    private val embedder:   SpeciesEmbedder,
-    private val index:      SpeciesReferenceIndex,
-    private val resolver:   RegionResolverPort? = null,
+    private val embedder: SpeciesEmbedder,
+    private val index: SpeciesReferenceIndex,
+    private val resolver: RegionResolverPort? = null,
     private val confidence: SpeciesConfidence = SpeciesConfidence(),
-    private val describer:  DescriberPort = SpeciesDescriber(),
-    private val locator:    CropProvider = OrganismLocator(),
+    private val describer: DescriberPort = SpeciesDescriber(),
+    private val locator: CropProvider = OrganismLocator(),
     private val isBlankFrame: (Bitmap) -> Boolean = ImageContentCheck::isBlank,
+    private val vlmChoiceTopK: Int = DEFAULT_CHOICE_TOP_K,
+    private val vlmCropper: (Bitmap, OrganismCrop) -> Bitmap = ::defaultVlmCrop,
 ) {
     companion object {
         private const val TAG = "SpeciesIdentifier"
         private const val TOP_K = 5
+        /** Off by default: Gemma 4 E2B did not improve on the RAG ranking (docs/SPECIES_ID.md). */
+        const val DEFAULT_CHOICE_TOP_K = 0
+
+        /** Long edge of the crop shown to Gemma (vision_140 path, see OrganismLocator). */
+        const val VLM_CROP_SIZE = 448
+
+        private fun defaultVlmCrop(full: Bitmap, crop: OrganismCrop): Bitmap =
+            RagCropPreparer.cropForRag(full, crop.bbox, targetSize = VLM_CROP_SIZE)
     }
 
-    /**
-     * Lightweight per-stage latency tracker. Logs the last timing of each stage
-     * (locate / encode / search / describe / total) plus a running p50 so the
-     * BioDex latency is measurable straight from logcat without a profiler.
-     * Thread-confined to the identify coroutine; sample lists are tiny.
-     */
+    /** Per-stage latency, logged as p50 so it can be read from logcat. */
     private val latency = StageLatency(TAG)
 
     /**
      * Identify all marine organisms found in [bitmap].
      *
-     * @param bitmap      Full-resolution input frame.
-     * @param location    GPS position; null = no geo-filter.
-     * @param sensitivity Geographic filter level (default BALANCED).
-     * @param language    BCP-47 language for VLM descriptions.
-     * @return            One [IdentificationResult] per detected organism.
-     *                    Empty only when [embedder] is not ready.
+     * @return One [IdentificationResult] per located organism (possibly
+     *         unidentified). Empty when the embedder is not ready or the frame
+     *         is blank.
      */
     suspend fun identify(
         bitmap: Bitmap,
@@ -104,144 +113,118 @@ class SpeciesIdentifier(
             Log.w(TAG, "Embedder not ready — skipping identification")
             return emptyList()
         }
-
         if (isBlankFrame(bitmap)) {
             Log.d(TAG, "Frame has no content (black / flat) — skipping identification")
             return emptyList()
         }
-
         val totalStart = System.currentTimeMillis()
         val region = resolveRegion(location)
         val locateStart = System.currentTimeMillis()
-        val crops  = locator.locate(bitmap)
+        val crops = locator.locate(bitmap)
         latency.record("locate", System.currentTimeMillis() - locateStart)
         Log.d(TAG, "Identifying ${crops.size} crop(s), region=${region?.ecoregionName}")
 
         val results = crops.mapNotNull { crop ->
-            runCatching {
-                identifyCrop(crop, region, sensitivity, language)
-            }.onFailure { e ->
-                Log.w(TAG, "Crop identification failed: ${e.message}")
-            }.getOrNull()
+            runCatching { identifyCrop(bitmap, crop, region, sensitivity, language) }
+                .onFailure { e -> Log.w(TAG, "Crop identification failed: ${e.message}") }
+                .getOrNull()
         }
         latency.record("total", System.currentTimeMillis() - totalStart)
         latency.logSummary()
         return results
     }
 
-    // -----------------------------------------------------------------------
-    // Per-crop identification
-    // -----------------------------------------------------------------------
-
     private suspend fun identifyCrop(
+        full: Bitmap,
         crop: OrganismCrop,
         region: MarineRegion?,
         sensitivity: GeoFilterSensitivity,
         language: String,
     ): IdentificationResult {
         val encodeStart = System.currentTimeMillis()
-        val emb     = embedder.embed(crop.crop)
+        val emb = embedder.embed(crop.crop)
         latency.record("encode", System.currentTimeMillis() - encodeStart)
         val searchStart = System.currentTimeMillis()
         val matches = index.search(
-            emb         = emb,
-            region      = region,
-            topK        = TOP_K,
+            emb = emb,
+            region = region,
+            topK = maxOf(TOP_K, vlmChoiceTopK),
             sensitivity = sensitivity,
-            hierarchy   = hierarchyFn(),
+            hierarchy = hierarchyFn(),
         )
         latency.record("search", System.currentTimeMillis() - searchStart)
+        if (matches.isEmpty()) return unidentified(crop, null, emptyList())
 
-        if (matches.isEmpty()) return openVocabResult(crop, region, language)
-
-        val top1       = matches[0]
-        val top2       = matches.getOrNull(1)
-        val margin     = top1.cosineScore - (top2?.cosineScore ?: 0f)
-        val source     = confidence.idSource(top1.confidence, margin)
+        val top1 = matches[0]
+        val margin = top1.cosineScore - (matches.getOrNull(1)?.cosineScore ?: 0f)
         val outOfRange = top1.geoMatchLevel == GeoMatchLevel.GLOBAL && region != null
-
-        return when (source) {
-            "RAG_CORE"      -> ragCoreResult(top1, crop, outOfRange)
-            "RAG_TENTATIVE" -> ragTentativeResult(top1, crop, region, language, outOfRange)
-            else            -> openVocabResult(crop, region, language)
+        val shown = matches.take(TOP_K)
+        return when (confidence.idSource(top1.confidence, margin)) {
+            "RAG_CORE" -> matchResult(top1, crop, SpeciesIdSource.RAG_CORE, outOfRange, shown)
+            "RAG_TENTATIVE" -> tentative(full, crop, matches, region, language, outOfRange)
+            else -> unidentified(crop, top1, shown)
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Result builders
-    // -----------------------------------------------------------------------
-
-    private fun ragCoreResult(
-        top1: SpeciesMatch,
+    /** Tentative band: let Gemma choose among the candidates when it is available. */
+    private suspend fun tentative(
+        full: Bitmap,
         crop: OrganismCrop,
+        matches: List<SpeciesMatch>,
+        region: MarineRegion?,
+        language: String,
         outOfRange: Boolean,
+    ): IdentificationResult {
+        val shown = matches.take(TOP_K)
+        val offered = matches.take(vlmChoiceTopK)
+        val choice = if (offered.isEmpty() || !describer.canChoose) null else {
+            val start = System.currentTimeMillis()
+            val candidates = offered.map { SpeciesCandidate(it.speciesKey, it.scientificName, index.commonName(it.speciesKey)) }
+            describer.chooseAmong(vlmCropper(full, crop), candidates, region, language)
+                .also { latency.record("choose", System.currentTimeMillis() - start) }
+        }
+        return when (choice) {
+            null -> matchResult(matches[0], crop, SpeciesIdSource.RAG_TENTATIVE, outOfRange, shown)
+            is VlmChoice.NoneOfThem -> unidentified(crop, matches[0], shown)
+            is VlmChoice.Picked -> {
+                val pick = offered[choice.index]
+                matchResult(pick, crop, SpeciesIdSource.RAG_TENTATIVE,
+                    outOfRange && pick.geoMatchLevel == GeoMatchLevel.GLOBAL, shown, vlmChosen = true)
+            }
+        }
+    }
+
+    private fun matchResult(
+        m: SpeciesMatch,
+        crop: OrganismCrop,
+        source: SpeciesIdSource,
+        outOfRange: Boolean,
+        candidates: List<SpeciesMatch>,
+        vlmChosen: Boolean = false,
     ) = IdentificationResult(
-        speciesKey     = top1.speciesKey,
-        scientificName = top1.scientificName,
-        idSource       = SpeciesIdSource.RAG_CORE,
-        cosineScore    = top1.cosineScore,
-        confidence     = top1.confidence,
-        bbox           = crop.bbox,
-        geoMatchLevel  = top1.geoMatchLevel.name,
-        outOfRange     = outOfRange,
+        speciesKey = m.speciesKey,
+        scientificName = m.scientificName,
+        idSource = source,
+        cosineScore = m.cosineScore,
+        confidence = m.confidence,
+        bbox = crop.bbox,
+        geoMatchLevel = m.geoMatchLevel.name,
+        outOfRange = outOfRange,
+        candidates = candidates,
+        vlmChosen = vlmChosen,
     )
 
-    private suspend fun ragTentativeResult(
-        top1: SpeciesMatch,
-        crop: OrganismCrop,
-        region: MarineRegion?,
-        language: String,
-        outOfRange: Boolean,
-    ): IdentificationResult {
-        val describeStart = System.currentTimeMillis()
-        val vlm = describer.confirmOrDescribe(
-            crop                     = crop.crop,
-            hypothesisKey            = top1.speciesKey,
-            hypothesisScientificName = top1.scientificName,
-            region                   = region,
-            language                 = language,
+    private fun unidentified(crop: OrganismCrop, top1: SpeciesMatch?, candidates: List<SpeciesMatch>) =
+        IdentificationResult(
+            speciesKey = IdentificationResult.UNIDENTIFIED_KEY,
+            scientificName = "",
+            idSource = SpeciesIdSource.UNIDENTIFIED,
+            cosineScore = top1?.cosineScore ?: 0f,
+            confidence = top1?.confidence ?: 0f,
+            bbox = crop.bbox,
+            uncatalogued = true,
+            candidates = candidates,
         )
-        latency.record("describe", System.currentTimeMillis() - describeStart)
-        return IdentificationResult(
-            speciesKey     = top1.speciesKey,
-            scientificName = top1.scientificName,
-            idSource       = SpeciesIdSource.RAG_TENTATIVE,
-            cosineScore    = top1.cosineScore,
-            confidence     = top1.confidence,
-            vlmDescription = vlm.description.ifBlank { null },
-            bbox           = crop.bbox,
-            geoMatchLevel  = top1.geoMatchLevel.name,
-            outOfRange     = outOfRange,
-        )
-    }
-
-    private suspend fun openVocabResult(
-        crop: OrganismCrop,
-        region: MarineRegion?,
-        language: String,
-    ): IdentificationResult {
-        val describeStart = System.currentTimeMillis()
-        val vlm     = describer.describeOpenVocab(crop.crop, region, language)
-        latency.record("describe", System.currentTimeMillis() - describeStart)
-        val slug    = vlm.freeLabel?.replace(" ", "_")?.lowercase() ?: "unknown"
-        val key     = "uncat:$slug"
-        val sciName = vlm.freeLabel ?: "Unknown organism"
-        return IdentificationResult(
-            speciesKey     = key,
-            scientificName = sciName,
-            idSource       = SpeciesIdSource.VLM_OPENVOCAB,
-            cosineScore    = 0f,
-            confidence     = 0f,
-            vlmDescription = vlm.description.ifBlank { null },
-            bbox           = crop.bbox,
-            uncatalogued   = true,
-            freeLabel      = vlm.freeLabel,
-        )
-    }
-
-    // -----------------------------------------------------------------------
-    // Helpers
-    // -----------------------------------------------------------------------
 
     private fun resolveRegion(location: Location?): MarineRegion? {
         if (location == null || resolver == null) return null

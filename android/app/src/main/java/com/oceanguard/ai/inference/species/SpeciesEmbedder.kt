@@ -6,7 +6,8 @@ import android.graphics.Bitmap
  * Interface for on-device image embedding used in the BioDex RAG pipeline.
  *
  * Implementations convert a [Bitmap] (any size) into an L2-normalised
- * float32 embedding vector of dimension [EMBEDDING_DIM] (512).
+ * float32 embedding vector of length [dimension] (the dimension of the
+ * species pack encoder; [EMBEDDING_DIM] = 512 for the v1 pack and test doubles).
  *
  * The contract requires L2 normalisation so that cosine similarity equals
  * the dot product — the brute-force search in [SpeciesReferenceIndex]
@@ -21,15 +22,19 @@ import android.graphics.Bitmap
  */
 interface SpeciesEmbedder {
     companion object {
-        /** Fixed embedding dimension. All implementations must output this size. */
+        /** Embedding dimension of the v1 pack (OpenCLIP ViT-B/32) and of the test doubles. */
         const val EMBEDDING_DIM = 512
     }
 
     /** True once the model is loaded and ready for inference. */
     val isReady: Boolean
 
+    /** Length of the vectors returned by [embed]; must match the reference index. */
+    val dimension: Int
+        get() = EMBEDDING_DIM
+
     /**
-     * Embed [bitmap] and return a L2-normalised float32 vector of length [EMBEDDING_DIM].
+     * Embed [bitmap] and return a L2-normalised float32 vector of length [dimension].
      *
      * @throws IllegalStateException if the embedder is not ready.
      */

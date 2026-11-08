@@ -27,6 +27,9 @@ import kotlin.math.exp
  * @param tauHigh Minimum calibrated confidence for RAG_CORE.
  * @param tauLow  Minimum calibrated confidence for RAG_TENTATIVE.
  * @param delta   Minimum rank-1 vs rank-2 cosine margin for RAG_CORE.
+ * @param temperature When > 0, the confidence of a species is the softmax of
+ *                the per-species cosines at this temperature (computed by
+ *                [SpeciesReferenceIndex]); Platt is then unused. 0 = legacy Platt.
  */
 class SpeciesConfidence(
     val plattA: Float = DEFAULT_PLATT_A,
@@ -34,6 +37,7 @@ class SpeciesConfidence(
     val tauHigh: Float = DEFAULT_TAU_HIGH,
     val tauLow: Float = DEFAULT_TAU_LOW,
     val delta: Float = DEFAULT_DELTA,
+    val temperature: Float = 0f,
 ) {
     companion object {
         const val DEFAULT_PLATT_A  = 10.0f

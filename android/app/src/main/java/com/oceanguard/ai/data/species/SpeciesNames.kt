@@ -49,4 +49,20 @@ object SpeciesNames {
             ?: entry.commonNames["en"]
             ?: entry.scientificName
     }
+
+    /**
+     * Name to show for one identification: [unidentifiedLabel] for an
+     * unidentified organism, otherwise the localised common name of
+     * [speciesKey] (scientific name as fallback).
+     */
+    fun resultName(
+        speciesKey: String,
+        scientificName: String,
+        unidentified: Boolean,
+        catalog: SpeciesCatalog,
+        unidentifiedLabel: String,
+        language: String = currentLanguage(),
+    ): String =
+        if (unidentified) unidentifiedLabel
+        else commonName(catalog.byKey(speciesKey), language, fallback = scientificName)
 }

@@ -92,7 +92,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val viewModel = MainViewModel(applicationContext, app.detectionOrchestrator, app.repository, app.settingsRepository, app.locationProvider)
-        val speciesViewModel = SpeciesViewModel(applicationContext, app.speciesIdentifier, app.speciesCollectionRepository, app.speciesImagePreprocessor, app.locationProvider)
+        val speciesViewModel = SpeciesViewModel(applicationContext, { app.speciesIdentifierOrNull() }, app.speciesCollectionRepository, app.speciesImagePreprocessor, app.locationProvider)
 
         // Deep-link route from notification click (initial intent + onNewIntent)
         _pendingDeepLink.value = intent?.getStringExtra(InferenceService.EXTRA_DEEP_LINK_ROUTE)
