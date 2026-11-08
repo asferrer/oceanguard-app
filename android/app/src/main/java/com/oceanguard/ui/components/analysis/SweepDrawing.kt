@@ -97,6 +97,7 @@ internal fun DrawScope.drawEchoLabel(
     frame: Rect,
     progress: Float,
     color: Color,
+    textColor: Color = Color.Unspecified,
 ) {
     if (progress <= 0f) return
     val paddingX = LABEL_PADDING_X.toPx()
@@ -114,6 +115,6 @@ internal fun DrawScope.drawEchoLabel(
             size = pill,
             cornerRadius = CornerRadius(LABEL_CORNER.toPx()),
         )
-        drawText(layout, topLeft = Offset(left + paddingX, top + paddingY), alpha = alpha)
+        drawText(layout, color = textColor, topLeft = Offset(left + paddingX, top + paddingY), alpha = alpha)
     }
 }

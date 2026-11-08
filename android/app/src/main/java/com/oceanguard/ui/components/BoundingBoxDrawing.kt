@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -40,6 +41,8 @@ import com.oceanguard.ai.ui.motion.LocalReducedMotion
 import com.oceanguard.ai.ui.motion.OceanMotion
 import com.oceanguard.ai.ui.motion.motionSpec
 import com.oceanguard.ai.ui.motion.rememberOceanLoop
+import com.oceanguard.ai.data.DebrisMaterial
+import com.oceanguard.ai.ui.theme.ClassPalette
 import com.oceanguard.ai.ui.theme.MaterialFabric
 import com.oceanguard.ai.ui.theme.MaterialFishingNet
 import com.oceanguard.ai.ui.theme.MaterialGlass
@@ -47,6 +50,7 @@ import com.oceanguard.ai.ui.theme.MaterialMetal
 import com.oceanguard.ai.ui.theme.MaterialOther
 import com.oceanguard.ai.ui.theme.MaterialPlastic
 import com.oceanguard.ai.ui.theme.MaterialRubber
+import com.oceanguard.ai.ui.theme.materialColor
 
 // ---------------------------------------------------------------------------
 // Colour mapping: RT-DETR class name -> material colour
@@ -152,7 +156,32 @@ private val CLASS_COLOR_MAP: Map<String, Color> = mapOf(
  * Falls back to [MaterialOther] when no exact match is found.
  */
 internal fun colorForClass(className: String): Color =
-    CLASS_COLOR_MAP[className.lowercase()] ?: MaterialOther
+    ClassPalette.argbOrNull(className)?.let(::Color)
+        ?: CLASS_COLOR_MAP[className.lowercase()] ?: MaterialOther
+
+/**
+ * Colour of a detection or debris object: its class colour when the class is one of the
+ * detector's eight, otherwise the colour of its [material] family (extended Gemma classes).
+ */
+internal fun colorForClassOrMaterial(className: String, material: DebrisMaterial): Color =
+    ClassPalette.argbOrNull(className)?.let(::Color) ?: materialColor(material)
+
+private val DarkText = Color(0xFF14181C)
+private val LightText = Color(0xFFFFFFFF)
+private const val CONTRAST_OFFSET = 0.05f
+
+private fun contrastRatio(a: Color, b: Color): Float {
+    val hi = maxOf(a.luminance(), b.luminance())
+    val lo = minOf(a.luminance(), b.luminance())
+    return (hi + CONTRAST_OFFSET) / (lo + CONTRAST_OFFSET)
+}
+
+/**
+ * Text colour readable on top of [background] (a class colour): whichever of dark ink or white
+ * has the higher WCAG contrast. The single source for every label that sits on a class colour.
+ */
+internal fun onClassColor(background: Color): Color =
+    if (contrastRatio(background, DarkText) >= contrastRatio(background, LightText)) DarkText else LightText
 
 // ---------------------------------------------------------------------------
 // Core drawing helpers

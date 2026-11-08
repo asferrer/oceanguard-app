@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.exifinterface.media.ExifInterface
 import com.oceanguard.ai.inference.DetectionResult
 import com.oceanguard.ai.inference.Track
+import com.oceanguard.ai.ui.theme.ClassPalette
 import java.io.File
 import java.io.FileOutputStream
 
@@ -103,7 +104,8 @@ object BitmapAnnotator {
     private const val DEFAULT_COLOR = 0xFF607D8B.toInt() // MaterialOther
 
     private fun colorForClass(className: String): Int =
-        CLASS_COLOR_MAP[className.lowercase()] ?: DEFAULT_COLOR
+        ClassPalette.argbOrNull(className)?.toInt()
+            ?: CLASS_COLOR_MAP[className.lowercase()] ?: DEFAULT_COLOR
 
     /**
      * Draw L-shaped corner brackets on an Android Canvas.

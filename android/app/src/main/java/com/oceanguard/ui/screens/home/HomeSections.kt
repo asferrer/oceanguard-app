@@ -11,7 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -119,9 +119,9 @@ fun HomeCollectionsBlock(
 fun HomeTopLists(viewModel: MainViewModel, navController: NavController) {
     val sessions by viewModel.allSessions.collectAsStateWithLifecycle(initialValue = emptyList())
     if (sessions.isEmpty()) return
-    val context = LocalContext.current
-    val language = remember {
-        ConfigurationCompat.getLocales(context.resources.configuration).get(0)?.language?.lowercase() ?: "en"
+    val configuration = LocalConfiguration.current
+    val language = remember(configuration) {
+        ConfigurationCompat.getLocales(configuration).get(0)?.language?.lowercase() ?: "en"
     }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         HomeEntry(index = 8) {

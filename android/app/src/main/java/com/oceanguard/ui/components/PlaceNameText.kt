@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.dp
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.Location
@@ -42,7 +42,7 @@ fun PlaceNameText(
 ) {
     if (location == null) return
 
-    val context = LocalContext.current
+    val resources = LocalResources.current
     var placeName by remember(location) { mutableStateOf<String?>(null) }
     var isLoading by remember(location) { mutableStateOf(true) }
 
@@ -50,7 +50,7 @@ fun PlaceNameText(
         isLoading = true
         val result = geocoder.reverse(location.latitude, location.longitude)
         placeName = result?.toPlaceLabel()
-            ?: context.getString(R.string.zone_name_unknown)
+            ?: resources.getString(R.string.zone_name_unknown)
         isLoading = false
     }
 

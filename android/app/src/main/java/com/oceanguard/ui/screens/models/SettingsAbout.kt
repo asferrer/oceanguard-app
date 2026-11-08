@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -88,6 +89,7 @@ fun AboutBlock(
 @Composable
 private fun Logo(advancedEnabled: Boolean, onActivate: () -> Unit) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     var taps by remember { mutableIntStateOf(0) }
     Image(
         painter = painterResource(R.drawable.logo),
@@ -104,7 +106,7 @@ private fun Logo(advancedEnabled: Boolean, onActivate: () -> Unit) {
                     }
                     LogoTapResult.COUNTDOWN -> Toast.makeText(
                         context,
-                        context.getString(R.string.settings_dev_mode_countdown, ADVANCED_TAP_TARGET - taps),
+                        resources.getString(R.string.settings_dev_mode_countdown, ADVANCED_TAP_TARGET - taps),
                         Toast.LENGTH_SHORT,
                     ).show()
                     LogoTapResult.NONE -> Unit
