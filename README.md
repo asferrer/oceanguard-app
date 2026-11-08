@@ -41,14 +41,62 @@ ReportValidator -> Markdown / PDF / CSV / GeoJSON
 - **Detector.** RT-DETRv2 (R50vd, 150 queries, 8 classes), the model `exp08_real_synth_minor_s3` of the study, converted
   to TFLite FP16 (about 83 MB). The app is the only consumer of the conversion described in
   [`tools/rtdetrv2/README.md`](tools/rtdetrv2/README.md).
-- **Deep analysis and reports.** Gemma 4 E2B through LiteRT-LM, running on the phone GPU. The report agent calls 8 typed Kotlin `@Tool`
+- **Deep analysis and reports.** Gemma 4 E2B through LiteRT-LM, running on the phone GPU. The report agent calls 9 typed Kotlin `@Tool`
   methods (debris summary, material and type breakdown, risk assessment, collection waypoints, survey statistics,
-  ecological impacts, temporal trend), so every number in a report is computed in Kotlin and not written by the model.
+  ecological impacts, temporal trend, per-session details), so every number in a report is computed in Kotlin and not written by the model.
   `ReportValidator` scores the result with 12+ checks.
 - **Other features.** Continuous scan with RT-DETRv2 (about one pass every 4 s on the reference phone, not real time),
   map with the real location of each analysis (MapLibre, OpenFreeMap), GPS from EXIF or device, hotspot clustering,
   MarineDex and BioDex collections, achievements, and six languages (EN, ES, FR, DE, IT, PT).
 - **Alternative engines.** A llama.cpp path for the fine-tuned Gemma 4 (GGUF) and for Qwen 3.5 text models.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    subgraph UI["UI (ui/)"]
+        SCR["Jetpack Compose screens and navigation"]
+        VM["ViewModels<br/>MainViewModel, SpeciesViewModel, SpeciesDexViewModel"]
+        SCR <--> VM
+    end
+    subgraph SVC["Foreground services (service/)"]
+        IS["InferenceService<br/>photo, batch and video jobs"]
+        RS["ReportGenerationService"]
+        DS["VlmDownloadService"]
+    end
+    subgraph INF["On-device inference (inference/, ai/inference/)"]
+        ORC["DetectionOrchestrator"]
+        RT["RTDETRInference<br/>TFLite FP16, NNAPI or XNNPACK"]
+        G4["Gemma 4 E2B<br/>LiteRTTextEngine, LiteRT-LM"]
+        TRG["ToolReportGenerator<br/>ToolAgentLoop, OceanGuardTools"]
+        SPC["SpeciesIdentifier<br/>ONNX encoder and species index"]
+        LL["llama.cpp engines<br/>Qwen 3.5, fine-tuned GGUF"]
+        ORC --> RT
+        ORC -. "optional refinement" .-> G4
+        TRG --> G4
+        SPC -. "describes uncertain matches" .-> G4
+    end
+    subgraph DATA["Local storage (data/)"]
+        REPO["Repositories<br/>DetectionRepository, CollectionRepository,<br/>SpeciesCollectionRepository"]
+        ROOM[("Room database<br/>sessions, reports, MarineDex, achievements,<br/>videos, contribution queue, species")]
+        REPO --> ROOM
+    end
+    APP["OceanGuardApp<br/>holds the detectors, engines and model manager"]
+    VM --> IS
+    VM --> SPC
+    VM --> APP
+    IS --> ORC
+    IS --> REPO
+    APP --> TRG
+    APP --> RS
+    APP --> DS
+    APP --> REPO
+    APP --> MM["VlmModelManager<br/>downloads and validates models"]
+    DS -. "keeps the download alive" .-> MM
+```
+
+Detail of the photo, species, report and download paths: [docs/FLOWS.md](docs/FLOWS.md); interfaces, GPU strategy and
+memory: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Results of the detector
 
