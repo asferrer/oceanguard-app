@@ -55,9 +55,19 @@
 -keep class androidx.compose.** { *; }
 -dontwarn androidx.compose.**
 
-# WorkManager + DataContributionWorker
+# WorkManager + DataContributionWorker (WorkManager builds workers by reflection from their class name)
 -keep class androidx.work.** { *; }
--keep class com.oceanguard.ai.service.DataContributionWorker { *; }
--keep class com.oceanguard.ai.data.contribution.** { *; }
--keep class com.oceanguard.ai.utils.CocoAnnotationSerializer { *; }
-# The Firebase SDKs ship their own consumer rules; nothing to add when App Check is on.
+-keep class com.oceanguard.service.DataContributionWorker { *; }
+-keep class * extends androidx.work.ListenableWorker {
+    <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+-keep class com.oceanguard.data.contribution.** { *; }
+-keep class com.oceanguard.utils.CocoAnnotationSerializer { *; }
+# Firebase SDKs ship their own consumer rules; nothing to add when App Check is on.
+
+# ONNX Runtime (species detector and embedder): native code calls back into these classes through JNI.
+-keep class ai.onnxruntime.** { *; }
+-dontwarn ai.onnxruntime.**
+
+# Android Keystore (device key and attestation) is a framework API reached through JCA providers,
+# so it needs no rule; keep the signer classes above because they are matched by name in the envelope.
