@@ -12,6 +12,7 @@
     <string name="home_status_needs_download">Non téléchargé · ~%1$s Go</string>
     <string name="home_status_reports_ready">Rapports : modèle prêt</string>
     <string name="home_status_reports_missing">Rapports : modèle non téléchargé (%1$s)</string>
+    <string name="home_status_reports_download">Télécharger</string>
     <string name="home_download_title">Télécharger le modèle</string>
     <string name="home_download_message">Le mode %1$s nécessite un téléchargement unique d\'environ %2$s Go. Mieux vaut utiliser le Wi-Fi. Le télécharger maintenant ?</string>
     <string name="home_achievements_button_cd">Succès : %1$d sur %2$d débloqués</string>

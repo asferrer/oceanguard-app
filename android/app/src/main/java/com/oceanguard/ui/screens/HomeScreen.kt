@@ -47,6 +47,7 @@ import com.oceanguard.ai.ui.screens.home.HomeLogic
 import com.oceanguard.ai.ui.screens.home.HomeModelUi
 import com.oceanguard.ai.ui.screens.home.HomeStatsBlock
 import com.oceanguard.ai.ui.screens.home.HomeStatusBlock
+import com.oceanguard.ai.ui.screens.home.reportCatalogModel
 import com.oceanguard.ai.ui.screens.home.HomeTopLists
 import com.oceanguard.ai.ui.screens.home.HomeTourOverlay
 import com.oceanguard.ai.ui.screens.home.HomeTourStart
@@ -100,7 +101,7 @@ fun HomeScreen(
         HomeScaffold(scrollState) {
             HomeHeader(achievementsUnlocked, ALL_ACHIEVEMENTS.size, onAchievements = { navController.navigate("achievements") })
             HomeHub(target, { target = it }, model, bounds, actions)
-            HomeStatusBlock(app, model, bounds)
+            HomeStatusBlock(app, model, bounds) { reportCatalogModel(app)?.let(downloader::request) }
             HomeStatsBlock(viewModel, bounds)
             HomeCollectionsBlock(
                 dexEntries, discoveredCount, bounds, navController,

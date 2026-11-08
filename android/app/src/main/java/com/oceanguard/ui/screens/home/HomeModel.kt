@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oceanguard.ai.OceanGuardApp
+import com.oceanguard.ai.ui.screens.models.CatalogModel
 import com.oceanguard.ai.inference.TextModelTier
 import com.oceanguard.ai.inference.TextModelVariant
 import com.oceanguard.ai.inference.VlmDownloadState
@@ -44,6 +45,10 @@ fun rememberHomeModel(app: OceanGuardApp): HomeModelUi {
 /** Tier the user chose for reports, so the status line can say whether it is installed. */
 fun reportTier(app: OceanGuardApp): TextModelTier =
     TextModelTier.fromKey(app.settingsRepository.getVlmModelTierSync())
+
+/** The catalog entry the report model download goes through, or null when there is none. */
+fun reportCatalogModel(app: OceanGuardApp): CatalogModel? =
+    CatalogModel.forTier(reportTier(app), TextModelVariant.fromKey(app.settingsRepository.getVlmModelVariantSync()))
 
 private fun isReportModelMissing(app: OceanGuardApp): Boolean {
     val variant = TextModelVariant.fromKey(app.settingsRepository.getVlmModelVariantSync())
