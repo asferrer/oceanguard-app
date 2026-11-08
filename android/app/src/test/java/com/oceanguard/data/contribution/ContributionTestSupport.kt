@@ -5,6 +5,9 @@ import androidx.exifinterface.media.ExifInterface
 import androidx.room.Room
 import com.oceanguard.ai.data.OceanGuardDatabase
 import java.io.File
+import java.security.KeyPair
+import java.security.KeyPairGenerator
+import java.security.spec.ECGenParameterSpec
 import java.util.Base64
 
 /** In-memory [ContributionPrefs] for the queue and worker tests. */
@@ -16,7 +19,6 @@ class FakeContributionPrefs(
 ) : ContributionPrefs {
     val statuses = mutableListOf<ContributionSyncStatus>()
     var id: String? = null
-    var includeAsked = mutableListOf<Boolean>()
 
     override suspend fun consentGiven() = consent
     override suspend fun setConsent(given: Boolean) {
@@ -24,16 +26,39 @@ class FakeContributionPrefs(
         stale = false
     }
     override suspend fun hasStaleConsent() = stale
-    override suspend fun includeLocation() = include.also { includeAsked += it }
+    override suspend fun includeLocation() = include
     override suspend fun wifiOnly() = wifi
-    override suspend fun clientId(): String = id ?: "client-test-0001".also { id = it }
-    override suspend fun resetClientId() {
-        id = null
+    override suspend fun rememberClientId(id: String?) {
+        this.id = id
     }
     override suspend fun recordSync(status: ContributionSyncStatus) {
         statuses += status
     }
 }
+
+/** Software key pair standing in for the Android Keystore key. */
+class SoftwareDeviceIdentity : DeviceIdentity {
+    private var pair: KeyPair? = null
+    var resets = 0
+
+    private fun keys(): KeyPair = pair ?: KeyPairGenerator.getInstance("EC")
+        .apply { initialize(ECGenParameterSpec("secp256r1")) }.generateKeyPair().also { pair = it }
+
+    override fun publicKeySpki(): ByteArray = keys().public.encoded
+    override fun sign(message: ByteArray): ByteArray = KeystoreDeviceIdentity.signRaw(keys().private, message)
+    override fun reset() {
+        pair = null
+        resets++
+    }
+}
+
+/** A NAS key pair for tests (the real one is generated on the NAS by generate_keys.py). */
+val testRecipient: KeyPair = KeyPairGenerator.getInstance("EC")
+    .apply { initialize(ECGenParameterSpec("secp256r1")) }.generateKeyPair()
+
+val testRecipientB64: String = java.util.Base64.getEncoder().encodeToString(testRecipient.public.encoded)
+
+fun testConfig(url: String) = ContributionConfig(url, testRecipientB64)
 
 fun inMemoryDatabase(context: Context): OceanGuardDatabase =
     Room.inMemoryDatabaseBuilder(context, OceanGuardDatabase::class.java).allowMainThreadQueries().build()

@@ -1,67 +1,83 @@
 # Photo contribution
 
-Optional, off by default. When the user turns it on, each analysed photo is uploaded to the OceanGuard
-contribution gateway (`contribution-api`, contract v3) to improve the detection and species models and for
-statistics.
+Optional, off by default. When the user turns it on, each analysed photo is sent for research
+(better detection and species models, statistics). Pipeline and contract:
+`OceanguardAI-contrib/contribution-api` (contract v4):
+
+```
+phone --HTTPS--> Cloudflare Worker (workers.dev, free) + D1 buffer --(outbound pull)--> research NAS
+```
 
 ## What is sent
 
-- The photo exactly as stored, **with its EXIF**: GPS location, date and time, make and model, orientation.
-  With **Include location** off (Settings), a temporary copy loses every GPS tag and the XMP packet and that copy
-  is sent; the photo on the phone is not modified. If the tags cannot be removed, the photo is not sent.
-- The detections as COCO JSON (`CocoAnnotationSerializer`).
-- The app version and an anonymous install id (`client_id`, a random UUID created on the first upload).
+- The photo exactly as stored, **with its EXIF**: GPS location, date and time, make and model,
+  orientation. With **Include location** off (Settings), a temporary copy loses every GPS tag
+  and the XMP packet and that copy is sent; the photo on the phone is not modified. If the tags
+  cannot be removed, the photo is not sent.
+- The detections as COCO JSON (`CocoAnnotationSerializer`) and the app version.
+- All of it **encrypted on the phone to the NAS public key** (`ContributionEnvelope`: ECIES
+  P-256, HKDF-SHA256, AES-256-GCM). The Cloudflare buffer only holds ciphertext.
+- An anonymous contributor id: the hash of a per-install P-256 key generated in the Android
+  Keystore (`KeystoreDeviceIdentity`), which never leaves the phone.
 
 ## Configuration (never in the repository)
 
-`android/local.properties` (git-ignored) or environment variables of the same name:
+`android/local.properties` (git-ignored) or environment variables of the same name; both values
+are public:
 
 ```
-CONTRIBUTION_API_URL=https://contrib.<domain>
-CONTRIBUTION_API_KEY_ID=og-android-2026a
-CONTRIBUTION_API_SECRET=<from contribution-api/deploy/generate_keys.py>
+CONTRIBUTION_API_URL=https://oceanguard-contrib.<account>.workers.dev
+CONTRIBUTION_RECIPIENT_KEY=<NAS public key from contribution-api/deploy/generate_keys.py>
 ```
 
-Without them the APK has no destination: the Settings switch is disabled with an explanation, the post-analysis
-sheet never appears, nothing is queued and, at start-up, anything left in the queue is removed.
+`android/app/google-services.json` (git-ignored) turns on Firebase App Check: the build applies
+the google-services plugin, adds the App Check SDK (debug provider in debug builds, Play
+Integrity in release builds) and attaches `X-Firebase-AppCheck` to every request. Without the
+file the APK contains no Firebase code and **does not offer contribution** (the Worker refuses
+unattested requests), except against a local test Worker on `127.0.0.1`.
+`-Poceanguard.appcheck=true` compiles the App Check sources without the file, to check that they
+build.
 
-`android/app/google-services.json` (git-ignored) turns on Firebase App Check: the build applies the
-google-services plugin, adds the App Check SDK (debug provider in debug builds, Play Integrity in release builds)
-and attaches `X-Firebase-AppCheck` to every request. Without the file the APK contains no Firebase code.
-`-Poceanguard.appcheck=true` compiles the App Check sources without the file, to check that they build.
+Without a destination, the Settings switch is disabled with an explanation, the post-analysis
+sheet never appears, nothing is queued and anything left in the queue is removed at start-up.
 
 ## Security decisions
 
-- **TLS**: OkHttp defaults (system trust store, hostname verification). No custom trust manager and no exceptions
-  for private addresses. Only `https://` URLs are accepted, plus `http://` to `localhost`/`127.0.0.1` for tests.
-- **Embedded HMAC secret**: it can be extracted from the APK, so it is not the main defence. It provides
-  integrity, revocation by `key_id` (rotation without breaking old versions) and a cheap filter. The defence that
-  cannot be copied from the APK is App Check; a public build must run against a gateway with
-  `OG_APPCHECK_ENFORCE=true`. A build without `google-services.json` is only for local tests.
-- **Consent is versioned** (`CONSENT_VERSION` in `data/settings/ContributionSettings.kt`). The consent of v1.1.1
-  promised "no GPS coordinates"; it no longer counts, the user is asked again and what was queued under it is
-  dropped.
+- **No secret in the APK.** No HMAC, no API key. Identity = Keystore key (ECDSA signature on every
+  request); attestation = App Check (the main control). The Worker only holds public keys.
+- **End-to-end encryption** to the NAS: a compromise of the Cloudflare account or a TLS
+  interception reveals no photo and no location.
+- **TLS**: system trust store, TLS 1.2+ with restricted suites (`ConnectionSpec.RESTRICTED_TLS`),
+  no cleartext, no redirects. **No certificate pinning**: Cloudflare rotates the CAs of
+  workers.dev and advises against pinning; the end-to-end encryption makes it unnecessary.
+- **Consent is versioned** (`CONSENT_VERSION` in `data/settings/ContributionSettings.kt`). The
+  consent of v1.1.1 promised "no GPS coordinates"; it no longer counts, the user is asked again
+  and what was queued under it is dropped.
 
 ## Queue and retries
 
-`ContributionUploadRunner` sends one photo at a time:
+`ContributionUploadRunner` sends one photo at a time. The contribution id is stable per queue
+item and install, so a retry after a lost answer is a duplicate, not a second copy.
 
-| Gateway answer | Item | Pass |
+| Worker answer | Item | Pass |
 |---|---|---|
 | 201, or 200 duplicate | DONE | continues |
-| 413 / 415 / 422, photo missing, location not removable | FAILED | continues |
-| 401 (key or App Check), 5xx, network | stays PENDING, one attempt spent | stops, WorkManager retries (backoff 5 min, doubling) |
-| 429 | stays PENDING, no attempt spent | stops, retried later |
+| 411 / 413 / 415 / 422, photo missing, location not removable, not sealable | FAILED | continues |
+| 401 (App Check or signature), 5xx, network | stays PENDING, one attempt spent | stops, WorkManager retries (backoff 5 min, doubling) |
+| 429, or 503 quota | stays PENDING, no attempt spent | stops, retried later |
 
-After 5 attempts the item becomes FAILED, so no item stays PENDING forever. Settings shows the counts, the last
-result in words ("the server rejected the app key…"), **Upload now**, **Retry failed**, the anonymous contributor
-id, **Delete my contributed photos** (`POST /v1/withdrawals`), **Reset contribution prompts** and the privacy
-policy (six languages).
+After 5 attempts the item becomes FAILED, so nothing stays PENDING forever. Settings shows the
+counts, the last result in words, **Upload now**, **Retry failed**, the anonymous contributor
+id, **Delete my contributed photos** (deletes what is still buffered at once; the NAS deletes
+the rest on its next pull; the Keystore key is then deleted, so later contributions use a new
+identity), **Reset contribution prompts** and the privacy policy (six languages).
 
 ## Tests
 
-`ContributionSignerTest` (gateway HMAC vectors), `ContributionApiClientTest` (MockWebServer),
-`ContributionConfigTest`, `ContributionImageTest` (GPS removal, Robolectric), `ContributionUploadRunnerTest`,
-`ContributionRepositoryTest` (WorkManager testing), `DataContributionWorkerTest`, `ContributionConsentTest`.
-`ContributionGatewayE2ETest` runs against a local gateway only when `OG_E2E_URL`, `OG_E2E_KEY_ID` and
-`OG_E2E_SECRET` are set (see `contribution-api/deploy/CHECKLIST_AUTOR.md`, step 5).
+`ContributionEnvelopeTest` (same bytes as the NAS vector), `ContributionSignerTest`,
+`ContributionApiClientTest` (MockWebServer; verifies the signature the way the Worker does),
+`ContributionConfigTest`, `ContributionImageTest` (GPS removal, Robolectric),
+`ContributionUploadRunnerTest`, `ContributionRepositoryTest` (WorkManager testing),
+`DataContributionWorkerTest`, `ContributionConsentTest`. `ContributionGatewayE2ETest` runs
+against the local Worker (`contribution-api/worker/local/serve.mjs`) only when `OG_E2E_URL` and
+`OG_E2E_RECIPIENT_KEY` are set (see `contribution-api/deploy/CHECKLIST_AUTOR.md`, step 5).

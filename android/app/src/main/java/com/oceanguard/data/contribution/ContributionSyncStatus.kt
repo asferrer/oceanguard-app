@@ -14,7 +14,7 @@ enum class ContributionSyncStatus {
     /** This build has no destination (no URL or key). */
     NOT_CONFIGURED,
 
-    /** Signature rejected: revoked key or clock far off. */
+    /** Device signature rejected (usually the phone clock is far off). */
     AUTH,
 
     /** App Check token missing or rejected. */
@@ -22,6 +22,9 @@ enum class ContributionSyncStatus {
 
     /** Too many uploads; the server asked to wait. */
     RATE_LIMITED,
+
+    /** The free buffer is full for today; retried later (nothing is ever billed). */
+    QUOTA,
 
     /** Server error; retried later. */
     SERVER,

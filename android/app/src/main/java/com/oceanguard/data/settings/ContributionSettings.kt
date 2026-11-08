@@ -12,7 +12,6 @@ import com.oceanguard.ai.data.contribution.ContributionSyncStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.util.UUID
 
 /**
  * Wording of the consent the user accepted. 1 was v1.1.1 ("no GPS coordinates"); 2 says the
@@ -87,7 +86,7 @@ val SettingsRepository.contributionSyncState: Flow<ContributionSyncState>
         )
     }
 
-/** Anonymous install id shown in Settings, so an e-mail withdrawal request can name it. */
+/** Anonymous contributor id (from the device key) shown in Settings, so an e-mail withdrawal request can name it. */
 val SettingsRepository.contributionClientIdFlow: Flow<String?>
     get() = store.data.map { it[ContributionKeys.CLIENT_ID] }
 
@@ -108,18 +107,10 @@ class SettingsContributionPrefs(private val settings: SettingsRepository) : Cont
 
     override suspend fun wifiOnly(): Boolean = settings.contributeWifiOnly.first()
 
-    override suspend fun clientId(): String {
-        var id: String? = null
+    override suspend fun rememberClientId(id: String?) {
         store.edit { prefs ->
-            id = prefs[ContributionKeys.CLIENT_ID] ?: UUID.randomUUID().toString().also {
-                prefs[ContributionKeys.CLIENT_ID] = it
-            }
+            if (id == null) prefs.remove(ContributionKeys.CLIENT_ID) else prefs[ContributionKeys.CLIENT_ID] = id
         }
-        return checkNotNull(id)
-    }
-
-    override suspend fun resetClientId() {
-        store.edit { it.remove(ContributionKeys.CLIENT_ID) }
     }
 
     override suspend fun recordSync(status: ContributionSyncStatus) {

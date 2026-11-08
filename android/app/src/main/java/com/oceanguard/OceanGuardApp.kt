@@ -43,6 +43,8 @@ import com.oceanguard.ai.service.VlmDownloadService
 import com.oceanguard.ai.data.contribution.AppCheck
 import com.oceanguard.ai.data.contribution.ContributionApiClient
 import com.oceanguard.ai.data.contribution.ContributionConfig
+import com.oceanguard.ai.data.contribution.ContributionEnvelope
+import com.oceanguard.ai.data.contribution.KeystoreDeviceIdentity
 import com.oceanguard.ai.data.contribution.ContributionImage
 import com.oceanguard.ai.data.contribution.ContributionQueueDao
 import com.oceanguard.ai.data.contribution.ContributionRepository
@@ -514,12 +516,15 @@ class OceanGuardApp : Application(), ContributionHost {
 
     val imagePreprocessor: ImagePreprocessor by lazy { ImagePreprocessor(this) }
 
-    // Research contribution. No destination in this build (empty local.properties) means no
-    // client, and then the feature is not offered anywhere.
+    // Research contribution. No client (and the feature is not offered anywhere) when this
+    // build has no destination, or has no App Check while pointing at a real Worker: the
+    // Worker refuses unattested requests, so offering it would only queue photos for nothing.
     val contributionQueueDao: ContributionQueueDao by lazy { database.contributionQueueDao() }
     private val contributionPrefs by lazy { SettingsContributionPrefs(settingsRepository) }
+    private val contributionConfig by lazy { ContributionConfig.fromBuildConfig() }
     private val contributionApiClient: ContributionApiClient? by lazy {
-        ContributionConfig.fromBuildConfig().takeIf { it.isUsable }?.let { ContributionApiClient(it) }
+        contributionConfig.takeIf { it.isUsable && (AppCheck.AVAILABLE || it.isLoopback) }
+            ?.let { ContributionApiClient(it, KeystoreDeviceIdentity()) }
     }
     val contributionRepository: ContributionRepository by lazy {
         ContributionRepository(contributionQueueDao, contributionPrefs, this, contributionApiClient)
@@ -534,6 +539,9 @@ class OceanGuardApp : Application(), ContributionHost {
         appVersion = BuildConfig.VERSION_NAME,
         prepare = { photo, includeLocation ->
             ContributionImage.prepare(photo, includeLocation, java.io.File(cacheDir, "contribution"))
+        },
+        seal = { id, meta, image ->
+            ContributionEnvelope.seal(checkNotNull(contributionConfig.recipientSpki), id, meta, image)
         },
     )
 

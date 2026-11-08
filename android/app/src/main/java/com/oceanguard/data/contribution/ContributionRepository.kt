@@ -16,7 +16,8 @@ import java.util.concurrent.TimeUnit
 
 /** Result of "Withdraw my contributions" in Settings. */
 sealed interface WithdrawResult {
-    data class Done(val removed: Int) : WithdrawResult
+    /** Accepted: [pendingDeleted] were still in the buffer; the NAS deletes the rest on its next pass. */
+    data class Done(val pendingDeleted: Int) : WithdrawResult
     data object Unavailable : WithdrawResult
     data class Failed(val status: ContributionSyncStatus) : WithdrawResult
 }
@@ -105,12 +106,13 @@ class ContributionRepository(
      */
     suspend fun withdrawAll(): WithdrawResult {
         val api = client ?: return WithdrawResult.Unavailable
-        return when (val outcome = api.withdraw(prefs.clientId())) {
+        return when (val outcome = api.withdraw()) {
             is ApiOutcome.Withdrawn -> {
                 prefs.setConsent(false)
                 dao.deleteAll()
-                prefs.resetClientId()
-                WithdrawResult.Done(outcome.count)
+                api.resetIdentity()
+                prefs.rememberClientId(null)
+                WithdrawResult.Done(outcome.pendingDeleted)
             }
             is ApiOutcome.Failed -> WithdrawResult.Failed(outcome.status)
             else -> WithdrawResult.Failed(ContributionSyncStatus.SERVER)

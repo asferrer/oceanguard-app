@@ -1,0 +1,14 @@
+[
+  {
+    "recipient_private_hex": "1f2e3d4c5b6a79881f2e3d4c5b6a79881f2e3d4c5b6a79881f2e3d4c5b6a7988",
+    "recipient_spki_b64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvXxzuIsum0ztpiAistqL4TGTpbVu3Cbn33hC4kzQtesGBa2nvag6xqK4DX4xQED6R/8WuDushc7bAURRu3znGg==",
+    "ephemeral_private_hex": "0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9",
+    "ephemeral_public_x_hex": "160b0615159ebbdf7fd4b1194d42b2986c6b2cccad799521b8b326292b6419b3",
+    "ephemeral_public_y_hex": "93a20e124ad2a56ecea74f8dae84d8d91d0f5ac4a33f221226d1681cd12552ca",
+    "nonce_hex": "000102030405060708090a0b",
+    "contribution_id": "3f2b8c1e-5d4a-4b6f-9e8d-7c6b5a493827",
+    "meta": "{\"v\":1,\"contribution_id\":\"3f2b8c1e-5d4a-4b6f-9e8d-7c6b5a493827\",\"app_version\":\"1.2.0\",\"annotations\":{\"images\":[],\"annotations\":[],\"categories\":[]}}",
+    "image_hex": "ffd8ffe000104a46494600010173796e746865746963ffd9",
+    "envelope_hex": "4f4743310104160b0615159ebbdf7fd4b1194d42b2986c6b2cccad799521b8b326292b6419b393a20e124ad2a56ecea74f8dae84d8d91d0f5ac4a33f221226d1681cd12552ca000102030405060708090a0b777962c79405dc1e38865ee6a109c208dd7f0a5b1a89cee1b153f6096e2b32a4a9b2ec9725115cba697bee8263c656ca53f8da993cd29af4ed68ade6d19eb288d10e02f1960de83fbf9388b9ed5d9dbe54dddb94ed0229ef1399e0af2d92b90eed8dc387ac4a72069ea1bd93118fbf44d350bd6f0f451a39836983030883984166a32e88a4988ef9d48458b06e987fdc22d494727dd7d0061b85bc9e1a21d20f8860ea4e5e1a97eb3885e764f6511dc563564c69e705d530000cbdf8854030"
+  }
+]

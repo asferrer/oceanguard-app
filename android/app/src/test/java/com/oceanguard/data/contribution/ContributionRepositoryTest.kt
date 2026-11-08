@@ -33,6 +33,7 @@ class ContributionRepositoryTest {
     private lateinit var db: OceanGuardDatabase
     private val dao get() = db.contributionQueueDao()
     private val prefs = FakeContributionPrefs()
+    private val identity = SoftwareDeviceIdentity()
 
     @Before
     fun setUp() {
@@ -52,7 +53,7 @@ class ContributionRepositoryTest {
         prefs = prefs,
         context = context,
         client = if (available) {
-            ContributionApiClient(ContributionConfig("http://127.0.0.1:${server.port}/", "og-test-2026", "s"), appCheckToken = { null })
+            ContributionApiClient(testConfig("http://127.0.0.1:${server.port}/"), identity, appCheckToken = { "token" })
         } else {
             null
         },
@@ -127,15 +128,16 @@ class ContributionRepositoryTest {
     @Test
     fun withdrawAllDeletesEverywhereAndStartsANewId() = runBlocking {
         prefs.consent = true
-        prefs.id = "client-old-0001"
+        prefs.id = identity.clientId
         dao.insert(ContributionQueueItem(sessionId = 1, imageUri = "u", annotationsJson = "{}", status = ContributionStatus.DONE))
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"withdrawn":1}"""))
+        server.enqueue(MockResponse().setResponseCode(202).setBody("""{"status":"accepted","pending_deleted":1}"""))
 
         assertEquals(WithdrawResult.Done(1), repository().withdrawAll())
-        assertTrue(server.takeRequest().body.readUtf8().contains("client-old-0001"))
+        assertEquals("/v1/withdrawals", server.takeRequest().path)
         assertEquals(0, dao.getDoneCount())
         assertFalse(prefs.consent)
         assertNull(prefs.id)
+        assertEquals("a new anonymous identity next time", 1, identity.resets)
     }
 
     @Test

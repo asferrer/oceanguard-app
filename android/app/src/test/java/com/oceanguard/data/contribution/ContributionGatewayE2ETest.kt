@@ -11,15 +11,13 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.UUID
 
 /**
- * End-to-end against a LOCAL contribution-api (never a public server), with synthetic photos.
- * Skipped unless OG_E2E_URL, OG_E2E_KEY_ID and OG_E2E_SECRET are set, e.g.:
- *
- *   OG_KEYS=og-e2e:local-test-secret OG_APPCHECK_ENFORCE=false OG_DATA_DIR=/tmp/og \
- *     uvicorn app.main:app --port 8077
- *   OG_E2E_URL=http://127.0.0.1:8077 OG_E2E_KEY_ID=og-e2e OG_E2E_SECRET=local-test-secret \
- *     ./gradlew :app:testDebugUnitTest --tests '*ContributionGatewayE2ETest'
+ * End-to-end against the LOCAL Worker (`contribution-api/worker/local/serve.mjs`, the real
+ * Worker code on 127.0.0.1) with synthetic photos; the NAS side is then checked with
+ * `python -m app.cli pull`. Skipped unless OG_E2E_URL and OG_E2E_RECIPIENT_KEY are set
+ * (see contribution-api/deploy/CHECKLIST_AUTOR.md, step 5).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = Application::class)
@@ -28,40 +26,44 @@ class ContributionGatewayE2ETest {
     @get:Rule
     val tmp = TemporaryFolder()
 
-    private fun clientOrSkip(): ContributionApiClient {
-        val url = System.getenv("OG_E2E_URL").orEmpty()
-        val config = ContributionConfig(url, System.getenv("OG_E2E_KEY_ID").orEmpty(), System.getenv("OG_E2E_SECRET").orEmpty())
-        assumeTrue("local gateway not configured", config.isUsable && config.url!!.host in setOf("127.0.0.1", "localhost"))
-        return ContributionApiClient(config, appCheckToken = { null })
+    private fun configOrSkip(): ContributionConfig {
+        val config = ContributionConfig(System.getenv("OG_E2E_URL").orEmpty(), System.getenv("OG_E2E_RECIPIENT_KEY").orEmpty())
+        assumeTrue("local worker not configured", config.isUsable && config.isLoopback)
+        return config
     }
 
     private val coco = """{"images":[{"id":1,"file_name":"e2e.jpg","width":16,"height":12,"date_captured":"2026-05-17T08:20:30Z"}],""" +
         """"annotations":[{"id":1,"image_id":1,"category_id":0,"category_name":"BOTTLE","bbox":[1,1,4,4],"area":16,"iscrowd":0,"score":0.9}],""" +
         """"categories":[{"id":0,"name":"Bottle"}]}"""
 
+    private fun meta(id: String) = """{"v":1,"contribution_id":"$id","app_version":"e2e","annotations":$coco}"""
+
     @Test
-    fun uploadWithAndWithoutLocationThenDuplicate() = runBlocking {
-        val client = clientOrSkip()
+    fun uploadsWithAndWithoutLocationAndARetry() = runBlocking {
+        val config = configOrSkip()
+        val client = ContributionApiClient(config, SoftwareDeviceIdentity(), appCheckToken = { null })
         val photo = syntheticJpeg(tmp.root, "e2e.jpg")
         val withGps = ContributionImage.prepare(photo, includeLocation = true, workDir = tmp.newFolder("a"))
         val withoutGps = ContributionImage.prepare(photo, includeLocation = false, workDir = tmp.newFolder("b"))
+        val spki = config.recipientSpki!!
 
-        val first = client.upload(withGps, "e2e.jpg", coco, "e2e-client-0001", "e2e", null)
-        assertTrue("got $first", first is ApiOutcome.Stored && !first.duplicate)
-        val second = client.upload(withoutGps, "e2e_nogps.jpg", coco, "e2e-client-0001", "e2e", null)
-        assertTrue("got $second", second is ApiOutcome.Stored && !second.duplicate)
-        val again = client.upload(withGps, "e2e.jpg", coco, "e2e-client-0001", "e2e", null)
-        assertEquals(ApiOutcome.Stored((first as ApiOutcome.Stored).id, duplicate = true), again)
+        val first = UUID.randomUUID().toString()
+        assertEquals(ApiOutcome.Stored(first, false), client.upload(ContributionEnvelope.seal(spki, first, meta(first), withGps), first))
+        val second = UUID.randomUUID().toString()
+        assertEquals(ApiOutcome.Stored(second, false), client.upload(ContributionEnvelope.seal(spki, second, meta(second), withoutGps), second))
+        // Retry of the first one: new ciphertext, same id -> duplicate, not a second copy.
+        val again = client.upload(ContributionEnvelope.seal(spki, first, meta(first), withGps), first)
+        assertEquals(ApiOutcome.Stored(first, true), again)
     }
 
     @Test
-    fun withdrawRemovesOnlyThatClient() = runBlocking {
-        val client = clientOrSkip()
-        val photo = syntheticJpeg(tmp.root, "w.jpg", withGps = false)
-        val bytes = photo.readBytes() + byteArrayOf(0) // distinct digest from the other test
-        val stored = client.upload(bytes, "w.jpg", coco, "e2e-client-0002", "e2e", null)
+    fun withdrawalDeletesWhatThatDeviceLeftInTheBuffer() = runBlocking {
+        val config = configOrSkip()
+        val client = ContributionApiClient(config, SoftwareDeviceIdentity(), appCheckToken = { null })
+        val id = UUID.randomUUID().toString()
+        val photo = syntheticJpeg(tmp.root, "w.jpg", withGps = false).readBytes()
+        val stored = client.upload(ContributionEnvelope.seal(config.recipientSpki!!, id, meta(id), photo), id)
         assertTrue("got $stored", stored is ApiOutcome.Stored)
-        assertEquals(ApiOutcome.Withdrawn(1), client.withdraw("e2e-client-0002"))
-        assertEquals(ApiOutcome.Withdrawn(0), client.withdraw("e2e-client-0002"))
+        assertEquals(ApiOutcome.Withdrawn(1), client.withdraw())
     }
 }

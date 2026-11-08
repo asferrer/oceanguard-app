@@ -7,7 +7,7 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
-// Research contribution: gateway settings from local.properties (never committed) or, for CI,
+// Research contribution: Worker settings from local.properties (never committed) or, for CI,
 // from environment variables of the same name. Empty values build an APK that does not offer
 // the feature at all.
 val contribProps = Properties().apply {
@@ -105,10 +105,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Research contribution: gateway URL and HMAC key (contract section 7)
+        // Research contribution (contract v4): Worker URL and NAS public key. Both public;
+        // no secret is embedded in the APK (identity = Keystore key, attestation = App Check).
         buildConfigField("String", "CONTRIB_API_URL", javaString(contribSetting("CONTRIBUTION_API_URL")))
-        buildConfigField("String", "CONTRIB_API_KEY_ID", javaString(contribSetting("CONTRIBUTION_API_KEY_ID")))
-        buildConfigField("String", "CONTRIB_API_SECRET", javaString(contribSetting("CONTRIBUTION_API_SECRET")))
+        buildConfigField("String", "CONTRIB_RECIPIENT_KEY", javaString(contribSetting("CONTRIBUTION_RECIPIENT_KEY")))
         buildConfigField("boolean", "CONTRIB_APP_CHECK", appCheckEnabled.toString())
 
         vectorDrawables {

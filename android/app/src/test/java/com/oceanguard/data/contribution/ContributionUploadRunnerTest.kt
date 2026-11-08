@@ -43,15 +43,22 @@ class ContributionUploadRunnerTest {
         server.shutdown()
     }
 
+    private val identity = SoftwareDeviceIdentity()
+
     private fun client() = ContributionApiClient(
-        ContributionConfig("http://127.0.0.1:${server.port}/", "og-test-2026", "super-secret-test-value"),
-        appCheckToken = { null },
+        testConfig("http://127.0.0.1:${server.port}/"),
+        identity,
+        appCheckToken = { "token" },
     )
 
     private fun runner(
         client: ContributionApiClient? = client(),
         prepare: (File, Boolean) -> ByteArray = { f, _ -> f.readBytes() },
-    ) = ContributionUploadRunner(dao, client, prefs, "1.2.0", prepare, pauseBetweenMs = 0)
+    ) = ContributionUploadRunner(
+        dao, client, prefs, "1.2.0", prepare,
+        seal = { id, meta, image -> ContributionEnvelope.seal(testRecipient.public.encoded, id, meta, image) },
+        pauseBetweenMs = 0,
+    )
 
     private fun queue(vararg names: String, retries: Int = 0): List<Long> = runBlocking {
         names.map { name ->
@@ -86,6 +93,10 @@ class ContributionUploadRunnerTest {
         assertEquals(RunReport(uploaded = 2, failed = 0, outcome = RunOutcome.DONE), report)
         ids.forEach { assertEquals("DONE", statusOf(it).first) }
         assertEquals(ContributionSyncStatus.OK, prefs.statuses.last())
+        assertEquals(identity.clientId, prefs.id)
+        val first = server.takeRequest()
+        assertTrue(first.getHeader("X-OG-Contribution-Id")!!.matches(Regex("[0-9a-f-]{36}")))
+        assertTrue("envelope, not the photo", first.body.readByteArray().copyOfRange(0, 4).contentEquals("OGC1".toByteArray()))
     }
 
     @Test
@@ -131,6 +142,25 @@ class ContributionUploadRunnerTest {
         assertEquals("FAILED", statusOf(ids[0]).first)
         assertEquals(ContributionSyncStatus.AUTH, prefs.statuses.last())
         assertEquals(ContributionUploadRunner.MAX_RETRIES, server.requestCount)
+    }
+
+    @Test
+    fun quotaDoesNotSpendAttempts() = runBlocking {
+        val ids = queue("a.jpg")
+        server.enqueue(MockResponse().setResponseCode(503).setBody("""{"error":"quota"}"""))
+        assertEquals(RunOutcome.RETRY, runner().run().outcome)
+        assertEquals("PENDING" to 0, statusOf(ids[0]))
+        assertEquals(ContributionSyncStatus.QUOTA, prefs.statuses.last())
+    }
+
+    @Test
+    fun retriesKeepTheSameContributionId() = runBlocking {
+        queue("a.jpg")
+        server.enqueue(MockResponse().setResponseCode(500))
+        server.enqueue(MockResponse().setResponseCode(201).setBody("{}"))
+        runner().run()
+        runner().run()
+        assertEquals(server.takeRequest().getHeader("X-OG-Contribution-Id"), server.takeRequest().getHeader("X-OG-Contribution-Id"))
     }
 
     @Test

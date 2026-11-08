@@ -201,6 +201,7 @@ internal fun syncStatusText(status: ContributionSyncStatus): Int = when (status)
     ContributionSyncStatus.AUTH -> R.string.contribute_sync_auth
     ContributionSyncStatus.ATTESTATION -> R.string.contribute_sync_attestation
     ContributionSyncStatus.RATE_LIMITED -> R.string.contribute_sync_rate_limited
+    ContributionSyncStatus.QUOTA -> R.string.contribute_sync_quota
     ContributionSyncStatus.SERVER -> R.string.contribute_sync_server
     ContributionSyncStatus.NETWORK -> R.string.contribute_sync_network
     ContributionSyncStatus.REJECTED -> R.string.contribute_sync_rejected
@@ -235,8 +236,8 @@ private fun WithdrawBlock(app: OceanGuardApp, scope: CoroutineScope) {
             onConfirm = {
                 confirming = false
                 scope.launch {
-                    val message = when (val result = app.contributionRepository.withdrawAll()) {
-                        is WithdrawResult.Done -> resources.getString(R.string.contribute_withdraw_done, result.removed)
+                    val message = when (app.contributionRepository.withdrawAll()) {
+                        is WithdrawResult.Done -> resources.getString(R.string.contribute_withdraw_done)
                         else -> resources.getString(R.string.contribute_withdraw_failed)
                     }
                     Toast.makeText(context, message, Toast.LENGTH_LONG).show()

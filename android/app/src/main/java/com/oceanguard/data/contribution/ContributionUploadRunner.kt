@@ -1,9 +1,12 @@
 package com.oceanguard.ai.data.contribution
 
 import android.util.Log
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import kotlinx.coroutines.delay
 import java.io.File
 import java.io.IOException
+import java.util.UUID
 
 /** How an upload cycle ended, mapped by the worker to a WorkManager result. */
 enum class RunOutcome { DONE, RETRY, NOT_CONFIGURED }
@@ -18,7 +21,8 @@ data class RunReport(val uploaded: Int, val failed: Int, val outcome: RunOutcome
  *   [ContributionRepository.reconcile]).
  * - Accepted (201 or duplicate 200): DONE.
  * - Refused for content (413/415/422), photo missing or location impossible to remove: FAILED.
- * - Anything else: the item keeps PENDING, its attempt counter grows (except on 429) and the
+ * - Each photo is sealed for the NAS ([ContributionEnvelope]) before it leaves the phone.
+ * - Anything else: the item keeps PENDING, its attempt counter grows (except on 429/quota) and the
  *   pass stops so WorkManager retries with backoff. After [MAX_RETRIES] attempts the item
  *   becomes FAILED, so a broken server or a revoked key cannot keep items PENDING forever.
  */
@@ -28,6 +32,7 @@ class ContributionUploadRunner(
     private val prefs: ContributionPrefs,
     private val appVersion: String,
     private val prepare: (photo: File, includeLocation: Boolean) -> ByteArray,
+    private val seal: (contributionId: String, metaJson: String, image: ByteArray) -> ByteArray,
     private val pauseBetweenMs: Long = 300,
     private val nowMs: () -> Long = System::currentTimeMillis,
 ) {
@@ -68,19 +73,20 @@ class ContributionUploadRunner(
             dao.updateStatus(item.id, ContributionStatus.FAILED.name)
             return Step.Failed
         }
-        val outcome = client.upload(
-            image = bytes,
-            fileName = photo.name,
-            annotationsJson = item.annotationsJson,
-            clientId = prefs.clientId(),
-            appVersion = appVersion,
-            // The capture time travels in the EXIF and in the COCO date_captured.
-            capturedAt = null,
-        )
+        val contributionId = contributionIdOf(client.clientId, item)
+        val envelope = try {
+            seal(contributionId, metaJson(contributionId, item.annotationsJson), bytes)
+        } catch (e: RuntimeException) { // bad annotations JSON or recipient key: never sent
+            Log.w(TAG, "Photo ${item.id} not sealable: ${e.javaClass.simpleName}")
+            dao.updateStatus(item.id, ContributionStatus.FAILED.name)
+            return Step.Failed
+        }
+        val outcome = client.upload(envelope, contributionId)
         return when (outcome) {
             is ApiOutcome.Stored -> {
                 dao.updateStatus(item.id, ContributionStatus.DONE.name)
                 prefs.recordSync(ContributionSyncStatus.OK)
+                prefs.rememberClientId(client.clientId)
                 if (pauseBetweenMs > 0) delay(pauseBetweenMs)
                 Step.Uploaded
             }
@@ -90,7 +96,9 @@ class ContributionUploadRunner(
                 Step.Failed
             }
             is ApiOutcome.Failed -> {
-                if (outcome.status != ContributionSyncStatus.RATE_LIMITED) dao.incrementRetry(item.id)
+                val waitOnly = outcome.status == ContributionSyncStatus.RATE_LIMITED ||
+                    outcome.status == ContributionSyncStatus.QUOTA
+                if (!waitOnly) dao.incrementRetry(item.id)
                 prefs.recordSync(outcome.status)
                 Log.w(TAG, "Upload of ${item.id} failed: ${outcome.status} (${outcome.httpCode})")
                 Step.Stop
@@ -99,8 +107,23 @@ class ContributionUploadRunner(
         }
     }
 
+    /** Envelope metadata: what the NAS needs besides the photo (no location, no device data). */
+    private fun metaJson(contributionId: String, annotationsJson: String): String = JsonObject().apply {
+        addProperty("v", 1)
+        addProperty("contribution_id", contributionId)
+        addProperty("app_version", appVersion)
+        add("annotations", JsonParser.parseString(annotationsJson))
+    }.toString()
+
     companion object {
         private const val TAG = "ContribRunner"
+
+        /**
+         * Stable per queue item and install, so a retry after a lost answer is recognised as a
+         * duplicate (the envelope itself differs on every attempt: fresh ephemeral key).
+         */
+        fun contributionIdOf(clientId: String, item: ContributionQueueItem): String =
+            UUID.nameUUIDFromBytes("$clientId:${item.id}:${item.createdAt}".toByteArray()).toString()
         const val MAX_RETRIES = 5
         private const val PURGE_AGE_MS = 30L * 24 * 60 * 60 * 1000
     }

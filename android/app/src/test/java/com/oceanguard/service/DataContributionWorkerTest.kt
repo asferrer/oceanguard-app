@@ -6,7 +6,10 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.testing.TestListenableWorkerBuilder
 import com.oceanguard.ai.data.contribution.ContributionApiClient
-import com.oceanguard.ai.data.contribution.ContributionConfig
+import com.oceanguard.ai.data.contribution.ContributionEnvelope
+import com.oceanguard.ai.data.contribution.SoftwareDeviceIdentity
+import com.oceanguard.ai.data.contribution.testConfig
+import com.oceanguard.ai.data.contribution.testRecipient
 import com.oceanguard.ai.data.contribution.ContributionQueueItem
 import com.oceanguard.ai.data.contribution.ContributionStatus
 import com.oceanguard.ai.data.contribution.ContributionUploadRunner
@@ -61,12 +64,16 @@ class DataContributionWorkerTest {
 
     private fun useRunner(configured: Boolean) {
         val client = if (configured) {
-            ContributionApiClient(ContributionConfig("http://127.0.0.1:${server.port}/", "og-test-2026", "s"), appCheckToken = { null })
+            ContributionApiClient(testConfig("http://127.0.0.1:${server.port}/"), SoftwareDeviceIdentity(), appCheckToken = { "token" })
         } else {
             null
         }
         app.runnerFactory = {
-            ContributionUploadRunner(db.contributionQueueDao(), client, prefs, "1.2.0", { f, _ -> f.readBytes() }, pauseBetweenMs = 0)
+            ContributionUploadRunner(
+                db.contributionQueueDao(), client, prefs, "1.2.0", { f, _ -> f.readBytes() },
+                seal = { id, meta, image -> ContributionEnvelope.seal(testRecipient.public.encoded, id, meta, image) },
+                pauseBetweenMs = 0,
+            )
         }
     }
 

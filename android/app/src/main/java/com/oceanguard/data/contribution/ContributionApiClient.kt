@@ -1,28 +1,29 @@
 package com.oceanguard.ai.data.contribution
 
 import android.util.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody
-import okhttp3.RequestBody.Companion.toRequestBody
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.ConnectionSpec
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
+import java.security.SecureRandom
+import java.util.Base64
 import java.util.concurrent.TimeUnit
 
-/** What one request to the gateway ended in. */
+/** What one request to the Worker ended in. */
 sealed interface ApiOutcome {
     /** 200/201 to an upload. */
     data class Stored(val id: String?, val duplicate: Boolean) : ApiOutcome
 
-    /** 200 to a withdrawal. */
-    data class Withdrawn(val count: Int) : ApiOutcome
+    /** 202 to a withdrawal: what was still buffered is gone; the NAS removes the rest. */
+    data class Withdrawn(val pendingDeleted: Int) : ApiOutcome
 
-    /** 413/415/422: this photo will never be accepted. */
+    /** 411/413/415/422: this photo will never be accepted. */
     data class Rejected(val httpCode: Int) : ApiOutcome
 
     /** Anything else: try again later. [status] says why, for Settings. */
@@ -34,82 +35,79 @@ sealed interface ApiOutcome {
 }
 
 /**
- * Client of the OceanGuard contribution gateway (contribution-api, contract v3).
+ * Client of the contribution Worker (contract v4). Every request carries:
+ * - `X-Firebase-AppCheck`: short-lived token that proves the genuine app on a real device
+ *   (the main control; the Worker refuses requests without it);
+ * - the device public key and an ECDSA signature by the install's Keystore key over the
+ *   canonical string ([ContributionSigner]) — no shared secret exists.
  *
- * Every request carries the HMAC headers (section 3) and, when the build has App Check, the
- * `X-Firebase-AppCheck` token (section 3b). TLS is OkHttp's default: system trust store and
- * hostname verification, no exceptions.
+ * Uploads carry an envelope already encrypted to the NAS ([ContributionEnvelope]).
+ * TLS: system trust store, TLS 1.2+ with modern suites only, no cleartext, no redirects.
+ * No certificate pinning: workers.dev certificates come from CAs Cloudflare rotates and
+ * Cloudflare advises against pinning; the end-to-end encryption protects the photos even
+ * if TLS were intercepted.
  */
 class ContributionApiClient(
     private val config: ContributionConfig,
-    private val http: OkHttpClient = defaultHttpClient(),
+    private val identity: DeviceIdentity,
+    private val http: OkHttpClient = defaultHttpClient(config),
     private val appCheckToken: suspend () -> String? = { AppCheck.token() },
     private val nowSeconds: () -> Long = { System.currentTimeMillis() / 1000L },
 ) {
     private val baseUrl = requireNotNull(config.url) { "contribution URL not allowed: ${config.baseUrl}" }
+    private val random = SecureRandom()
 
-    /** POST /v1/contributions with the photo exactly as given (EXIF included). */
-    suspend fun upload(
-        image: ByteArray,
-        fileName: String,
-        annotationsJson: String,
-        clientId: String,
-        appVersion: String,
-        capturedAt: String?,
-    ): ApiOutcome {
-        val sha = ContributionSigner.sha256Hex(image)
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("image", fileName, image.toRequestBody(JPEG))
-            .addFormDataPart("annotations", "$fileName.json", annotationsJson.toByteArray().toRequestBody(JSON))
-            .addFormDataPart("image_sha256", sha)
-            .addFormDataPart("client_id", clientId)
-            .addFormDataPart("app_version", appVersion)
-            .apply { if (capturedAt != null) addFormDataPart("captured_at", capturedAt) }
-            .build()
-        return execute("v1/contributions", body, sha) { code, text ->
+    val clientId: String get() = identity.clientId
+
+    fun resetIdentity() = identity.reset()
+
+    /** POST /v1/contributions with an envelope sealed for [contributionId]. */
+    suspend fun upload(envelope: ByteArray, contributionId: String): ApiOutcome =
+        execute("/v1/contributions", envelope, OCTET, contributionId) { code, text ->
             val json = parseObject(text)
             ApiOutcome.Stored(
-                id = json?.get("id")?.takeIf { it.isJsonPrimitive }?.asString?.takeIf { it.isNotEmpty() },
+                id = json?.get("id")?.takeIf { it.isJsonPrimitive }?.asString,
                 duplicate = json?.get("duplicate")?.takeIf { it.isJsonPrimitive }?.asBoolean ?: (code == 200),
             )
         }
-    }
 
-    /** POST /v1/withdrawals: deletes this install's photos (all, or one by server id). */
-    suspend fun withdraw(clientId: String, contributionId: String? = null): ApiOutcome {
-        val json = JsonObject().apply {
-            addProperty("client_id", clientId)
-            if (contributionId != null) addProperty("contribution_id", contributionId)
+    /** POST /v1/withdrawals: deletes every photo this install sent. */
+    suspend fun withdraw(): ApiOutcome =
+        execute("/v1/withdrawals", "{}".toByteArray(), JSON, null) { _, text ->
+            val n = parseObject(text)?.get("pending_deleted")?.takeIf { it.isJsonPrimitive }
+            ApiOutcome.Withdrawn(runCatching { n?.asInt }.getOrNull() ?: 0)
         }
-        val raw = json.toString().toByteArray(Charsets.UTF_8)
-        return execute("v1/withdrawals", raw.toRequestBody(JSON), ContributionSigner.sha256Hex(raw)) { _, text ->
-            val count = parseObject(text)?.get("withdrawn")?.takeIf { it.isJsonPrimitive }
-            ApiOutcome.Withdrawn(runCatching { count?.asInt }.getOrNull() ?: 0)
-        }
-    }
 
     private suspend fun execute(
         path: String,
-        body: RequestBody,
-        payloadSha: String,
+        body: ByteArray,
+        type: okhttp3.MediaType,
+        contributionId: String?,
         onSuccess: (Int, String) -> ApiOutcome,
     ): ApiOutcome {
         val token = appCheckToken()
-        val timestamp = nowSeconds().toString()
-        val request = Request.Builder()
-            .url(baseUrl.newBuilder().addPathSegments(path).build())
-            .header("X-OG-Key-Id", config.keyId)
-            .header("X-OG-Timestamp", timestamp)
-            .header("X-OG-Signature", ContributionSigner.signature(config.secret, config.keyId, timestamp, payloadSha))
-            .apply { if (token != null) header("X-Firebase-AppCheck", token) }
-            .post(body)
-            .build()
         return withContext(Dispatchers.IO) {
+            val timestamp = nowSeconds()
+            val nonce = ByteArray(12).also { random.nextBytes(it) }.joinToString("") { "%02x".format(it) }
+            val payloadSha = ContributionSigner.sha256Hex(body)
+            val message = ContributionSigner.canonical("POST", path, timestamp, nonce, payloadSha, contributionId)
+            val request = Request.Builder()
+                .url(baseUrl.newBuilder().encodedPath(path).build())
+                .header("X-OG-Device-Key", B64URL.encodeToString(identity.publicKeySpki()))
+                .header("X-OG-Timestamp", timestamp.toString())
+                .header("X-OG-Nonce", nonce)
+                .header("X-OG-Payload-SHA256", payloadSha)
+                .header("X-OG-Signature", B64URL.encodeToString(identity.sign(message)))
+                .apply {
+                    if (contributionId != null) header("X-OG-Contribution-Id", contributionId)
+                    if (token != null) header("X-Firebase-AppCheck", token)
+                }
+                .post(body.toRequestBody(type))
+                .build()
             try {
                 http.newCall(request).execute().use { response ->
                     val text = response.body?.string().orEmpty()
-                    if (response.code == 200 || response.code == 201) {
+                    if (response.code in 200..202) {
                         onSuccess(response.code, text)
                     } else {
                         classifyFailure(response.code, text, response.header("Retry-After"))
@@ -124,10 +122,14 @@ class ContributionApiClient(
 
     companion object {
         private const val TAG = "ContribApiClient"
-        private val JPEG = "image/jpeg".toMediaType()
+        private val OCTET = "application/octet-stream".toMediaType()
         private val JSON = "application/json".toMediaType()
+        private val B64URL = Base64.getUrlEncoder().withoutPadding()
 
-        fun defaultHttpClient(): OkHttpClient = OkHttpClient.Builder()
+        fun defaultHttpClient(config: ContributionConfig): OkHttpClient = OkHttpClient.Builder()
+            .connectionSpecs(listOf(if (config.isLoopback) ConnectionSpec.CLEARTEXT else ConnectionSpec.RESTRICTED_TLS))
+            .followRedirects(false)
+            .followSslRedirects(false)
             .connectTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(120, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
@@ -139,13 +141,13 @@ class ContributionApiClient(
         /** Maps a non-success answer to the contract's categories (section 4). */
         internal fun classifyFailure(code: Int, body: String, retryAfter: String?): ApiOutcome {
             val error = parseObject(body)?.get("error")?.takeIf { it.isJsonPrimitive }?.asString.orEmpty()
-            return when (code) {
-                413, 415, 422 -> ApiOutcome.Rejected(code)
-                401 -> ApiOutcome.Failed(
-                    if (error == "attestation") ContributionSyncStatus.ATTESTATION else ContributionSyncStatus.AUTH,
-                    code,
-                )
-                429 -> ApiOutcome.Failed(ContributionSyncStatus.RATE_LIMITED, code, retryAfter?.trim()?.toLongOrNull())
+            val wait = retryAfter?.trim()?.toLongOrNull()
+            return when {
+                code == 411 || code == 413 || code == 415 || code == 422 -> ApiOutcome.Rejected(code)
+                code == 401 && error == "attestation" -> ApiOutcome.Failed(ContributionSyncStatus.ATTESTATION, code)
+                code == 401 -> ApiOutcome.Failed(ContributionSyncStatus.AUTH, code)
+                code == 429 -> ApiOutcome.Failed(ContributionSyncStatus.RATE_LIMITED, code, wait)
+                code == 503 && error == "quota" -> ApiOutcome.Failed(ContributionSyncStatus.QUOTA, code, wait)
                 else -> ApiOutcome.Failed(ContributionSyncStatus.SERVER, code)
             }
         }

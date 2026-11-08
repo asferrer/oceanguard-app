@@ -18,11 +18,8 @@ interface ContributionPrefs {
 
     suspend fun wifiOnly(): Boolean
 
-    /** Anonymous install id, created on first use; sent as `client_id`. */
-    suspend fun clientId(): String
-
-    /** Starts a new anonymous id (after withdrawing everything). */
-    suspend fun resetClientId()
+    /** Anonymous contributor id shown in Settings (null once withdrawn). */
+    suspend fun rememberClientId(id: String?)
 
     suspend fun recordSync(status: ContributionSyncStatus)
 }
