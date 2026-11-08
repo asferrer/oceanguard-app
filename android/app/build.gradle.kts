@@ -7,11 +7,21 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
-// Research contribution: NAS credentials injected from local.properties (never committed)
+// Research contribution: Worker settings from local.properties (never committed) or, for CI,
+// from environment variables of the same name. Empty values build an APK that does not offer
+// the feature at all.
 val contribProps = Properties().apply {
     val f = rootProject.file("local.properties")
-    if (f.exists()) load(f.inputStream())
+    if (f.exists()) f.inputStream().use { load(it) }
 }
+
+fun contribSetting(key: String): String =
+    (contribProps.getProperty(key) ?: System.getenv(key) ?: "").trim()
+
+/** Value as a Java string literal for buildConfigField. */
+fun javaString(value: String): String =
+    "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
 
 /**
  * Derives version from the latest git tag.
@@ -84,10 +94,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Research contribution: WebDAV credentials (read from local.properties)
-        buildConfigField("String", "CONTRIB_URL",  "\"${contribProps.getProperty("CONTRIBUTION_WEBDAV_URL", "")}\"")
-        buildConfigField("String", "CONTRIB_USER", "\"${contribProps.getProperty("CONTRIBUTION_WEBDAV_USER", "")}\"")
-        buildConfigField("String", "CONTRIB_PASS", "\"${contribProps.getProperty("CONTRIBUTION_WEBDAV_PASS", "")}\"")
+        // Research contribution (contract v4): Worker URL and NAS public key. Both public;
+        // no secret is embedded in the APK (identity and attestation: Android Keystore key).
+        buildConfigField("String", "CONTRIB_API_URL", javaString(contribSetting("CONTRIBUTION_API_URL")))
+        buildConfigField("String", "CONTRIB_RECIPIENT_KEY", javaString(contribSetting("CONTRIBUTION_RECIPIENT_KEY")))
 
         vectorDrawables {
             useSupportLibrary = true
@@ -164,6 +174,8 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            // Robolectric tests (contribution queue, worker, EXIF) read the merged resources.
+            isIncludeAndroidResources = true
         }
     }
 }
@@ -277,8 +289,18 @@ dependencies {
     // WorkManager — background upload scheduling (ktx merged into runtime since 2.9.0)
     implementation("androidx.work:work-runtime-ktx:2.11.2")
 
+    // OkHttp: used directly by the contribution client (explicit, not via Coil)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+
     // Testing
     testImplementation("junit:junit:4.13.2")
+    // Contribution: queue, worker and EXIF tests on the JVM
+    testImplementation("org.robolectric:robolectric:4.16.1")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.work:work-testing:2.11.2")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     // Mockito 5 (inline mock maker by default) — used to mock final android.* stub
     // classes such as Bitmap in pure-JVM unit tests (no Robolectric needed).
     testImplementation("org.mockito:mockito-core:5.14.2")

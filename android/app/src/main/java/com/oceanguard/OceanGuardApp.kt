@@ -35,11 +35,22 @@ import com.oceanguard.ai.inference.VlmModelManager
 import com.oceanguard.ai.inference.VlmTextEngine
 import com.oceanguard.ai.inference.LiteRTTextEngine
 import com.oceanguard.ai.inference.ZoneReportInput
+import com.oceanguard.ai.service.ContributionHost
+import com.oceanguard.ai.service.ContributionUploadResult
 import com.oceanguard.ai.service.InferenceServiceState
 import com.oceanguard.ai.service.ReportGenerationService
 import com.oceanguard.ai.service.VlmDownloadService
+import com.oceanguard.ai.data.contribution.ContributionApiClient
+import com.oceanguard.ai.data.contribution.ContributionConfig
+import com.oceanguard.ai.data.contribution.ContributionEnvelope
+import com.oceanguard.ai.data.contribution.KeystoreDeviceIdentity
+import com.oceanguard.ai.data.contribution.ContributionImage
 import com.oceanguard.ai.data.contribution.ContributionQueueDao
 import com.oceanguard.ai.data.contribution.ContributionRepository
+import com.oceanguard.ai.data.contribution.ContributionUploadRunner
+import com.oceanguard.ai.data.contribution.RunOutcome
+import com.oceanguard.ai.data.contribution.RunReport
+import com.oceanguard.ai.data.settings.SettingsContributionPrefs
 import com.oceanguard.ai.utils.ImagePreprocessor
 import com.oceanguard.ai.utils.LocationProvider
 import com.oceanguard.ai.utils.PhotonGeocoderClient
@@ -173,7 +184,7 @@ class GenerationTracker(val maxTokens: Int) {
  * Initializes all inference engines and database at startup.
  * VLM engines load on demand and are auto-released after 2-minute idle.
  */
-class OceanGuardApp : Application() {
+class OceanGuardApp : Application(), ContributionHost {
 
     companion object {
         private const val TAG = "OceanGuardApp"
@@ -397,13 +408,41 @@ class OceanGuardApp : Application() {
 
     val imagePreprocessor: ImagePreprocessor by lazy { ImagePreprocessor(this) }
 
-    // Research contribution
+    // Research contribution. No client (and the feature is not offered anywhere) when this
+    // build has no destination. Identity and attestation: the Keystore key (DeviceIdentity).
     val contributionQueueDao: ContributionQueueDao by lazy { database.contributionQueueDao() }
+    private val contributionPrefs by lazy { SettingsContributionPrefs(settingsRepository) }
+    private val contributionConfig by lazy { ContributionConfig.fromBuildConfig() }
+    private val contributionApiClient: ContributionApiClient? by lazy {
+        contributionConfig.takeIf { it.isUsable }
+            ?.let { ContributionApiClient(it, KeystoreDeviceIdentity()) }
+    }
     val contributionRepository: ContributionRepository by lazy {
-        ContributionRepository(contributionQueueDao, settingsRepository, this)
+        ContributionRepository(contributionQueueDao, contributionPrefs, this, contributionApiClient)
     }
     /** Emitted by [DataContributionWorker] after an upload cycle. Consumed once by the UI. */
-    val contributionUploadResult = MutableStateFlow<com.oceanguard.ai.service.ContributionUploadResult?>(null)
+    val contributionUploadResult = MutableStateFlow<ContributionUploadResult?>(null)
+
+    override fun contributionUploadRunner(): ContributionUploadRunner = ContributionUploadRunner(
+        dao = contributionQueueDao,
+        client = contributionApiClient,
+        prefs = contributionPrefs,
+        appVersion = BuildConfig.VERSION_NAME,
+        prepare = { photo, includeLocation ->
+            ContributionImage.prepare(photo, includeLocation, java.io.File(cacheDir, "contribution"))
+        },
+        seal = { id, meta, image ->
+            ContributionEnvelope.seal(checkNotNull(contributionConfig.recipientSpki), id, meta, image)
+        },
+    )
+
+    override suspend fun onContributionCycleFinished(report: RunReport) {
+        achievementChecker.checkContributionCount(contributionQueueDao.getDoneCount())
+        val hadFailures = report.failed > 0 || report.outcome == RunOutcome.RETRY
+        if (report.uploaded > 0 || hadFailures) {
+            contributionUploadResult.value = ContributionUploadResult(report.uploaded, hadFailures)
+        }
+    }
 
     val tourDemoDataManager: TourDemoDataManager by lazy {
         TourDemoDataManager(
@@ -466,6 +505,14 @@ class OceanGuardApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        applicationScope.launch {
+            try {
+                contributionRepository.reconcile()
+            } catch (e: Exception) {
+                Log.e(TAG, "Contribution queue reconcile failed (non-fatal)", e)
+            }
+        }
 
         Log.i(TAG, "OceanGuard AI starting...")
 

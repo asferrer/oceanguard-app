@@ -84,8 +84,8 @@
     <string name="onboarding_page3_desc">Il nostro Vision Language Model fornisce un\'analisi ambientale approfondita, un punteggio di salute e raccomandazioni concrete.</string>
 
     <!-- Pagina 4 -->
-    <string name="onboarding_page4_title">100% Offline\ne Privato</string>
-    <string name="onboarding_page4_desc">Tutto il processo avviene sul dispositivo. Nessuna connessione internet richiesta. I tuoi dati non lasciano mai il tuo telefono \u2014 perfetto per il lavoro sul campo in zone remote.</string>
+    <string name="onboarding_page4_title" formatted="false">100% Offline\ne Privato</string>
+    <string name="onboarding_page4_desc">Tutta l\'elaborazione avviene sul dispositivo. Non serve internet. Le tue foto restano sul telefono, a meno che tu non scelga di contribuire — ideale per il lavoro sul campo in zone remote.</string>
 
     <!-- Pagina 5 -->
     <string name="onboarding_page5_title">Conquista\ni premi</string>
@@ -93,7 +93,7 @@
 
     <!-- Pagina 6 – Contributo alla ricerca -->
     <string name="onboarding_contribute_title">Migliorare il Rilevamento</string>
-    <string name="onboarding_contribute_body">Scegli di contribuire le tue immagini analizzate alla ricerca sul modello. Vengono condivisi solo i dati di rilevamento \u2014 nessuna posizione, nessuna informazione personale, completamente facoltativo.</string>
+    <string name="onboarding_contribute_body">Facoltativo. Se lo attivi, ogni foto analizzata viene inviata al server di ricerca di OceanGuard con i suoi metadati EXIF (posizione GPS, data e ora, modello del telefono) e i rilevamenti, per migliorare i modelli di rilevamento e delle specie e per le statistiche. Nelle Impostazioni puoi escludere la posizione, smettere quando vuoi o eliminare le foto inviate.</string>
     <string name="onboarding_contribute_toggle">Contribuisci le mie immagini</string>
 
     <!-- Pulsanti -->
@@ -292,11 +292,11 @@
     <string name="contribute_all_synced">Tutte le immagini sincronizzate ✓</string>
     <string name="contribute_upload_now_btn">Carica ora</string>
     <string name="contribute_consent_title">Contribuisci alla Ricerca</string>
-    <string name="contribute_consent_body">Le tue immagini ad alta risoluzione e i riquadri di rilevamento saranno inviati esclusivamente per migliorare il modello OceanGuard AI. Non vengono incluse coordinate GPS, note o identificatori personali. Puoi revocare il consenso in qualsiasi momento dalle Impostazioni.</string>
+    <string name="contribute_consent_body">Ogni foto analizzata verrà inviata a piena risoluzione al server di ricerca di OceanGuard con i suoi metadati EXIF (posizione GPS, data e ora, marca e modello del telefono) e gli oggetti rilevati. Servono a migliorare i modelli di rilevamento e delle specie e per le statistiche. Le posizioni reali non vengono mai pubblicate. In qualsiasi momento, nelle Impostazioni, puoi disattivare «Includi posizione», revocare il consenso o eliminare le foto inviate.</string>
     <string name="contribute_consent_accept">Acconsento</string>
     <string name="contribute_consent_dismiss">Annulla</string>
     <string name="contribute_prompt_title">Aiuta a Migliorare OceanGuard AI</string>
-    <string name="contribute_prompt_body">Le tue immagini analizzate potrebbero aiutare a migliorare il rilevamento dei rifiuti marini. Vengono condivisi solo l\'immagine e gli oggetti rilevati \u2014 senza posizione, senza dati personali.</string>
+    <string name="contribute_prompt_body">Le tue foto analizzate possono aiutare ad addestrare un rilevamento migliore dei rifiuti marini e delle specie. Ogni foto viene inviata con i suoi metadati EXIF (posizione, data e ora, modello del telefono) e gli oggetti rilevati.</string>
     <string name="contribute_prompt_wifi">Carica con WiFi</string>
     <string name="contribute_prompt_now">Carica ora</string>
     <string name="contribute_prompt_skip">Non ora</string>
@@ -316,9 +316,8 @@
     <string name="contribute_status_done">Contribuito ✓</string>
     <string name="contribute_status_failed">Riprova caricamento</string>
     <string name="contribute_enqueue_error">Impossibile preparare l\'immagine per il caricamento</string>
-    <string name="contribute_privacy_no_location">Nessuna coordinata GPS o dato di posizione</string>
-    <string name="contribute_privacy_no_personal">Nessun identificatore personale incluso</string>
-    <string name="contribute_privacy_research_only">Usato esclusivamente per la ricerca sul modello</string>
+    <string name="contribute_privacy_no_personal">Nessun nome, account o recapito; solo un identificativo anonimo di installazione</string>
+    <string name="contribute_privacy_research_only">Solo per la ricerca: modelli migliori e statistiche. Le posizioni non vengono mai pubblicate</string>
     <string name="contribute_prompt_dont_ask_again">Non chiedere più</string>
     <string name="home_model_download_downloading">Download del modello…</string>
     <string name="home_model_download_installing">Installazione del modello…</string>

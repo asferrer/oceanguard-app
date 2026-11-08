@@ -11,7 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oceanguard.ai.OceanGuardApp
 import com.oceanguard.ai.R
@@ -32,7 +32,7 @@ fun ContributionPrompts(
     app: OceanGuardApp,
     snackbarHostState: SnackbarHostState,
 ) {
-    val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     val uploadResult by app.contributionUploadResult.collectAsStateWithLifecycle()
     val prompt by viewModel.contributePrompt.collectAsStateWithLifecycle()
@@ -42,10 +42,10 @@ fun ContributionPrompts(
         val result = uploadResult ?: return@LaunchedEffect
         val message = when {
             result.hadFailures && result.uploadedCount > 0 ->
-                context.getString(R.string.contribute_upload_partial, result.uploadedCount)
-            result.hadFailures -> context.getString(R.string.contribute_upload_failed)
+                resources.getString(R.string.contribute_upload_partial, result.uploadedCount)
+            result.hadFailures -> resources.getString(R.string.contribute_upload_failed)
             result.uploadedCount > 0 ->
-                context.getString(R.string.contribute_upload_success, result.uploadedCount)
+                resources.getString(R.string.contribute_upload_success, result.uploadedCount)
             else -> null
         }
         message?.let { snackbarHostState.showSnackbar(it) }
@@ -57,8 +57,8 @@ fun ContributionPrompts(
             is ContributePromptState.ShowPrompt -> showSheet = true
             is ContributePromptState.ShowInfo -> {
                 val result = snackbarHostState.showSnackbar(
-                    message = context.getString(R.string.contribute_queued_message, current.count),
-                    actionLabel = context.getString(R.string.contribute_upload_now_btn),
+                    message = resources.getString(R.string.contribute_queued_message, current.count),
+                    actionLabel = resources.getString(R.string.contribute_upload_now_btn),
                     duration = SnackbarDuration.Long,
                 )
                 if (result == SnackbarResult.ActionPerformed) {

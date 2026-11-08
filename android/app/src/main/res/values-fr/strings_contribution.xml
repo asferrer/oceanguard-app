@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Research contribution: settings, sync state, withdrawal and privacy policy. -->
+<resources>
+    <string name="contribute_unavailable_desc">Non disponible dans cette version de l\'application : aucun serveur de recherche n\'est configuré. Rien n\'est envoyé.</string>
+    <string name="contribute_include_location_label">Inclure la position</string>
+    <string name="contribute_include_location_desc">Envoie les coordonnées GPS de la photo. Désactivé, elles sont retirées de la copie envoyée ; la photo du téléphone les garde.</string>
+    <string name="contribute_retry_failed_btn">Réessayer les échecs</string>
+    <string name="contribute_sync_line">Dernière tentative %2$s : %1$s</string>
+    <string name="contribute_sync_ok">envoi réussi</string>
+    <string name="contribute_sync_not_configured">pas de serveur de recherche dans cette version</string>
+    <string name="contribute_sync_auth">le serveur a refusé la signature de ce téléphone ; vérifiez la date et l\'heure</string>
+    <string name="contribute_sync_attestation">ce téléphone n\'a pas pu être vérifié (chargeur d\'amorçage déverrouillé, système modifié ou pas de matériel sécurisé) ; nouvel essai prévu</string>
+    <string name="contribute_sync_rate_limited">trop d\'envois ; nouvel essai plus tard</string>
+    <string name="contribute_sync_server">erreur du serveur ; nouvel essai plus tard</string>
+    <string name="contribute_sync_network">pas de connexion au serveur ; nouvel essai prévu</string>
+    <string name="contribute_sync_rejected">le serveur a refusé une photo</string>
+    <string name="contribute_client_id_line">Identifiant anonyme de contributeur : %1$s</string>
+    <string name="contribute_withdraw_btn">Supprimer mes photos partagées</string>
+    <string name="contribute_withdraw_title">Supprimer vos photos partagées ?</string>
+    <string name="contribute_withdraw_body">Les photos et données envoyées par ce téléphone sont supprimées du serveur de recherche, la file du téléphone est vidée et la contribution est désactivée. Les photos déjà incluses dans un jeu de données publié (sans EXIF ni position) ne peuvent pas être retirées des copies téléchargées par d\'autres.</string>
+    <string name="contribute_withdraw_confirm">Supprimer</string>
+    <string name="contribute_withdraw_done">Suppression demandée. Les photos encore en attente ont été supprimées ; le serveur de recherche supprime le reste à sa prochaine synchronisation.</string>
+    <string name="contribute_withdraw_failed">Impossible de joindre le serveur. Réessayez plus tard.</string>
+    <string name="contribute_reset_prompts_btn">Réinitialiser les invitations</string>
+    <string name="contribute_reset_prompts_done">L\'invitation à contribuer réapparaîtra après les analyses</string>
+    <string name="contribute_privacy_exif">Envoyée avec ses EXIF : position GPS, date et heure, modèle du téléphone. Vous pouvez retirer la position dans les Paramètres</string>
+    <string name="contribute_policy_link">Politique de confidentialité</string>
+    <string name="contribute_policy_close">Fermer</string>
+    <string name="contribute_policy_title">Confidentialité : partage de photos</string>
+    <string name="contribute_policy_what_title">Ce qui est collecté</string>
+    <string name="contribute_policy_what_body">Seulement si vous activez la contribution : chaque photo analysée en pleine résolution avec ses métadonnées EXIF (position GPS sauf si vous désactivez « Inclure la position », date et heure, marque et modèle du téléphone, orientation), les objets détectés (classe, cadre et confiance), la version de l\'application et un identifiant d\'installation anonyme (dérivé d\'une clé qui ne quitte jamais le téléphone). Ni nom, ni compte, ni e-mail, ni contacts. Une fois, le téléphone envoie aussi un certificat de son matériel sécurisé prouvant que l\'application est authentique et le téléphone non modifié (état de démarrage et niveau de correctif ; aucun identifiant).</string>
+    <string name="contribute_policy_why_title">Pour quoi faire</string>
+    <string name="contribute_policy_why_body">Pour améliorer les modèles de détection et d\'espèces d\'OceanGuard et établir des statistiques (par exemple où et quand des déchets sont trouvés et avec quels téléphones). Rien n\'est vendu ni utilisé à des fins publicitaires.</string>
+    <string name="contribute_policy_where_title">Où c\'est conservé</string>
+    <string name="contribute_policy_where_body">Chaque photo est chiffrée sur votre téléphone de sorte que seul le serveur privé du projet de recherche OceanGuard peut l\'ouvrir. Elle transite en HTTPS vers une mémoire tampon temporaire (Cloudflare, offre gratuite) qui ne garde que la copie chiffrée, 7 jours au plus, jusqu\'à ce que le serveur du projet la télécharge et l\'y supprime. Les photos originales avec leurs EXIF ne sont accessibles qu\'à l\'équipe de recherche et ne sont jamais diffusées publiquement.</string>
+    <string name="contribute_policy_publish_title">Ce qui peut être publié</string>
+    <string name="contribute_policy_publish_body">Un jeu de données de recherche peut être publié avec les photos débarrassées de tout EXIF et de toute position, ainsi que leurs annotations. Les positions réelles ne sont jamais publiées, pas plus que l\'identifiant d\'installation ou le modèle du téléphone.</string>
+    <string name="contribute_policy_withdraw_title">Comment retirer vos photos</string>
+    <string name="contribute_policy_withdraw_body">Désactivez la contribution dans les Paramètres pour arrêter l\'envoi. « Supprimer mes photos partagées » efface du serveur tout ce que ce téléphone a envoyé. Vous pouvez aussi le demander au projet en indiquant l\'identifiant anonyme de contributeur affiché dans les Paramètres.</string>
+    <string name="contribute_policy_license_title">Licence</string>
+    <string name="contribute_policy_license_body">En contribuant, vous acceptez que vos photos et leurs annotations puissent être partagées, sans EXIF ni position, sous la licence Creative Commons Attribution 4.0 International (CC BY 4.0), avec la mention « Contributeurs d\'OceanGuard AI ».</string>
+    <string name="contribute_sync_quota">le serveur de recherche est plein pour aujourd\'hui ; nouvel essai plus tard</string>
+    <string name="contribute_sync_app_not_official">cette copie de l\'application n\'est pas la version officielle (version de débogage ou autre signature) ; seul l\'APK officiel peut contribuer</string>
+</resources>

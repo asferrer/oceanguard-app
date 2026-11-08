@@ -9,114 +9,55 @@ import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
-import com.oceanguard.ai.OceanGuardApp
 import com.oceanguard.ai.R
-import com.oceanguard.ai.utils.WebDavUploadClient
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.oceanguard.ai.data.contribution.ContributionUploadRunner
+import com.oceanguard.ai.data.contribution.RunOutcome
+import com.oceanguard.ai.data.contribution.RunReport
+
+/** Implemented by the Application: gives the worker its runner and receives the cycle result. */
+interface ContributionHost {
+    fun contributionUploadRunner(): ContributionUploadRunner
+    suspend fun onContributionCycleFinished(report: RunReport)
+}
 
 /**
- * WorkManager CoroutineWorker that uploads pending contribution images to the NAS.
- * Uses build-time credentials from BuildConfig via [WebDavUploadClient].
+ * WorkManager worker that sends the contribution queue to the gateway. The logic lives in
+ * [ContributionUploadRunner]; this class adds the progress notification and maps the outcome:
  *
- * Processes items **one at a time** to avoid OOM on large queues.
- * Shows a progress notification during upload.
- * On failure: WorkManager retries with exponential backoff (configured at enqueue time).
- * Items exceeding [MAX_RETRIES] are marked FAILED and skipped.
+ * - DONE: success.
+ * - RETRY: retry with the exponential backoff set at enqueue time (5 min, doubling). Each
+ *   retry consumes the attempt budget of the photo that failed, so the queue always ends.
+ * - NOT_CONFIGURED: failure, no retry (Settings shows why).
  */
 class DataContributionWorker(
     context: Context,
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
 
-    companion object {
-        private const val TAG = "ContribWorker"
-        private const val MAX_RETRIES = 5
-        private const val PURGE_AGE_MS = 30L * 24 * 60 * 60 * 1000 // 30 days
-        private const val CHANNEL_ID = "oceanguard_contribution"
-        private const val NOTIFICATION_ID = 9001
+    override suspend fun doWork(): Result {
+        val host = applicationContext as? ContributionHost ?: return Result.failure()
+        val report = host.contributionUploadRunner().run { done, total -> showProgress(done, total) }
+        host.onContributionCycleFinished(report)
+        return when (report.outcome) {
+            RunOutcome.DONE -> Result.success()
+            RunOutcome.RETRY -> Result.retry()
+            RunOutcome.NOT_CONFIGURED -> Result.failure()
+        }
     }
 
-    override suspend fun doWork(): Result {
-        if (!WebDavUploadClient.isConfigured) return Result.failure()
-
-        val app = applicationContext as OceanGuardApp
-        val dao = app.contributionQueueDao
-        val monthFmt = SimpleDateFormat("yyyy-MM", Locale.US)
-
-        // Fail items that exceeded max retries before processing
-        dao.failExceededRetries(MAX_RETRIES)
-
-        // Purge completed/failed items older than 30 days
-        dao.purgeOlderThan(System.currentTimeMillis() - PURGE_AGE_MS)
-
-        // Count total pending for progress tracking
-        val totalPending = dao.getPendingCount()
-        if (totalPending == 0) return Result.success()
-
-        ensureNotificationChannel()
-        setForeground(buildForegroundInfo(0, totalPending))
-
-        var uploaded = 0
-        var anyFailed = false
-
-        // Process one item at a time to avoid loading all images into memory
-        while (true) {
-            val item = dao.getNextPending() ?: break
-
-            val imageFile = File(item.imageUri.removePrefix("file://"))
-            if (!imageFile.exists()) {
-                Log.w(TAG, "Image file missing, marking FAILED: ${item.imageUri}")
-                dao.updateStatus(item.id, "FAILED")
-                continue
-            }
-
-            setForeground(buildForegroundInfo(uploaded, totalPending))
-
-            val yearMonth = monthFmt.format(Date(item.createdAt))
-            val ok = try {
-                WebDavUploadClient.upload(
-                    yearMonth = yearMonth,
-                    fileName = imageFile.name,
-                    imageBytes = imageFile.readBytes(),
-                    jsonBytes = item.annotationsJson.toByteArray(Charsets.UTF_8),
-                )
-            } catch (e: Exception) {
-                Log.e(TAG, "Upload failed for ${imageFile.name}", e)
-                false
-            }
-
-            if (ok) {
-                dao.updateStatus(item.id, "DONE")
-                uploaded++
-                Log.i(TAG, "Uploaded ${imageFile.name}")
-                // Brief pause between uploads to avoid overwhelming the NAS
-                kotlinx.coroutines.delay(300)
-            } else {
-                // Keep as PENDING, just increment retry count — failExceededRetries()
-                // at the start of next run will mark it FAILED if max retries reached.
-                dao.incrementRetry(item.id)
-                Log.w(TAG, "Upload failed for ${imageFile.name} (attempt ${item.retryCount + 1}/$MAX_RETRIES)")
-                anyFailed = true
-                break
-            }
+    /** Best effort: Android may refuse a foreground service from the background (API 31+). */
+    private suspend fun showProgress(done: Int, total: Int) {
+        try {
+            ensureNotificationChannel()
+            setForeground(buildForegroundInfo(done, total))
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "Progress notification not shown: ${e.javaClass.simpleName}")
         }
-
-        // Check contribution achievements based on total successful uploads
-        val totalDone = dao.getDoneCount()
-        app.achievementChecker.checkContributionCount(totalDone)
-
-        // Notify UI of completion
-        app.contributionUploadResult.value = ContributionUploadResult(uploaded, anyFailed)
-
-        return if (anyFailed) Result.retry() else Result.success()
     }
 
     private fun buildForegroundInfo(current: Int, total: Int): ForegroundInfo {
         val text = applicationContext.getString(
-            R.string.contribute_upload_progress, current + 1, total
+            R.string.contribute_upload_progress, (current + 1).coerceAtMost(total), total,
         )
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -141,6 +82,12 @@ class DataContributionWorker(
             }
             nm.createNotificationChannel(channel)
         }
+    }
+
+    private companion object {
+        const val TAG = "ContribWorker"
+        const val CHANNEL_ID = "oceanguard_contribution"
+        const val NOTIFICATION_ID = 9001
     }
 }
 

@@ -238,9 +238,17 @@ class MainViewModel(
         dismissContributePrompt()
     }
 
-    /** Enqueue sessions for contribution upload by ID. Grants consent and optionally triggers immediate upload. */
+    /**
+     * Enqueue sessions for contribution upload by ID. Grants consent and optionally triggers
+     * immediate upload. Never grants consent in a build without a destination.
+     */
     fun enqueueSessions(sessionIds: List<Long>, wifiOnly: Boolean, onComplete: () -> Unit = {}) {
         viewModelScope.launch {
+            if (!app.contributionRepository.isAvailable) {
+                dismissContributePrompt()
+                onComplete()
+                return@launch
+            }
             settingsRepository.setContributeConsentGiven(true)
             sessionIds.forEach { id ->
                 repository.getSession(id)?.let { session ->
@@ -259,7 +267,7 @@ class MainViewModel(
         viewModelScope.launch {
             if (contributionQueued) {
                 _contributePrompt.value = ContributePromptState.ShowInfo(sessionIds.size)
-            } else {
+            } else if (app.contributionRepository.isAvailable) {
                 // Two independent silencers: explicit "Don't ask again" opt-out,
                 // OR the soft cap of three dismissals. Either suppresses the prompt.
                 val neverPrompt = settingsRepository.contributeNeverPrompt.first()

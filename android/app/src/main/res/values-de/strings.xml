@@ -84,8 +84,8 @@
     <string name="onboarding_page3_desc">Unser Vision Language Model bietet tiefgehende Umweltanalysen, Gesundheitsbewertungen und umsetzbare Empfehlungen.</string>
 
     <!-- Seite 4 -->
-    <string name="onboarding_page4_title">100% Offline\n&amp; Privat</string>
-    <string name="onboarding_page4_desc">Die gesamte Verarbeitung erfolgt auf dem Gerät. Keine Internetverbindung erforderlich. Ihre Daten verlassen Ihr Telefon nie \u2014 ideal für Feldarbeit an abgelegenen Orten.</string>
+    <string name="onboarding_page4_title" formatted="false">100% Offline\n&amp; Privat</string>
+    <string name="onboarding_page4_desc">Die gesamte Verarbeitung erfolgt auf dem Gerät. Kein Internet erforderlich. Ihre Fotos bleiben auf dem Telefon, außer Sie entscheiden sich, sie beizutragen — ideal für die Feldarbeit abseits.</string>
 
     <!-- Seite 5 -->
     <string name="onboarding_page5_title">Erfolge\nfreischalten</string>
@@ -93,7 +93,7 @@
 
     <!-- Seite 6 – Forschungsbeitrag -->
     <string name="onboarding_contribute_title">Erkennung verbessern</string>
-    <string name="onboarding_contribute_body">Tragen Sie Ihre analysierten Bilder zur Modellforschung bei. Nur Erkennungsdaten werden geteilt \u2014 kein Standort, keine persönlichen Daten, vollständig optional.</string>
+    <string name="onboarding_contribute_body">Optional. Wenn Sie dies einschalten, wird jedes analysierte Foto mit seinen EXIF-Metadaten (GPS-Standort, Datum und Uhrzeit, Telefonmodell) und den Erkennungen an den Forschungsserver von OceanGuard gesendet, um die Erkennungs- und Artenmodelle zu verbessern und für Statistiken. In den Einstellungen können Sie den Standort weglassen, jederzeit aufhören oder die gesendeten Fotos löschen.</string>
     <string name="onboarding_contribute_toggle">Meine Bilder beitragen</string>
 
     <!-- Schaltflächen -->
@@ -292,11 +292,11 @@
     <string name="contribute_all_synced">Alle Bilder synchronisiert ✓</string>
     <string name="contribute_upload_now_btn">Jetzt hochladen</string>
     <string name="contribute_consent_title">Zur Forschung beitragen</string>
-    <string name="contribute_consent_body">Ihre hochauflösenden Bilder und Erkennungsrahmen werden ausschließlich zur Verbesserung des OceanGuard AI-Modells gesendet. Keine GPS-Koordinaten, Notizen oder persönliche Identifikatoren werden eingeschlossen. Sie können Ihre Einwilligung jederzeit in den Einstellungen widerrufen.</string>
+    <string name="contribute_consent_body">Jedes analysierte Foto wird in voller Auflösung mit seinen EXIF-Metadaten (GPS-Standort, Datum und Uhrzeit, Hersteller und Modell des Telefons) und den erkannten Objekten an den Forschungsserver von OceanGuard gesendet. Sie dienen der Verbesserung der Erkennungs- und Artenmodelle und Statistiken. Echte Standorte werden nie veröffentlicht. In den Einstellungen können Sie jederzeit „Standort einbeziehen“ ausschalten, die Einwilligung widerrufen oder die gesendeten Fotos löschen.</string>
     <string name="contribute_consent_accept">Ich stimme zu</string>
     <string name="contribute_consent_dismiss">Abbrechen</string>
     <string name="contribute_prompt_title">OceanGuard AI verbessern</string>
-    <string name="contribute_prompt_body">Ihre analysierten Bilder könnten helfen, die Erkennung von Meeresmüll zu verbessern. Nur das Bild und erkannte Objekte werden geteilt \u2014 ohne Standort, ohne persönliche Daten.</string>
+    <string name="contribute_prompt_body">Ihre analysierten Fotos können helfen, die Erkennung von Meeresmüll und Arten zu verbessern. Jedes Foto wird mit seinen EXIF-Metadaten (Standort, Datum und Uhrzeit, Telefonmodell) und den erkannten Objekten gesendet.</string>
     <string name="contribute_prompt_wifi">Über WLAN hochladen</string>
     <string name="contribute_prompt_now">Jetzt hochladen</string>
     <string name="contribute_prompt_skip">Nicht jetzt</string>
@@ -316,9 +316,8 @@
     <string name="contribute_status_done">Beigetragen ✓</string>
     <string name="contribute_status_failed">Upload wiederholen</string>
     <string name="contribute_enqueue_error">Bild konnte nicht für den Upload vorbereitet werden</string>
-    <string name="contribute_privacy_no_location">Keine GPS-Koordinaten oder Standortdaten</string>
-    <string name="contribute_privacy_no_personal">Keine persönlichen Identifikatoren enthalten</string>
-    <string name="contribute_privacy_research_only">Ausschließlich für Modellforschung verwendet</string>
+    <string name="contribute_privacy_no_personal">Kein Name, kein Konto, keine Kontaktdaten; nur eine anonyme Installations-ID</string>
+    <string name="contribute_privacy_research_only">Nur für die Forschung: bessere Modelle und Statistiken. Standorte werden nie veröffentlicht</string>
     <string name="contribute_prompt_dont_ask_again">Nicht mehr fragen</string>
     <string name="home_model_download_downloading">Modell wird heruntergeladen…</string>
     <string name="home_model_download_installing">Modell wird installiert…</string>

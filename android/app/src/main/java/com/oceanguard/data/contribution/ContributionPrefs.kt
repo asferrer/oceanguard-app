@@ -1,0 +1,25 @@
+package com.oceanguard.ai.data.contribution
+
+/**
+ * The preferences the contribution queue and worker need. Backed by DataStore in the app
+ * (`data/settings/ContributionSettings.kt`); a plain fake in tests.
+ */
+interface ContributionPrefs {
+    /** Consent given for the current wording of the consent (see CONSENT_VERSION). */
+    suspend fun consentGiven(): Boolean
+
+    suspend fun setConsent(given: Boolean)
+
+    /** Consent given under an older wording, which no longer counts. */
+    suspend fun hasStaleConsent(): Boolean
+
+    /** Send the GPS tags of the photo (default true, author's choice). */
+    suspend fun includeLocation(): Boolean
+
+    suspend fun wifiOnly(): Boolean
+
+    /** Anonymous contributor id shown in Settings (null once withdrawn). */
+    suspend fun rememberClientId(id: String?)
+
+    suspend fun recordSync(status: ContributionSyncStatus)
+}

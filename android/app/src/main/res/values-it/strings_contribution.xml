@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Research contribution: settings, sync state, withdrawal and privacy policy. -->
+<resources>
+    <string name="contribute_unavailable_desc">Non disponibile in questa versione dell\'app: non è configurato alcun server di ricerca. Non viene inviato nulla.</string>
+    <string name="contribute_include_location_label">Includi posizione</string>
+    <string name="contribute_include_location_desc">Invia le coordinate GPS della foto. Se disattivato, vengono rimosse dalla copia caricata; la foto sul telefono le conserva.</string>
+    <string name="contribute_retry_failed_btn">Riprova falliti</string>
+    <string name="contribute_sync_line">Ultimo tentativo %2$s: %1$s</string>
+    <string name="contribute_sync_ok">inviato correttamente</string>
+    <string name="contribute_sync_not_configured">nessun server di ricerca in questa versione</string>
+    <string name="contribute_sync_auth">il server ha rifiutato la firma di questo telefono; controlla data e ora</string>
+    <string name="contribute_sync_attestation">non è stato possibile verificare questo telefono (bootloader sbloccato, sistema modificato o senza hardware sicuro); verrà ritentato</string>
+    <string name="contribute_sync_rate_limited">troppi invii; verrà ritentato più tardi</string>
+    <string name="contribute_sync_server">errore del server; verrà ritentato più tardi</string>
+    <string name="contribute_sync_network">nessuna connessione al server; verrà ritentato</string>
+    <string name="contribute_sync_rejected">il server ha rifiutato una foto</string>
+    <string name="contribute_client_id_line">ID anonimo del contributore: %1$s</string>
+    <string name="contribute_withdraw_btn">Elimina le mie foto inviate</string>
+    <string name="contribute_withdraw_title">Eliminare le foto inviate?</string>
+    <string name="contribute_withdraw_body">Le foto e i dati inviati da questo telefono vengono eliminati dal server di ricerca, la coda sul telefono viene svuotata e la contribuzione si disattiva. Le foto già incluse in un dataset pubblicato (senza EXIF né posizione) non possono essere rimosse dalle copie scaricate da altri.</string>
+    <string name="contribute_withdraw_confirm">Elimina</string>
+    <string name="contribute_withdraw_done">Eliminazione richiesta. Le foto ancora in attesa sono state eliminate; il server di ricerca elimina il resto alla prossima sincronizzazione.</string>
+    <string name="contribute_withdraw_failed">Impossibile contattare il server. Riprova più tardi.</string>
+    <string name="contribute_reset_prompts_btn">Ripristina gli avvisi</string>
+    <string name="contribute_reset_prompts_done">L\'avviso di contribuzione riapparirà dopo le analisi</string>
+    <string name="contribute_privacy_exif">Inviata con i suoi EXIF: posizione GPS, data e ora, modello del telefono. Puoi escludere la posizione nelle Impostazioni</string>
+    <string name="contribute_policy_link">Informativa sulla privacy</string>
+    <string name="contribute_policy_close">Chiudi</string>
+    <string name="contribute_policy_title">Privacy: invio di foto</string>
+    <string name="contribute_policy_what_title">Cosa viene raccolto</string>
+    <string name="contribute_policy_what_body">Solo se attivi la contribuzione: ogni foto analizzata a piena risoluzione con i suoi metadati EXIF (posizione GPS, a meno che tu non disattivi «Includi posizione», data e ora, marca e modello del telefono, orientamento), gli oggetti rilevati (classe, riquadro e confidenza), la versione dell\'app e un identificativo anonimo di installazione (derivato da una chiave che non lascia mai il telefono). Nessun nome, account, e-mail o contatto. Una volta, il telefono invia anche un certificato del suo hardware sicuro che dimostra che l\'app è autentica e il telefono non è modificato (stato di avvio e livello di patch; nessun identificativo).</string>
+    <string name="contribute_policy_why_title">A cosa serve</string>
+    <string name="contribute_policy_why_body">Per migliorare i modelli di rilevamento e delle specie di OceanGuard e calcolare statistiche (per esempio dove e quando si trovano rifiuti e con quali telefoni). Nulla viene venduto o usato per pubblicità.</string>
+    <string name="contribute_policy_where_title">Dove viene conservato</string>
+    <string name="contribute_policy_where_body">Ogni foto viene cifrata sul telefono in modo che solo il server privato del progetto di ricerca OceanGuard possa aprirla. Viaggia via HTTPS verso un buffer temporaneo (Cloudflare, piano gratuito) che conserva solo la copia cifrata, al massimo 7 giorni, finché il server del progetto non la scarica e la elimina da lì. Le foto originali con i loro EXIF sono accessibili solo al gruppo di ricerca e non vengono mai rese pubbliche.</string>
+    <string name="contribute_policy_publish_title">Cosa può essere pubblicato</string>
+    <string name="contribute_policy_publish_body">Può essere pubblicato un dataset di ricerca con le foto prive di qualsiasi EXIF e posizione e le loro annotazioni. Le posizioni reali non vengono mai pubblicate, né l\'identificativo di installazione né il modello del telefono.</string>
+    <string name="contribute_policy_withdraw_title">Come ritirarle</string>
+    <string name="contribute_policy_withdraw_body">Disattiva la contribuzione nelle Impostazioni per smettere di inviare. «Elimina le mie foto inviate» cancella dal server tutto ciò che questo telefono ha inviato. Puoi anche chiederlo al progetto indicando l\'ID anonimo del contributore mostrato nelle Impostazioni.</string>
+    <string name="contribute_policy_license_title">Licenza</string>
+    <string name="contribute_policy_license_body">Contribuendo accetti che le tue foto e le loro annotazioni possano essere condivise, senza EXIF né posizione, con la licenza Creative Commons Attribuzione 4.0 Internazionale (CC BY 4.0), con l\'attribuzione «Contributori di OceanGuard AI».</string>
+    <string name="contribute_sync_quota">il server di ricerca è pieno per oggi; verrà ritentato più tardi</string>
+    <string name="contribute_sync_app_not_official">questa copia dell\'app non è la versione ufficiale (build di debug o altra firma); solo l\'APK ufficiale può contribuire</string>
+</resources>

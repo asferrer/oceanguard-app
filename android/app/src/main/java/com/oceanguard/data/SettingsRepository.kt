@@ -10,6 +10,8 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.oceanguard.ai.data.settings.contributeConsentFlow
+import com.oceanguard.ai.data.settings.writeContributeConsent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -60,7 +62,6 @@ class SettingsRepository(private val context: Context) {
         val VLM_MODEL_VARIANT = stringPreferencesKey("vlm_model_variant")
 
         // Research contribution
-        val CONTRIBUTE_CONSENT_GIVEN  = booleanPreferencesKey("contribute_consent_given")
         val CONTRIBUTE_WIFI_ONLY      = booleanPreferencesKey("contribute_wifi_only")
         val CONTRIBUTE_DECLINE_COUNT  = intPreferencesKey("contribute_decline_count")
         val CONTRIBUTE_NEVER_PROMPT   = booleanPreferencesKey("contribute_never_prompt")
@@ -517,10 +518,11 @@ class SettingsRepository(private val context: Context) {
     // Research contribution
     // -----------------------------------------------------------------------
 
-    /** True once the user has explicitly given consent to contribute images. */
-    val contributeConsentGiven: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[Keys.CONTRIBUTE_CONSENT_GIVEN] ?: false
-    }
+    /**
+     * True once the user has explicitly given consent to contribute images, for the current
+     * wording of the consent (versioned in data/settings/ContributionSettings.kt).
+     */
+    val contributeConsentGiven: Flow<Boolean> get() = contributeConsentFlow()
 
     /** When true, uploads only occur on WiFi (UNMETERED) networks. Default: true. */
     val contributeWifiOnly: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -539,15 +541,13 @@ class SettingsRepository(private val context: Context) {
      * Explicit opt-out: once true, the contribution prompt never shows again
      * after an analysis. Independent from [contributeDeclineCount] so a single
      * "Don't ask again" tap silences the prompt permanently regardless of how
-     * many times the user dismissed it before. Resets to false from Settings.
+     * many times the user dismissed it before. "Reset contribution prompts" in Settings clears it.
      */
     val contributeNeverPrompt: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[Keys.CONTRIBUTE_NEVER_PROMPT] ?: false
     }
 
-    suspend fun setContributeConsentGiven(v: Boolean) {
-        context.dataStore.edit { prefs -> prefs[Keys.CONTRIBUTE_CONSENT_GIVEN] = v }
-    }
+    suspend fun setContributeConsentGiven(v: Boolean) = writeContributeConsent(v)
 
     suspend fun setContributeWifiOnly(v: Boolean) {
         context.dataStore.edit { prefs -> prefs[Keys.CONTRIBUTE_WIFI_ONLY] = v }
@@ -559,7 +559,7 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    /** Permanently silence the contribution prompt. Reversible from Settings. */
+    /** Silence the contribution prompt. Settings brings it back with resetContributePrompts(). */
     suspend fun setContributeNeverPrompt(v: Boolean) {
         context.dataStore.edit { prefs -> prefs[Keys.CONTRIBUTE_NEVER_PROMPT] = v }
     }

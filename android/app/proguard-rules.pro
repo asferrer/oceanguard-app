@@ -60,4 +60,4 @@
 -keep class com.oceanguard.ai.service.DataContributionWorker { *; }
 -keep class com.oceanguard.ai.data.contribution.** { *; }
 -keep class com.oceanguard.ai.utils.CocoAnnotationSerializer { *; }
--keep class com.oceanguard.ai.utils.WebDavUploadClient { *; }
+# The Firebase SDKs ship their own consumer rules; nothing to add when App Check is on.

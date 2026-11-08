@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.AnalysisMode
+import com.oceanguard.ai.ui.components.ContributionPrivacyLink
 import com.oceanguard.ai.ui.components.sonar.SonarRadar
 import com.oceanguard.ai.ui.components.sonar.modeTimeLabel
 import com.oceanguard.ai.ui.screens.home.HomeLogic
@@ -193,9 +194,13 @@ private fun OptionTexts(option: WelcomeOption, alpha: Float, modifier: Modifier)
     }
 }
 
-/** Optional contribution of analysed images. Off by default; the switch is the whole row. */
+/**
+ * Optional contribution of analysed images. Off by default; the switch is the whole row.
+ * The body says what is sent (photo with its EXIF, location included, and the detections).
+ * Without a destination in this build the switch is disabled and the page says so.
+ */
 @Composable
-fun ContributePage(enabled: Boolean, onToggle: (Boolean) -> Unit) {
+fun ContributePage(enabled: Boolean, available: Boolean, onToggle: (Boolean) -> Unit) {
     PageFrame {
         IconBadge(Icons.Filled.Science)
         PageText(stringResource(R.string.onboarding_contribute_title), stringResource(R.string.onboarding_contribute_body))
@@ -204,15 +209,28 @@ fun ContributePage(enabled: Boolean, onToggle: (Boolean) -> Unit) {
                 .fillMaxWidth()
                 .padding(top = 16.dp)
                 .heightIn(min = 56.dp)
-                .toggleable(value = enabled, role = Role.Switch, onValueChange = onToggle),
+                .alpha(if (available) 1f else DISABLED_ALPHA)
+                .toggleable(value = enabled, enabled = available, role = Role.Switch, onValueChange = onToggle),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(stringResource(R.string.onboarding_contribute_toggle), style = MaterialTheme.typography.bodyLarge)
-            Switch(checked = enabled, onCheckedChange = null)
+            Switch(checked = enabled && available, onCheckedChange = null, enabled = available)
+        }
+        if (available) {
+            ContributionPrivacyLink()
+        } else {
+            Text(
+                stringResource(R.string.contribute_unavailable_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
+
+private const val DISABLED_ALPHA = 0.5f
 
 /** Offer of the guided tour. The two buttons live in the shared controls. */
 @Composable
