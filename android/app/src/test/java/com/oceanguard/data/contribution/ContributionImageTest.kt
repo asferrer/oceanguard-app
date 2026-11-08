@@ -51,6 +51,17 @@ class ContributionImageTest {
         assertTrue("temporary copy deleted", work.listFiles().orEmpty().isEmpty())
     }
 
+    @Test
+    fun tenMegabytePhotoLosesGpsAndKeepsTheRest() {
+        val photo = largeSyntheticJpeg(tmp.root)
+        val bytes = ContributionImage.prepare(photo, includeLocation = false, workDir = tmp.newFolder("work"))
+        assertTrue(bytes.size >= 10 * 1024 * 1024)
+        val sent = ExifInterface(bytes.inputStream())
+        assertNull(sent.latLong)
+        assertEquals("SynthPhone 1", sent.getAttribute(ExifInterface.TAG_MODEL))
+        assertNotNull(ExifInterface(photo).latLong)
+    }
+
     @Test(expected = java.io.IOException::class)
     fun missingPhotoIsNotSendable() {
         ContributionImage.prepare(File(tmp.root, "gone.jpg"), includeLocation = false, workDir = tmp.newFolder("work"))

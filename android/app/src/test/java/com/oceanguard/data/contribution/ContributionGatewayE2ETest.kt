@@ -39,10 +39,10 @@ class ContributionGatewayE2ETest {
     private fun meta(id: String) = """{"v":1,"contribution_id":"$id","app_version":"e2e","annotations":$coco}"""
 
     @Test
-    fun uploadsWithAndWithoutLocationAndARetry() = runBlocking {
+    fun tenMegabyteUploadsWithAndWithoutLocationAndARetry() = runBlocking {
         val config = configOrSkip()
         val client = ContributionApiClient(config, SoftwareDeviceIdentity(), appCheckToken = { null })
-        val photo = syntheticJpeg(tmp.root, "e2e.jpg")
+        val photo = largeSyntheticJpeg(tmp.root, "e2e.jpg") // >= 10 MiB, several parts
         val withGps = ContributionImage.prepare(photo, includeLocation = true, workDir = tmp.newFolder("a"))
         val withoutGps = ContributionImage.prepare(photo, includeLocation = false, workDir = tmp.newFolder("b"))
         val spki = config.recipientSpki!!

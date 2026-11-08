@@ -8,6 +8,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import com.oceanguard.ai.data.contribution.ContributionApiClient
 import com.oceanguard.ai.data.contribution.ContributionEnvelope
 import com.oceanguard.ai.data.contribution.SoftwareDeviceIdentity
+import com.oceanguard.ai.data.contribution.WorkerLikeDispatcher
 import com.oceanguard.ai.data.contribution.testConfig
 import com.oceanguard.ai.data.contribution.testRecipient
 import com.oceanguard.ai.data.contribution.ContributionQueueItem
@@ -47,11 +48,13 @@ class DataContributionWorkerTest {
 
     private val app: TestContributionApp = ApplicationProvider.getApplicationContext()
     private val server = MockWebServer()
+    private val worker = WorkerLikeDispatcher()
     private lateinit var db: OceanGuardDatabase
     private val prefs = FakeContributionPrefs(consent = true)
 
     @Before
     fun setUp() {
+        server.dispatcher = worker
         server.start(java.net.InetAddress.getByName("127.0.0.1"), 0)
         db = inMemoryDatabase(app)
     }
@@ -92,7 +95,7 @@ class DataContributionWorkerTest {
     fun successWhenTheQueueIsSent() {
         useRunner(configured = true)
         queuePhoto()
-        server.enqueue(MockResponse().setResponseCode(201).setBody("""{"id":"a","duplicate":false}"""))
+        worker.enqueue(MockResponse().setResponseCode(201).setBody("""{"id":"a","duplicate":false}"""))
         assertEquals(ListenableWorker.Result.success(), runWorker())
         assertEquals(RunReport(1, 0, RunOutcome.DONE), app.reports.single())
     }
@@ -101,7 +104,7 @@ class DataContributionWorkerTest {
     fun retryWhenTheServerFails() {
         useRunner(configured = true)
         queuePhoto()
-        server.enqueue(MockResponse().setResponseCode(502))
+        worker.enqueue(MockResponse().setResponseCode(502))
         assertEquals(ListenableWorker.Result.retry(), runWorker())
         assertEquals(RunOutcome.RETRY, app.reports.single().outcome)
     }

@@ -30,6 +30,7 @@ class ContributionRepositoryTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val server = MockWebServer()
+    private val worker = WorkerLikeDispatcher()
     private lateinit var db: OceanGuardDatabase
     private val dao get() = db.contributionQueueDao()
     private val prefs = FakeContributionPrefs()
@@ -38,6 +39,7 @@ class ContributionRepositoryTest {
     @Before
     fun setUp() {
         WorkManagerTestInitHelper.initializeTestWorkManager(context)
+        server.dispatcher = worker
         server.start(java.net.InetAddress.getByName("127.0.0.1"), 0)
         db = inMemoryDatabase(context)
     }
@@ -130,7 +132,7 @@ class ContributionRepositoryTest {
         prefs.consent = true
         prefs.id = identity.clientId
         dao.insert(ContributionQueueItem(sessionId = 1, imageUri = "u", annotationsJson = "{}", status = ContributionStatus.DONE))
-        server.enqueue(MockResponse().setResponseCode(202).setBody("""{"status":"accepted","pending_deleted":1}"""))
+        worker.enqueue(MockResponse().setResponseCode(202).setBody("""{"status":"accepted","pending_deleted":1}"""))
 
         assertEquals(WithdrawResult.Done(1), repository().withdrawAll())
         assertEquals("/v1/withdrawals", server.takeRequest().path)
@@ -144,7 +146,7 @@ class ContributionRepositoryTest {
     fun failedWithdrawalKeepsEverything() = runBlocking {
         prefs.consent = true
         dao.insert(ContributionQueueItem(sessionId = 1, imageUri = "u", annotationsJson = "{}", status = ContributionStatus.DONE))
-        server.enqueue(MockResponse().setResponseCode(503))
+        worker.enqueue(MockResponse().setResponseCode(503))
         assertEquals(WithdrawResult.Failed(ContributionSyncStatus.SERVER), repository().withdrawAll())
         assertEquals(1, dao.getDoneCount())
         assertTrue(prefs.consent)

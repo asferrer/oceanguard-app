@@ -80,6 +80,23 @@ fun syntheticJpeg(dir: File, name: String = "synthetic.jpg", withGps: Boolean = 
     return file
 }
 
+/**
+ * A synthetic JPEG of at least 10 MiB, like a 50 MP phone photo: the small image with fake
+ * GPS, make and model, plus 160 filler APP15 segments (never a real photo or place).
+ */
+fun largeSyntheticJpeg(dir: File, name: String = "large.jpg"): File {
+    val small = syntheticJpeg(dir, "small_$name").readBytes()
+    val out = java.io.ByteArrayOutputStream()
+    out.write(small, 0, 2) // SOI
+    val filler = ByteArray(65_531) { (it % 199).toByte() }
+    repeat(160) {
+        out.write(byteArrayOf(0xFF.toByte(), 0xEF.toByte(), 0xFF.toByte(), 0xFD.toByte()))
+        out.write(filler)
+    }
+    out.write(small, 2, small.size - 2)
+    return File(dir, name).apply { writeBytes(out.toByteArray()) }
+}
+
 /** 16x12 plain-colour JPEG without metadata, generated for these tests. */
 private const val PLAIN_JPEG_B64 =
     "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRT" +
@@ -92,3 +109,31 @@ private const val PLAIN_JPEG_B64 =
     "HBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOE" +
     "hYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+P" +
     "n6/9oADAMBAAIRAxEAPwDFooor1jzD/9k="
+
+/**
+ * MockWebServer dispatcher that behaves like the Worker's part protocol: part requests get
+ * 202 unless the next queued answer is a refusal (then the part gets it); the commit, a
+ * withdrawal or any other request gets the next queued answer (201 by default).
+ */
+class WorkerLikeDispatcher : okhttp3.mockwebserver.Dispatcher() {
+    private val queue = java.util.concurrent.LinkedBlockingQueue<okhttp3.mockwebserver.MockResponse>()
+
+    fun enqueue(response: okhttp3.mockwebserver.MockResponse) {
+        queue.add(response)
+    }
+
+    private fun code(response: okhttp3.mockwebserver.MockResponse) = response.status.split(" ")[1].toInt()
+
+    override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): okhttp3.mockwebserver.MockResponse {
+        if ("/parts/" in request.path.orEmpty()) {
+            val head = queue.peek()
+            return if (head != null && code(head) !in 200..201) queue.poll()!!
+            else okhttp3.mockwebserver.MockResponse().setResponseCode(202).setBody("""{"received":0}""")
+        }
+        return queue.poll() ?: okhttp3.mockwebserver.MockResponse().setResponseCode(201).setBody("{}")
+    }
+}
+
+/** Contribution id of an upload request (it travels in the path). */
+fun contributionIdOf(request: okhttp3.mockwebserver.RecordedRequest): String? =
+    Regex("/v1/contributions/([0-9a-f-]{36})/").find(request.path.orEmpty())?.groupValues?.get(1)

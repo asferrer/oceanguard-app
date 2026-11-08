@@ -27,12 +27,14 @@ class ContributionUploadRunnerTest {
     val tmp = TemporaryFolder()
 
     private val server = MockWebServer()
+    private val worker = WorkerLikeDispatcher()
     private lateinit var db: OceanGuardDatabase
     private val dao get() = db.contributionQueueDao()
     private val prefs = FakeContributionPrefs(consent = true)
 
     @Before
     fun setUp() {
+        server.dispatcher = worker
         server.start(java.net.InetAddress.getByName("127.0.0.1"), 0)
         db = inMemoryDatabase(ApplicationProvider.getApplicationContext())
     }
@@ -88,22 +90,23 @@ class ContributionUploadRunnerTest {
     @Test
     fun acceptedPhotosAreDone() = runBlocking {
         val ids = queue("a.jpg", "b.jpg")
-        repeat(2) { server.enqueue(MockResponse().setResponseCode(201).setBody("""{"id":"x","duplicate":false}""")) }
+        repeat(2) { worker.enqueue(MockResponse().setResponseCode(201).setBody("""{"id":"x","duplicate":false}""")) }
         val report = runner().run()
         assertEquals(RunReport(uploaded = 2, failed = 0, outcome = RunOutcome.DONE), report)
         ids.forEach { assertEquals("DONE", statusOf(it).first) }
         assertEquals(ContributionSyncStatus.OK, prefs.statuses.last())
         assertEquals(identity.clientId, prefs.id)
         val first = server.takeRequest()
-        assertTrue(first.getHeader("X-OG-Contribution-Id")!!.matches(Regex("[0-9a-f-]{36}")))
+        assertTrue(contributionIdOf(first) != null)
+        assertTrue(first.path!!.contains("/parts/0?parts=1&bytes="))
         assertTrue("envelope, not the photo", first.body.readByteArray().copyOfRange(0, 4).contentEquals("OGC1".toByteArray()))
     }
 
     @Test
     fun refusedPhotoFailsAndTheQueueGoesOn() = runBlocking {
         val ids = queue("a.jpg", "b.jpg")
-        server.enqueue(MockResponse().setResponseCode(422).setBody("""{"error":"bad_annotations"}"""))
-        server.enqueue(MockResponse().setResponseCode(201).setBody("{}"))
+        worker.enqueue(MockResponse().setResponseCode(422).setBody("""{"error":"bad_annotations"}"""))
+        worker.enqueue(MockResponse().setResponseCode(201).setBody("{}"))
         val report = runner().run()
         assertEquals(RunReport(1, 1, RunOutcome.DONE), report)
         assertEquals("FAILED", statusOf(ids[0]).first)
@@ -113,7 +116,7 @@ class ContributionUploadRunnerTest {
     @Test
     fun serverErrorKeepsPendingSpendsOneAttemptAndAsksForRetry() = runBlocking {
         val ids = queue("a.jpg", "b.jpg")
-        server.enqueue(MockResponse().setResponseCode(500).setBody("""{"error":"server"}"""))
+        worker.enqueue(MockResponse().setResponseCode(500).setBody("""{"error":"server"}"""))
         val report = runner().run()
         assertEquals(RunOutcome.RETRY, report.outcome)
         assertEquals("PENDING" to 1, statusOf(ids[0]))
@@ -124,7 +127,7 @@ class ContributionUploadRunnerTest {
     @Test
     fun rateLimitDoesNotSpendAttempts() = runBlocking {
         val ids = queue("a.jpg")
-        server.enqueue(MockResponse().setResponseCode(429).setHeader("Retry-After", "60").setBody("{}"))
+        worker.enqueue(MockResponse().setResponseCode(429).setHeader("Retry-After", "60").setBody("{}"))
         assertEquals(RunOutcome.RETRY, runner().run().outcome)
         assertEquals("PENDING" to 0, statusOf(ids[0]))
         assertEquals(ContributionSyncStatus.RATE_LIMITED, prefs.statuses.last())
@@ -134,7 +137,7 @@ class ContributionUploadRunnerTest {
     fun revokedKeyEndsInFailedAfterTheBudget() = runBlocking {
         val ids = queue("a.jpg")
         repeat(ContributionUploadRunner.MAX_RETRIES) {
-            server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error":"auth"}"""))
+            worker.enqueue(MockResponse().setResponseCode(401).setBody("""{"error":"auth"}"""))
             assertEquals(RunOutcome.RETRY, runner().run().outcome)
         }
         val last = runner().run()
@@ -147,20 +150,51 @@ class ContributionUploadRunnerTest {
     @Test
     fun quotaDoesNotSpendAttempts() = runBlocking {
         val ids = queue("a.jpg")
-        server.enqueue(MockResponse().setResponseCode(503).setBody("""{"error":"quota"}"""))
+        worker.enqueue(MockResponse().setResponseCode(503).setBody("""{"error":"quota"}"""))
         assertEquals(RunOutcome.RETRY, runner().run().outcome)
         assertEquals("PENDING" to 0, statusOf(ids[0]))
         assertEquals(ContributionSyncStatus.QUOTA, prefs.statuses.last())
     }
 
     @Test
+    fun missingAppCheckTokenWaitsWithoutSpendingAttempts() = runBlocking {
+        val ids = queue("a.jpg")
+        val offline = ContributionApiClient(testConfig("https://oceanguard-contrib.example.workers.dev/"), identity, appCheckToken = { null })
+        assertEquals(RunOutcome.RETRY, runner(client = offline).run().outcome)
+        assertEquals("PENDING" to 0, statusOf(ids[0]))
+        assertEquals(ContributionSyncStatus.ATTESTATION, prefs.statuses.last())
+    }
+
+    @Test
     fun retriesKeepTheSameContributionId() = runBlocking {
         queue("a.jpg")
-        server.enqueue(MockResponse().setResponseCode(500))
-        server.enqueue(MockResponse().setResponseCode(201).setBody("{}"))
+        worker.enqueue(MockResponse().setResponseCode(500))
+        worker.enqueue(MockResponse().setResponseCode(201).setBody("{}"))
         runner().run()
         runner().run()
-        assertEquals(server.takeRequest().getHeader("X-OG-Contribution-Id"), server.takeRequest().getHeader("X-OG-Contribution-Id"))
+        val ids = (1..server.requestCount).map { contributionIdOf(server.takeRequest()) }.toSet()
+        assertEquals("every request of both attempts names the same contribution", 1, ids.size)
+    }
+
+    @Test
+    fun tenMegabytePhotoWithoutLocationTravelsInParts() = runBlocking {
+        // 10 MB synthetic JPEG: real EXIF with fake GPS plus 160 filler APP15 segments.
+        val photo = largeSyntheticJpeg(tmp.root)
+        assertTrue(photo.length() >= 10L * 1024 * 1024)
+        val id = dao.insert(
+            ContributionQueueItem(sessionId = 1, imageUri = "file://${photo.path}", annotationsJson = "{}", status = ContributionStatus.PENDING),
+        )
+        prefs.include = false
+        val work = tmp.newFolder("work")
+        val report = runner(prepare = { f, include -> ContributionImage.prepare(f, include, work) }).run()
+        assertEquals(RunReport(1, 0, RunOutcome.DONE), report)
+        assertEquals("DONE", statusOf(id).first)
+        val requests = (1..server.requestCount).map { server.takeRequest() }
+        val parts = requests.filter { "/parts/" in it.path!! }
+        assertEquals(6, parts.size)
+        assertTrue("one D1 row per part", parts.all { it.bodySize <= 2_000_000 })
+        assertTrue(requests.last().path!!.contains("/commit?parts=6&bytes="))
+        assertTrue("the temporary copy without GPS is gone", work.listFiles().orEmpty().isEmpty())
     }
 
     @Test
@@ -177,7 +211,7 @@ class ContributionUploadRunnerTest {
         queue("a.jpg")
         prefs.include = false
         val seen = mutableListOf<Boolean>()
-        server.enqueue(MockResponse().setResponseCode(201).setBody("{}"))
+        worker.enqueue(MockResponse().setResponseCode(201).setBody("{}"))
         runner(prepare = { f, include -> seen += include; f.readBytes() }).run()
         assertEquals(listOf(false), seen)
         assertTrue(server.takeRequest().getHeader("X-OG-Signature")!!.isNotEmpty())
