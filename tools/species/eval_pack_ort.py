@@ -1,4 +1,4 @@
-"""Stand-alone check of a species pack with ONNX Runtime on CPU (numpy + Pillow + onnxruntime only).
+"""Stand-alone check of a species pack with ONNX Runtime on CPU (numpy + Pillow + onnxruntime only); honours the pack's `cropMode` and `sessionOptimization`.
 
 Meant to run in a clean venv with the same ONNX Runtime as the app (``onnxruntime==1.20.1``):
 
@@ -39,12 +39,14 @@ def read_spex(path: Path):
     return body, meta
 
 
-def prep(path: Path, size: int, mean, std) -> np.ndarray:
+def prep(path: Path, size: int, mean, std, crop: str = "center") -> np.ndarray:
     im = Image.open(path).convert("RGB")
     w, h = im.size
     m = min(w, h)
     x, y = (w - m) // 2, (h - m) // 2
-    im = im.crop((x, y, x + m, y + m)).resize((size, size), Image.BILINEAR)
+    if crop != "full":  # "full": the whole photo squashed to a square
+        im = im.crop((x, y, x + m, y + m))
+    im = im.resize((size, size), Image.BILINEAR)
     a = (np.asarray(im, np.float32) / 255.0 - np.array(mean, np.float32)) / np.array(std, np.float32)
     return a.transpose(2, 0, 1)
 
@@ -71,6 +73,11 @@ def main() -> None:
     e, cal, sc = man["encoder"], man["calibration"], man.get("scoring")
     so = ort.SessionOptions()
     so.intra_op_num_threads = a.threads
+    lv = ort.GraphOptimizationLevel
+    so.graph_optimization_level = {"none": lv.ORT_DISABLE_ALL, "basic": lv.ORT_ENABLE_BASIC,
+                                   "all": lv.ORT_ENABLE_ALL}[man.get("sessionOptimization", "all")]
+    crop = man.get("cropMode", "center")
+    print("sessionOptimization", man.get("sessionOptimization", "all"), "cropMode", crop)
     sess = ort.InferenceSession(str(a.pack / man["encoderFile"]), so, providers=["CPUExecutionProvider"])
     print("onnxruntime", ort.__version__, "providers", sess.get_providers())
     t = sess.run([e["outputName"]], {e["inputName"]: self_test(e["size"], e["mean"], e["std"])})[0][0]
@@ -98,7 +105,7 @@ def main() -> None:
     X = []
     with ThreadPoolExecutor(4) as pool:
         for i in range(0, len(files), 16):
-            batch = np.stack(list(pool.map(lambda p: prep(p, e["size"], e["mean"], e["std"]), files[i:i + 16])))
+            batch = np.stack(list(pool.map(lambda p: prep(p, e["size"], e["mean"], e["std"], crop), files[i:i + 16])))
             X.append(sess.run([e["outputName"]], {e["inputName"]: batch})[0])
             if (i // 16) % 25 == 0:
                 print(f"  {i + len(batch)}/{len(files)}", flush=True)
@@ -106,7 +113,7 @@ def main() -> None:
     q = q / np.linalg.norm(q, axis=1, keepdims=True)
     lat = []
     for i in range(10):
-        x1 = np.stack([prep(files[i], e["size"], e["mean"], e["std"])])
+        x1 = np.stack([prep(files[i], e["size"], e["mean"], e["std"], crop)])
         t0 = time.time()
         sess.run([e["outputName"]], {e["inputName"]: x1})
         lat.append(time.time() - t0)

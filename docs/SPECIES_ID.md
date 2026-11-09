@@ -566,3 +566,89 @@ Reproduce (outputs in the run folder): `count_inat_available.py`, `count_gbif_av
 `fetch_inat_more.py`, `dedupe_ext.py`, `embed_set.py` (bioclip, bioclip2; `--flip`, `--crop full|start|end|c80`),
 `embed_text.py`, `precision_exp.py --exp gallery|head|tta|text|refs|combo|distract`, `build_pack_plus.py --encoder bioclip2
 --text-weight 4 --w16 --ext ext_rows.jsonl`, `eval_pack_ort.py` (inside the `onnxruntime==1.20.1` venv).
+
+
+## 11. Final pack for 1.2.0-rc3 (pack_final, 2026-11-09)
+
+`C:/rerun_v9/runs/_species_precision/pack_final/`: the encoder of pack_best (same ONNX, same SHA-256) with a new index,
+calibration for precision and three optional manifest fields. Built with `build_pack_plus.py --crop-mode full
+--precision-high 0.95 --precision-low 0.80 --session-optimization none --catalog-name species_catalog_v2.json
+--reuse-encoder pack_best`.
+
+**Calibration (val).** `tauHigh` = lowest threshold with val selective precision >= 0.95, `tauLow` = lowest with >= 0.80
+(the "possible" band is a suggestion, never stored); wrong species and accepted out-of-catalogue photos count as errors.
+The softmax temperature is still the optimum of the val fit: 0.05421. Result: **tauHigh 0.904, tauLow 0.525** (the
+0.91 quoted in 10.3 was for the centre-square pack; pack_best at target 0.90 had 0.773 / 0.531).
+
+**`cropMode`: "full".** Without a locator the encoder gets the whole photo resized to 224 x 224 (aspect ratio not kept)
+instead of the centre square; the reference photos are embedded the same way. Same pipeline, same val calibration:
+
+| Input (references / queries) | Val top-1 | Test top-1 / top-5 / macro | Independent top-1 / top-5 / macro |
+|---|---|---|---|
+| centre square / centre square | 0.891 | 0.888 / 0.977 / 0.869 | 0.800 / 0.922 / 0.766 |
+| centre square / whole photo | 0.887 | 0.896 / 0.977 / 0.881 | 0.810 / 0.931 / 0.786 |
+| **whole photo / whole photo (pack_final)** | 0.884 | **0.898 / 0.977 / 0.886** | **0.811 / 0.931 / 0.785** |
+
+Confirmed on both held-out sets (+1.0 test, +1.1 independent, 3 210 and 4 107 photos; the same direction as the +0.7 /
++1.2 of 10.2); val (1 131 photos) goes the other way by -0.7, within its noise. The app resize is bilinear on the whole
+bitmap, as in `embed_set.py --crop full`.
+
+**`sessionOptimization`: "none".** `mem_lat2.py`: peak working set and p50 of one photo, ONNX Runtime 1.20.1, 4 threads,
+x86 CPU, the pack ONNX (fp16 storage + Cast). The Java levels map to `ORT_DISABLE_ALL / BASIC / EXTENDED / ALL`; every level
+gives the same embedding (cosine >= 0.9999998).
+
+| Level (Java) | Load | p50 | Peak RAM |
+|---|---|---|---|
+| none (`NO_OPT`) | 0.7 s | 505 ms | **786 MB** |
+| basic (`BASIC_OPT`) | 2.9 s | 404 ms | 2 568 MB |
+| extended (`EXTENDED_OPT`) | 2.9 s | 372 ms | 2 567 MB |
+| all (`ALL_OPT`) | 2.9 s | 376 ms | 2 568 MB |
+
+The constant folding of the fp16 -> fp32 Casts (it starts at BASIC) materialises the 1.2 GB fp32 weights; only `NO_OPT`
+stays under 1 GB, and it costs ~35 % of latency on this CPU (no operator fusion). On ARM the penalty may be different
+(not measured). No fp32 or pure-fp16 ONNX is needed for the memory limit, but the real S22 figure is still unknown.
+
+**`catalogFile`: `species_catalog_v2.json`** (SHA-256 48e47f34...a112e, the regenerated one): the 202 species keys of the
+index (197 with image prototypes + 5 text-only: *Cystoseira amentacea*, *Eledone moschata*, *Patella ferruginea*, *Sepia
+elegans*, *Sphyraena sphyraena*) are exactly the 202 keys of the catalogue, no key in only one of them (`verify_pack.py`).
+`merged` {hypselodoris_picta: felimare_picta} is kept in the manifest. 18 677 reference photos (CC0 / CC-BY).
+
+**Results (ONNX Runtime 1.20.1, CPU, clean venv; cropMode full, level none; no location).** Decisions count accepted
+out-of-catalogue photos as errors in the precision.
+
+| Set | Top-1 / top-5 / macro | RAG_CORE cov. / prec. | RAG_TENTATIVE cov. / prec. | Negatives: core / tentative / unidentified |
+|---|---|---|---|---|
+| iNaturalist test (3 210 + 305 negatives) | 0.899 / 0.979 / 0.890 | 0.686 / 0.980 | 0.234 / 0.709 | 0.089 / 0.348 / 0.564 |
+| Independent (4 107 + 336 negatives) | 0.810 / 0.934 / 0.792 | 0.616 / 0.963 | 0.236 / 0.652 | 0.062 / 0.339 / 0.598 |
+
+Against pack_best (target 0.90): CORE coverage falls from 0.787 / 0.699 to 0.686 / 0.616 and the precision of the
+confident answers rises from 0.957 / 0.931 to 0.980 / 0.963; accepted negatives fall from 21.3 % / 14.6 % to 8.9 % /
+6.2 %. The tentative band is wide (0.23-0.24 of the photos) and only 0.65-0.71 right: it is a suggestion.
+
+**With the new geographic prior of the app** (section 9: `logit = score / T + ln g`, g = 1 / 0.5 / 0.3 / 0.1 / 1,
+pack thresholds; photos with a resolved ecoregion: test 3 196 + 305 negatives, independent 1 917 + 106 negatives; same
+photos for both rows, `geo/geo_final2.txt`):
+
+| Set | Prior | Top-1 / top-5 | RAG_CORE cov. / prec. | RAG_TENTATIVE cov. / prec. | Negatives: core / tentative |
+|---|---|---|---|---|---|
+| Test | none | 0.899 / 0.979 | 0.686 / 0.980 | 0.234 / 0.707 | 0.089 / 0.348 |
+| Test | new app prior | **0.905 / 0.981** | 0.693 / 0.983 | 0.230 / 0.704 | 0.079 / 0.380 |
+| Independent | none | 0.840 / 0.949 | 0.652 / 0.977 | 0.222 / 0.675 | 0.066 / 0.387 |
+| Independent | new app prior | **0.847 / 0.953** | 0.671 / 0.977 | 0.203 / 0.677 | 0.075 / 0.387 |
+
+Geography adds +0.6 / +0.7 points of top-1 and keeps the precision of the confident answers (0.983 / 0.977).
+
+`verify_pack.py` was rewritten (no torch needed): manifest and file check, SHA-256 of every file, index vs catalogue
+keys, session with the manifest level, self-test and the app chain on a split (it calls `eval_pack_ort.py`, which now
+honours `cropMode` and `sessionOptimization`).
+
+Files (`pack_final/`, not committed):
+
+```
+biodex_bioclip2_v3.onnx        aee44cd78984b1ea0f41364f881071040c4b648c124d73803d038d30eaac4bf7   (609.11 MB)
+species_index_v3.bin           9dd4d8ae870385438f58fd506d77cd75654ee8f8a2b574568379b500a05eccd7   (2.19 MB)
+species_pack.json              dd5c56c3f47b36ec23adb82c8dcb82b4de2d1c220b50d765dc9820edb41f05cc
+species_catalog_v2.json        48e47f343918efca837bd87df53135bbd901903afddfa075a17c37d12cfa112e   (0.38 MB)
+reference_provenance.jsonl     0709da07aa431ef076252f29321f6f7befdf4414012efb335d70fc4cf1d085aa   (3.20 MB)
+build_report.json              57879d2d5cd38e53634ef233509d3b99603d310dedc02c1bb30f146f882db73f
+```

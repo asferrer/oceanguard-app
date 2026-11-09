@@ -46,6 +46,12 @@ def main() -> None:
     ap.add_argument("--merge", default="hypselodoris_picta=felimare_picta")
     ap.add_argument("--w16", action="store_true", help="fp16 weight storage (fp32 compute)")
     ap.add_argument("--version", type=int, default=3)
+    ap.add_argument("--crop-mode", default="center", choices=["center", "full"],
+                    help="input of the encoder without a locator: centre square or the whole photo squashed to 224; "
+                         "references and queries are embedded the same way")
+    ap.add_argument("--catalog-name", default="species_catalog_v1.json", help="catalogFile name in the pack")
+    ap.add_argument("--session-optimization", choices=["all", "basic", "none"], help="written to species_pack.json")
+    ap.add_argument("--reuse-encoder", type=Path, help="pack dir whose ONNX is copied instead of exported again")
     ap.add_argument("--precision-high", type=float, default=0.90)
     ap.add_argument("--precision-low", type=float, default=0.80)
     a = ap.parse_args()
@@ -58,23 +64,30 @@ def main() -> None:
     for r in rows:
         if r["species_key"] in merge:  # same animal under two names: identical observations, keep one copy
             r["split"] = "dropped_dup"
-    E = np.load(a.emb / f"inat_{enc}.npy")
+    var = "_full" if a.crop_mode == "full" else ""
+    E = np.load(a.emb / f"inat_{enc}{var}.npy")
     ext_rows, E_ext = [], None
     if a.ext:
         ext_rows = [r for r in L.load_jsonl(a.ext) if r["species_key"] not in merge]
         keep_idx = {(r["observation_id"], r["photo_id"]) for r in ext_rows}
         all_ext = L.load_jsonl(a.ext)
-        E_ext = np.load(a.emb / f"ext_{enc}.npy")
+        E_ext = np.load(a.emb / f"ext_{enc}{var}.npy")
         sel = [i for i, r in enumerate(all_ext) if (r["observation_id"], r["photo_id"]) in keep_idx
                and r["species_key"] not in merge]
         E_ext = E_ext[sel]
     cat = {s["speciesKey"]: s for s in json.loads(a.catalog.read_text(encoding="utf-8"))["species"]}
     species = sorted(k for k in cat if k not in merge)
     pos = {s: j for j, s in enumerate(species)}
+    for r in rows:  # catalogue photos of a species that is not in this catalogue count as out-of-catalogue
+        if r["role"] == "catalog" and r["species_key"] not in pos and r["species_key"] not in merge:
+            r["role"] = "negative"
+    keep = [i for i, r in enumerate(ext_rows) if r["species_key"] in pos]
+    ext_rows = [ext_rows[i] for i in keep]
+    E_ext = E_ext[keep] if E_ext is not None else None
 
     # --- references (train observers, publishable licences) ---
     ref_idx = [i for i, r in enumerate(rows) if r["split"] == "train" and r["role"] == "catalog"
-               and (r.get("license") or "") in lic]
+               and (r.get("license") or "") in lic and r["species_key"] in pos]
     X = [E[ref_idx]]
     K = [r["species_key"] for r in (rows[i] for i in ref_idx)]
     prov = [rows[i] for i in ref_idx]
@@ -115,7 +128,7 @@ def main() -> None:
     rho = float(np.percentile(corr_img, 10))  # image term given to species without any reference photo
     val = L.make_split([rows[i] for i in val_i], scores(E[val_i], rho), pos)
     test = L.make_split([rows[i] for i in test_i], scores(E[test_i], rho), pos)
-    res = L.evaluate(val, {"test": test})
+    res = L.evaluate(val, {"test": test}, prec_high=a.precision_high, prec_low=a.precision_low)
     T, th, tl = res["T"], res["tauHigh"], res["tauLow"]
     print(f"calibration: T={T} tauHigh={th} tauLow={tl} missingImageScore={rho:.3f}; "
           f"val top-1 {res['val_top1']:.3f}, test top-1 {res['test']['top1']:.3f} top-5 {res['test']['top5']:.3f}")
@@ -133,9 +146,15 @@ def main() -> None:
     write_spex(a.out / idx_file, np.concatenate(vecs), meta)
     enc_file = f"biodex_{enc}_v{a.version}.onnx"
     tmp = a.out / "_fp32.onnx"
-    export_onnx(enc, tmp, size)
     import onnxruntime as ort
-    if a.w16:
+    if a.reuse_encoder:
+        shutil.copy2(a.reuse_encoder / json.loads((a.reuse_encoder / "species_pack.json").read_text())["encoderFile"],
+                     a.out / enc_file)
+    else:
+        export_onnx(enc, tmp, size)
+    if a.reuse_encoder:
+        pass
+    elif a.w16:
         from onnx_fp16_storage import convert
         print("fp16 storage of", convert(str(tmp), str(a.out / enc_file)), "initialisers")
         tmp.unlink()
@@ -145,15 +164,22 @@ def main() -> None:
     # parity torch (fp32 GPU embeddings used for the index) vs the shipped ONNX on CPU
     from embed_all import to_tensor
     pi = ref_idx[:: max(1, len(ref_idx) // 24)][:24]
-    xin = np.stack([to_tensor(a.inat / rows[i]["file"], size, norm) for i in pi])
+    if a.crop_mode == "full":
+        from PIL import Image
+        def to_t(p):
+            im = Image.open(p).convert("RGB").resize((size, size), Image.BILINEAR)
+            return ((np.asarray(im, np.float32) / 255.0 - np.array(norm[0], np.float32)) / np.array(norm[1], np.float32)).transpose(2, 0, 1)
+        xin = np.stack([to_t(a.inat / rows[i]["file"]) for i in pi])
+    else:
+        xin = np.stack([to_tensor(a.inat / rows[i]["file"], size, norm) for i in pi])
     out = l2n(sess.run(["image_features"], {"pixel_values": xin})[0])
     parity = float(np.min(np.sum(out * E[pi], axis=1)))
     print(f"torch(GPU) vs shipped ONNX(CPU) min cosine on {len(pi)} photos: {parity:.6f}")
     pattern = self_test_pattern(size, *norm)
     expected = l2n(sess.run(["image_features"], {"pixel_values": pattern})[0])[0]
-    shutil.copy2(a.catalog, a.out / "species_catalog_v1.json")
+    shutil.copy2(a.catalog, a.out / a.catalog_name)
     manifest = {
-        "version": a.version, "encoderFile": enc_file, "indexFile": idx_file, "catalogFile": "species_catalog_v1.json",
+        "version": a.version, "encoderFile": enc_file, "indexFile": idx_file, "catalogFile": a.catalog_name,
         "encoder": {"inputName": "pixel_values", "outputName": "image_features", "size": size,
                     "mean": list(norm[0]), "std": list(norm[1]), "dim": int(X.shape[1])},
         "calibration": {"plattA": 0.0, "plattB": 0.0, "tauHigh": th, "tauLow": tl, "delta": 0.0, "temperature": T},
@@ -166,7 +192,10 @@ def main() -> None:
                             "count": int(len(K)), "species": int(len(have_img)),
                             "note": "only embeddings are shipped; attribution in reference_provenance.jsonl"},
         "merged": merge,
+        "cropMode": a.crop_mode,
     }
+    if a.session_optimization:
+        manifest["sessionOptimization"] = a.session_optimization
     if not use_text:
         manifest.pop("scoring")
     (a.out / "species_pack.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")

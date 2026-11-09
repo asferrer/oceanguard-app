@@ -130,7 +130,8 @@ def make_split(rows, S, pos) -> Split:
     return Split(S, lab, neg)
 
 
-def evaluate(val: Split, others: dict[str, Split], T: float | None = None, reject: np.ndarray | None = None) -> dict:
+def evaluate(val: Split, others: dict[str, Split], T: float | None = None, reject: np.ndarray | None = None,
+             prec_high: float = 0.90, prec_low: float = 0.80) -> dict:
     """Calibrate on ``val`` and report each split of ``others``."""
     m = (~val.neg) & (val.lab >= 0)
     T = T or fit_T(val.S[m], val.lab[m])
@@ -138,7 +139,7 @@ def evaluate(val: Split, others: dict[str, Split], T: float | None = None, rejec
     if reject is not None:  # columns that mean "not in the catalogue": never an answer
         cv = np.where(reject[val.S.argmax(1)], 0.0, cv)
     corr = (val.S.argmax(1) == val.lab) & ~val.neg
-    th, tl = lowest_tau(cv, corr, val.neg, 0.90), lowest_tau(cv, corr, val.neg, 0.80)
+    th, tl = lowest_tau(cv, corr, val.neg, prec_high), lowest_tau(cv, corr, val.neg, prec_low)
     res = {"T": round(T, 5), "tauHigh": th, "tauLow": tl,
            "val_top1": float(corr[~val.neg].mean())}
     for name, sp in others.items():
