@@ -227,8 +227,22 @@ class SpeciesReferenceIndex(
         topK: Int = 5,
         sensitivity: GeoFilterSensitivity = GeoFilterSensitivity.BALANCED,
         hierarchy: (Int) -> Pair<Int, Int>? = { null },
-    ): List<SpeciesMatch> {
-        if (!loaded || prototypes.isEmpty()) return emptyList()
+    ): List<SpeciesMatch> = searchDetailed(emb, region, topK, sensitivity, hierarchy).matches
+
+    /**
+     * Same ranking and confidences as [search], plus the probability mass of every catalogue
+     * `group` ([SpeciesSearchOutcome.groupProbabilities]): the sum of the calibrated softmax
+     * probabilities (geo prior included) over all species of the group, not only the top-k.
+     * Empty when the pack uses the legacy Platt confidence (no softmax to sum).
+     */
+    fun searchDetailed(
+        emb: FloatArray,
+        region: MarineRegion?,
+        topK: Int = 5,
+        sensitivity: GeoFilterSensitivity = GeoFilterSensitivity.BALANCED,
+        hierarchy: (Int) -> Pair<Int, Int>? = { null },
+    ): SpeciesSearchOutcome {
+        if (!loaded || prototypes.isEmpty()) return SpeciesSearchOutcome(emptyList(), emptyMap())
         require(emb.size == dimension) {
             "Query embedding dim=${emb.size}, expected $dimension"
         }
@@ -254,7 +268,7 @@ class SpeciesReferenceIndex(
         val confOf = confidenceFunction(effective.associate { it.key to it.adjusted })
 
         val top = effective.sortedByDescending { it.adjusted }.take(topK)
-        return top.map { c ->
+        val matches = top.map { c ->
             val entry = catalogEntries[c.key]
             SpeciesMatch(
                 speciesKey     = c.key,
@@ -265,6 +279,9 @@ class SpeciesReferenceIndex(
                 rankScore      = c.adjusted,
             )
         }
+        val groups = if (t > 0f) GroupFallback.groupSums(effective.map { it.key to confOf(it.key, it.cosine) }) { catalogEntries[it]?.group }
+        else emptyMap()
+        return SpeciesSearchOutcome(matches, groups)
     }
 
     /** Per-species score from the row cosines: max over all rows, or image + text with [scoring]. */

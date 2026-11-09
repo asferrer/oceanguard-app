@@ -34,6 +34,10 @@ import java.io.File
  * @param cropMode     "center" (default) or "full": without an organism locator, crop the
  *                     centre square or resize the whole photo to size x size.
  * @param merged       Informative: species keys merged into another one (old -> new).
+ * @param groupFallback Optional: when no species is confident, report the catalogue group whose
+ *                     summed probability reaches [GroupFallback.threshold] (docs/SPECIES_ID.md, 13).
+ * @param sha256       Optional file name -> SHA-256 (hex) of the pack files, used by the update to
+ *                     reuse the files that did not change.
  * @param selfTest     Optional reference embedding of [SelfTest.pattern] computed
  *                     on the PC in fp32, used to detect a numerically broken
  *                     accelerator path on the device.
@@ -51,7 +55,16 @@ data class SpeciesPackConfig(
     val sessionOptimization: String? = null,
     val cropMode: String? = null,
     val merged: Map<String, String>? = null,
+    val groupFallback: GroupFallbackSpec? = null,
+    val sha256: Map<String, String>? = null,
 ) {
+    /** `groupFallback` of the manifest. */
+    data class GroupFallbackSpec(val threshold: Float = 0f)
+
+    /** Threshold of the group fallback; null when the pack has none (or an invalid one). */
+    val groupThreshold: Float?
+        get() = groupFallback?.threshold?.takeIf { it.isFinite() && it > 0f && it <= 1f }
+
     /**
      * Species score = imageWeight * max cosine of its image rows + textWeight * cosine of its
      * text row (rows whose viewTag is [textViewTag]). A species without image rows uses
@@ -181,6 +194,8 @@ data class SpeciesPackConfig(
                 sessionOptimization = optimization.key,
                 cropMode = if (fullCrop) CROP_FULL else "center",
                 merged = clean ?: emptyMap(),
+                groupFallback = groupFallback?.takeIf { groupThreshold != null },
+                sha256 = sha256?.filter { (k, v) -> k != null && v != null }?.mapValues { it.value.lowercase() },
             )
         }
 

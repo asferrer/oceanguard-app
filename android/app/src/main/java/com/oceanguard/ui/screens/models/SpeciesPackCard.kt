@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oceanguard.ai.OceanGuardApp
+import com.oceanguard.ai.inference.species.SpeciesPackUpdate
 import com.oceanguard.ai.R
 import com.oceanguard.ai.ui.components.sonar.SonarButton
 import com.oceanguard.ai.ui.components.sonar.SonarCard
@@ -66,12 +67,18 @@ private fun rememberSpeciesPackStatus(app: OceanGuardApp): SpeciesPackStatus {
     val manager = app.vlmModelManager
     val state by manager.downloadState.collectAsStateWithLifecycle()
     val selected by manager.speciesPackSelected.collectAsStateWithLifecycle()
-    var installed by remember { mutableStateOf(manager.isSpeciesPackAvailable()) }
+    var installedVersion by remember { mutableStateOf(manager.installedSpeciesPackVersion()) }
+    var remoteVersion by remember { mutableStateOf<Int?>(null) }
     // Re-read the disk when the download ends (completed, failed or cancelled), not on each byte.
     LaunchedEffect(state.javaClass) {
-        installed = withContext(Dispatchers.IO) { manager.isSpeciesPackAvailable() }
+        installedVersion = withContext(Dispatchers.IO) { manager.installedSpeciesPackVersion() }
     }
-    return SpeciesPackLogic.status(installed, selected, state)
+    // Once per installed version: is a newer pack published? (null offline: no offer)
+    LaunchedEffect(installedVersion) {
+        if (installedVersion != null) remoteVersion = manager.remoteSpeciesPackVersion()
+    }
+    val updateAvailable = SpeciesPackUpdate.isNewer(installedVersion, remoteVersion)
+    return SpeciesPackLogic.status(installedVersion != null, selected, state, updateAvailable)
 }
 
 @Composable
@@ -80,6 +87,11 @@ private fun SpeciesPackContent(status: SpeciesPackStatus, app: OceanGuardApp, on
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         when (status) {
             SpeciesPackStatus.Ready -> PackLine(stringResource(R.string.species_pack_status_ready))
+            SpeciesPackStatus.UpdateAvailable -> PackRow(
+                text = stringResource(R.string.species_pack_status_update, size),
+                button = stringResource(R.string.species_pack_btn_update),
+                onClick = onDownload,
+            )
             SpeciesPackStatus.Missing -> PackRow(
                 text = stringResource(R.string.species_pack_status_missing, size),
                 button = stringResource(R.string.species_pack_btn_download),

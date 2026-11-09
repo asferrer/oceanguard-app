@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -58,8 +59,10 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.species.SpeciesCatalog
+import com.oceanguard.ai.data.species.SpeciesGroups
 import com.oceanguard.ai.data.species.SpeciesIdSource
 import com.oceanguard.ai.data.species.SpeciesNames
+import com.oceanguard.ai.inference.species.GroupFallback
 import com.oceanguard.ai.inference.species.IdentificationResult
 import com.oceanguard.ai.ui.components.sonar.SonarButton
 import com.oceanguard.ai.ui.components.sonar.SonarButtonStyle
@@ -119,8 +122,9 @@ fun SpeciesResultScreen(
         val completeState = uiState as? SpeciesUiState.Complete
         if (completeState != null && capturedUri != null) {
             val unidentifiedLabel = stringResource(R.string.species_unidentified)
+            val resources = LocalContext.current.resources
             val boxes = remember(completeState, catalog, unidentifiedLabel) {
-                speciesNormBoxes(completeState, catalog, unidentifiedLabel)
+                speciesNormBoxes(completeState, catalog, unidentifiedLabel) { SpeciesGroups.title(resources, it) }
             }
             SpeciesFitWidthBoxOverlay(
                 imageUri = capturedUri.toString(),
@@ -234,15 +238,17 @@ internal fun speciesNormBoxes(
     state: SpeciesUiState.Complete,
     catalog: SpeciesCatalog,
     unidentifiedLabel: String,
+    groupTitle: (String) -> String = { it },
 ): List<NormBox> {
     if (state.imageWidth <= 0 || state.imageHeight <= 0) return emptyList()
     val lang = SpeciesNames.currentLanguage()
     return state.results.mapNotNull { result ->
         val bbox = result.bbox ?: return@mapNotNull null
-        val label = SpeciesNames.resultName(
-            result.speciesKey, result.scientificName, result.isUnidentified,
-            catalog, unidentifiedLabel, lang,
-        )
+        val label = result.groupKey?.takeIf { result.isUnidentified }?.let(groupTitle)
+            ?: SpeciesNames.resultName(
+                result.speciesKey, result.scientificName, result.isUnidentified,
+                catalog, unidentifiedLabel, lang,
+            )
         bboxToNormBox(
             x = bbox.x, y = bbox.y, width = bbox.width, height = bbox.height,
             imgWidth = state.imageWidth, imgHeight = state.imageHeight,
@@ -329,15 +335,16 @@ private fun SpeciesResultSummary(results: List<IdentificationResult>, catalog: S
 @Composable
 private fun CompactSpeciesResultCard(result: IdentificationResult, catalog: SpeciesCatalog) {
     val lang = Locale.getDefault().language
-    val commonName = SpeciesNames.resultName(
+    val resources = LocalContext.current.resources
+    val groupKey = result.groupKey?.takeIf { result.isUnidentified }
+    val commonName = if (groupKey != null) SpeciesGroups.title(resources, groupKey) else SpeciesNames.resultName(
         result.speciesKey, result.scientificName, result.isUnidentified,
         catalog, stringResource(R.string.species_unidentified), lang,
     )
-    // Unidentified: show the closest catalogue candidates as hints, not as an answer.
-    val subtitle = if (result.isUnidentified) {
-        stringResource(R.string.species_unidentified_hint, result.candidates.take(3).joinToString { it.scientificName })
-    } else result.scientificName
-    val confidencePct = (result.confidence * 100).toInt()
+    // Unidentified: show the closest catalogue candidates (common names) as hints, not as an answer.
+    val similar = if (result.isUnidentified) speciesSimilarLine(result, catalog, lang) else null
+    val subtitle = if (result.isUnidentified) similar else result.scientificName
+    val confidencePct = ((if (groupKey != null) result.groupConfidence else result.confidence) * 100).toInt()
 
     SonarCard {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -347,7 +354,7 @@ private fun CompactSpeciesResultCard(result: IdentificationResult, catalog: Spec
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Text(
+            if (subtitle != null) Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 fontStyle = if (result.isUnidentified) FontStyle.Normal else FontStyle.Italic,
@@ -368,23 +375,31 @@ private fun CompactSpeciesResultCard(result: IdentificationResult, catalog: Spec
     }
 }
 
+/** "Similar: A, B, C" with the localised common names of the top candidates; null without candidates. */
+@Composable
+internal fun speciesSimilarLine(result: IdentificationResult, catalog: SpeciesCatalog, lang: String): String? {
+    val names = GroupFallback.candidateNames(result.candidates, catalog::byKey, lang)
+    return if (names.isEmpty()) null else stringResource(R.string.species_similar, names.joinToString())
+}
+
 @Composable
 private fun IdSourceBadgeRow(result: IdentificationResult) {
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        val sourceLabel = when (result.idSource) {
+        val isGroup = result.isUnidentified && result.groupKey != null
+        val sourceLabel = if (isGroup) stringResource(R.string.species_badge_group) else when (result.idSource) {
             SpeciesIdSource.RAG_CORE      -> stringResource(R.string.species_badge_confident)
             SpeciesIdSource.RAG_TENTATIVE ->
                 if (result.vlmChosen) stringResource(R.string.species_badge_gemma) else stringResource(R.string.species_badge_possible)
             SpeciesIdSource.VLM_OPENVOCAB -> "Open Vocab"
             SpeciesIdSource.UNIDENTIFIED  -> stringResource(R.string.species_badge_unidentified)
         }
-        val containerColor = when (result.idSource) {
+        val containerColor = if (isGroup) MaterialTheme.colorScheme.secondaryContainer else when (result.idSource) {
             SpeciesIdSource.RAG_CORE      -> MaterialTheme.colorScheme.primaryContainer
             SpeciesIdSource.RAG_TENTATIVE -> MaterialTheme.colorScheme.secondaryContainer
             SpeciesIdSource.VLM_OPENVOCAB -> MaterialTheme.colorScheme.tertiaryContainer
             SpeciesIdSource.UNIDENTIFIED  -> MaterialTheme.colorScheme.surfaceVariant
         }
-        val labelColor = when (result.idSource) {
+        val labelColor = if (isGroup) MaterialTheme.colorScheme.onSecondaryContainer else when (result.idSource) {
             SpeciesIdSource.RAG_CORE      -> MaterialTheme.colorScheme.onPrimaryContainer
             SpeciesIdSource.RAG_TENTATIVE -> MaterialTheme.colorScheme.onSecondaryContainer
             SpeciesIdSource.VLM_OPENVOCAB -> MaterialTheme.colorScheme.onTertiaryContainer

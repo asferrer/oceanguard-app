@@ -14,4 +14,24 @@
     <string name="species_badge_confident">Identified</string>
     <string name="species_badge_possible">Possible</string>
     <string name="species_possible_name">Possible: %1$s</string>
+    <string name="species_group_title">Possible group: %1$s</string>
+    <string name="species_badge_group">Group</string>
+    <string name="species_similar">Similar: %1$s</string>
+    <string name="species_pack_status_update">Update available for the species pack (%1$s)</string>
+    <string name="species_pack_btn_update">Update</string>
+    <string name="species_group_bony_fish">Bony fish</string>
+    <string name="species_group_sharks_rays">Sharks and rays</string>
+    <string name="species_group_turtles">Sea turtles</string>
+    <string name="species_group_mammals">Marine mammals</string>
+    <string name="species_group_cephalopods">Cephalopods</string>
+    <string name="species_group_other_molluscs">Other molluscs</string>
+    <string name="species_group_crustaceans">Crustaceans</string>
+    <string name="species_group_echinoderms">Echinoderms</string>
+    <string name="species_group_corals_anemones">Corals and anemones</string>
+    <string name="species_group_jellyfish_hydrozoans">Jellyfish and hydrozoans</string>
+    <string name="species_group_sponges">Sponges</string>
+    <string name="species_group_polychaetes">Polychaete worms</string>
+    <string name="species_group_ascidians">Ascidians</string>
+    <string name="species_group_seagrasses">Seagrasses</string>
+    <string name="species_group_algae">Algae</string>
 </resources>

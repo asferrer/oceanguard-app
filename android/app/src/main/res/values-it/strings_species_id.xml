@@ -13,4 +13,24 @@
     <string name="species_badge_confident">Identificata</string>
     <string name="species_badge_possible">Possibile</string>
     <string name="species_possible_name">Possibile: %1$s</string>
+    <string name="species_group_title">Gruppo possibile: %1$s</string>
+    <string name="species_badge_group">Gruppo</string>
+    <string name="species_similar">Simili: %1$s</string>
+    <string name="species_pack_status_update">Aggiornamento del pacchetto specie disponibile (%1$s)</string>
+    <string name="species_pack_btn_update">Aggiorna</string>
+    <string name="species_group_bony_fish">Pesci ossei</string>
+    <string name="species_group_sharks_rays">Squali e razze</string>
+    <string name="species_group_turtles">Tartarughe marine</string>
+    <string name="species_group_mammals">Mammiferi marini</string>
+    <string name="species_group_cephalopods">Cefalopodi</string>
+    <string name="species_group_other_molluscs">Altri molluschi</string>
+    <string name="species_group_crustaceans">Crostacei</string>
+    <string name="species_group_echinoderms">Echinodermi</string>
+    <string name="species_group_corals_anemones">Coralli e anemoni</string>
+    <string name="species_group_jellyfish_hydrozoans">Meduse e idrozoi</string>
+    <string name="species_group_sponges">Spugne</string>
+    <string name="species_group_polychaetes">Policheti</string>
+    <string name="species_group_ascidians">Ascidie</string>
+    <string name="species_group_seagrasses">Fanerogame marine</string>
+    <string name="species_group_algae">Alghe</string>
 </resources>

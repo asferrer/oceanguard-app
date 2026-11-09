@@ -6,6 +6,7 @@ import com.oceanguard.ai.data.SettingsRepository
 import com.oceanguard.ai.data.model.BestModel
 import com.oceanguard.ai.inference.species.SpeciesPackAssets
 import com.oceanguard.ai.inference.species.SpeciesPackConfig
+import com.oceanguard.ai.inference.species.SpeciesPackUpdate
 import com.oceanguard.ai.utils.ModelUpdateChecker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -437,6 +438,12 @@ class VlmModelManager(
         cancelled = false
         try {
             val dir = getSpeciesDirectory()
+            val installed = SpeciesPackConfig.load(dir)
+            if (installed != null) {
+                updateSpeciesPack(dir, installed)
+                _downloadState.value = VlmDownloadState.Complete
+                return@withContext
+            }
             val assets = speciesManifest(dir)?.let(SpeciesPackAssets::forConfig) ?: SpeciesPackAssets.V1
             for ((name, minBytes) in assets) {
                 if (cancelled) break
@@ -448,6 +455,73 @@ class VlmModelManager(
         } catch (e: VlmDownloadException) {
             _downloadState.value = VlmDownloadState.Error(e.message ?: "Species pack download failed", e.kind)
             throw e
+        }
+    }
+
+    /** Version of the installed species pack, null when none is installed. */
+    fun installedSpeciesPackVersion(): Int? = SpeciesPackConfig.load(getSpeciesDirectory())?.version
+
+    /**
+     * Version of the species pack published in the repository (first manifest of
+     * [REMOTE_SPECIES_MANIFESTS] that exists); null when it cannot be read (offline, error).
+     */
+    suspend fun remoteSpeciesPackVersion(): Int? = withContext(Dispatchers.IO) {
+        for (name in REMOTE_SPECIES_MANIFESTS) {
+            val conn = openConnection("$SPECIES_REPO/$name")
+            try {
+                if (conn.responseCode == HttpURLConnection.HTTP_NOT_FOUND) continue
+                if (conn.responseCode != HttpURLConnection.HTTP_OK) return@withContext null
+                val text = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                return@withContext SpeciesPackConfig.parse(text)?.version
+            } catch (e: IOException) {
+                Log.i(TAG, "Remote species manifest check failed: ${e.message}")
+                return@withContext null
+            } finally {
+                conn.disconnect()
+            }
+        }
+        null
+    }
+
+    /**
+     * Update the installed pack to a newer remote manifest. Everything new is downloaded with the
+     * [SpeciesPackUpdate.STAGE_SUFFIX] and verified (size, and SHA-256 when the manifest has it)
+     * before it replaces the installed files; a failure or a cancel leaves the old pack untouched.
+     */
+    private suspend fun updateSpeciesPack(dir: File, installed: SpeciesPackConfig) {
+        val manifestStage = File(dir, SpeciesPackConfig.MANIFEST + SpeciesPackUpdate.STAGE_SUFFIX)
+        val staged = mutableListOf<Pair<File, File>>()
+        try {
+            fetchFirstAvailable { remote ->
+                downloadFile("$SPECIES_REPO/$remote", manifestStage, 50L, manifestStage.name)
+            }
+            val config = manifestStage.takeIf { it.exists() && !cancelled }
+                ?.let { SpeciesPackConfig.parse(it.readText(Charsets.UTF_8)) }
+            if (config == null || !SpeciesPackUpdate.isNewer(installed.version, config.version)) return
+            for ((name, minBytes) in SpeciesPackAssets.forConfig(config)) {
+                if (cancelled) return
+                val target = File(dir, name)
+                val reuse = SpeciesPackUpdate.canReuse(
+                    name, config, target.exists(), target.length(), minBytes,
+                ) { SpeciesPackUpdate.sha256(target) }
+                if (reuse) continue
+                val stage = File(dir, name + SpeciesPackUpdate.STAGE_SUFFIX)
+                downloadFile("$SPECIES_REPO/$name", stage, minBytes, stage.name)
+                if (cancelled) return
+                if (!SpeciesPackUpdate.matches(stage, config.sha256?.get(name))) {
+                    throw VlmDownloadException("Checksum mismatch for $name", kind = DownloadFailureKind.INCOMPLETE)
+                }
+                staged += stage to target
+            }
+            // All verified: swap the files in, the manifest last, then drop what the new pack no longer uses.
+            for ((stage, target) in staged + (manifestStage to File(dir, SpeciesPackConfig.MANIFEST))) {
+                stage.copyTo(target, overwrite = true)
+            }
+            SpeciesPackUpdate.orphans(installed, config).forEach { File(dir, it).delete() }
+            Log.i(TAG, "Species pack updated v${installed.version} -> v${config.version}")
+        } finally {
+            staged.forEach { it.first.delete() }
+            manifestStage.delete()
         }
     }
 
