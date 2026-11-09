@@ -755,4 +755,20 @@
         <item quantity="one">%d analyse</item>
         <item quantity="other">%d analyses</item>
     </plurals>
+    <!-- BioDex species achievements -->
+    <string name="achievement_category_biodex">Espèces du BioDex</string>
+    <string name="achievement_name_species_1">Première espèce</string>
+    <string name="achievement_name_species_5">Naturaliste</string>
+    <string name="achievement_name_species_15">Biologiste de terrain</string>
+    <string name="achievement_name_species_40">Expert marin</string>
+    <string name="achievement_name_species_100">Maître de la biodiversité</string>
+    <string name="achievement_name_species_favorite_3">Conservateur d\'espèces</string>
+    <string name="achievement_name_species_obs_50">Œil de lynx</string>
+    <string name="achievement_desc_species_1">Identifiez votre première espèce</string>
+    <string name="achievement_desc_species_5">Identifiez 5 espèces différentes</string>
+    <string name="achievement_desc_species_15">Identifiez 15 espèces différentes</string>
+    <string name="achievement_desc_species_40">Identifiez 40 espèces différentes</string>
+    <string name="achievement_desc_species_100">Identifiez 100 espèces différentes</string>
+    <string name="achievement_desc_species_favorite_3">Marquez 3 espèces favorites dans le BioDex</string>
+    <string name="achievement_desc_species_obs_50">Enregistrez 50 observations d\'espèces</string>
 </resources>

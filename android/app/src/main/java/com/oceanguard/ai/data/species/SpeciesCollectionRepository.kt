@@ -2,6 +2,7 @@ package com.oceanguard.ai.data.species
 
 import android.util.Log
 import com.oceanguard.ai.data.Location
+import com.oceanguard.ai.data.collection.AchievementChecker
 import com.oceanguard.ai.inference.species.IdentificationResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -21,11 +22,13 @@ import java.util.Date
  * @param speciesObservationDao  DAO for raw observation data.
  * @param speciesDexDao          DAO for the deduplicated dex entries.
  * @param catalog                In-memory species catalog (must be loaded).
+ * @param achievementChecker     Evaluates the BioDex achievements after each save / favourite.
  */
 class SpeciesCollectionRepository(
     private val speciesObservationDao: SpeciesObservationDao,
     private val speciesDexDao: SpeciesDexDao,
     private val catalog: SpeciesCatalog,
+    private val achievementChecker: AchievementChecker? = null,
 ) {
     private companion object {
         const val TAG = "SpeciesCollectionRepo"
@@ -94,6 +97,7 @@ class SpeciesCollectionRepository(
         val observation = toObservation(result, imageUri, thumbnailUri, location)
         val obsId = speciesObservationDao.insert(observation)
         discoverOrUpdate(result.speciesKey, result.scientificName, obsId)
+        achievementChecker?.checkSpeciesAchievements()
         return obsId
     }
 
@@ -167,6 +171,7 @@ class SpeciesCollectionRepository(
     /** Toggle the favourite flag for a dex entry. No-op if key not found. */
     suspend fun setFavorite(speciesKey: String, favorite: Boolean) {
         speciesDexDao.setFavorite(speciesKey, favorite)
+        achievementChecker?.checkSpeciesAchievements()
     }
 
     /**

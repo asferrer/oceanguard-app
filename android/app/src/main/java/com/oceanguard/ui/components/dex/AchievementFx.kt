@@ -88,13 +88,13 @@ fun AchievementFx(
     modifier: Modifier = Modifier,
 ) {
     val palette = rememberFxPalette()
-    val sprites = rememberOrbitSprites(enabled = category == AchievementCategory.COLLECTOR)
+    val sprites = rememberOrbitSprites(enabled = category == AchievementCategory.COLLECTOR || category == AchievementCategory.BIODEX)
     Canvas(modifier = modifier) {
         val k = progress()
         when (category) {
             AchievementCategory.FIRST_STEPS -> drawPing(k, palette)
             AchievementCategory.EXPLORER -> drawSweep(k, palette)
-            AchievementCategory.COLLECTOR -> drawOrbit(k, sprites)
+            AchievementCategory.COLLECTOR, AchievementCategory.BIODEX -> drawOrbit(k, sprites)
             AchievementCategory.IMPACT -> drawTide(k, palette)
             AchievementCategory.RESEARCH -> drawNetwork(k, palette)
             AchievementCategory.ELITE -> drawRays(k, palette)

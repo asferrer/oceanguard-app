@@ -24,6 +24,10 @@ interface AchievementDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(achievements: List<Achievement>)
 
+    /** Re-targets a locked achievement whose threshold changed between app versions. */
+    @Query("UPDATE achievements SET target = :target WHERE id = :id AND unlockedAt = 0 AND target != :target")
+    suspend fun updateTargetIfLocked(id: String, target: Int)
+
     @Query("DELETE FROM achievements")
     suspend fun deleteAll()
 

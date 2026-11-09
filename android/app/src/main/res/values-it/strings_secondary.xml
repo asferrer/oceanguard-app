@@ -755,4 +755,20 @@
         <item quantity="one">%d analisi</item>
         <item quantity="other">%d analisi</item>
     </plurals>
+    <!-- BioDex species achievements -->
+    <string name="achievement_category_biodex">Specie del BioDex</string>
+    <string name="achievement_name_species_1">Prima specie</string>
+    <string name="achievement_name_species_5">Naturalista</string>
+    <string name="achievement_name_species_15">Biologo sul campo</string>
+    <string name="achievement_name_species_40">Esperto marino</string>
+    <string name="achievement_name_species_100">Maestro della biodiversità</string>
+    <string name="achievement_name_species_favorite_3">Curatore di specie</string>
+    <string name="achievement_name_species_obs_50">Occhio di lince</string>
+    <string name="achievement_desc_species_1">Identifica la tua prima specie</string>
+    <string name="achievement_desc_species_5">Identifica 5 specie diverse</string>
+    <string name="achievement_desc_species_15">Identifica 15 specie diverse</string>
+    <string name="achievement_desc_species_40">Identifica 40 specie diverse</string>
+    <string name="achievement_desc_species_100">Identifica 100 specie diverse</string>
+    <string name="achievement_desc_species_favorite_3">Aggiungi 3 specie preferite nel BioDex</string>
+    <string name="achievement_desc_species_obs_50">Registra 50 osservazioni di specie</string>
 </resources>

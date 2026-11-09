@@ -323,6 +323,7 @@ class OceanGuardApp : Application(), ContributionHost {
             database.speciesObservationDao(),
             database.speciesDexDao(),
             speciesCatalog,
+            achievementChecker,
         )
     }
 
@@ -379,6 +380,7 @@ class OceanGuardApp : Application(), ContributionHost {
             achievementDao = database.achievementDao(),
             marineDexDao   = database.marineDexDao(),
             sessionDao     = database.detectionSessionDao(),
+            speciesDexDao  = database.speciesDexDao(),
         )
     }
 

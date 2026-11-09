@@ -163,6 +163,9 @@ class CollectionRepository(
             Achievement(id = def.id, target = def.target)
         }
         achievementDao.insertAll(seeds)
+        // Existing rows keep their progress; only the target of locked ones follows the definition
+        // (all_achievements grows with the list).
+        ALL_ACHIEVEMENTS.forEach { achievementDao.updateTargetIfLocked(it.id, it.target) }
     }
 
     /**

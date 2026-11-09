@@ -3,6 +3,7 @@ package com.oceanguard.ai.data.collection
 import android.util.Log
 import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.data.DetectionSessionDao
+import com.oceanguard.ai.data.species.SpeciesDexDao
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -20,6 +21,7 @@ class AchievementChecker(
     private val achievementDao: AchievementDao,
     private val marineDexDao: MarineDexDao,
     private val sessionDao: DetectionSessionDao,
+    private val speciesDexDao: SpeciesDexDao? = null,
 ) {
     companion object {
         private const val TAG = "AchievementChecker"
@@ -129,6 +131,28 @@ class AchievementChecker(
     suspend fun checkFavoriteCount() {
         val favCount = marineDexDao.getFavoriteCount().first()
         tryAdvance("dex_favorite_3", favCount)
+    }
+
+    /**
+     * Evaluates the BioDex species achievements (distinct species, favourites, observations).
+     * Called after a species observation is saved (single or batch) and when a species
+     * favourite is toggled. Never throws.
+     */
+    suspend fun checkSpeciesAchievements() {
+        val dao = speciesDexDao ?: return
+        try {
+            val discovered = dao.getDiscoveredCount().first()
+            tryAdvance("species_1", minOf(discovered, 1))
+            tryAdvance("species_5", discovered)
+            tryAdvance("species_15", discovered)
+            tryAdvance("species_40", discovered)
+            tryAdvance("species_100", discovered)
+            tryAdvance("species_favorite_3", dao.getFavoriteCount().first())
+            tryAdvance("species_obs_50", dao.getTotalObservations().first())
+            evaluateMetaAchievement()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error processing species achievements", e)
+        }
     }
 
     // -----------------------------------------------------------------------

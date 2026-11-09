@@ -18,7 +18,7 @@ class AchievementCardsTest {
     }
 
     @Test fun theTotalShownIsTheNumberDefined() {
-        assertEquals(25, ACHIEVEMENT_TOTAL)
+        assertEquals(32, ACHIEVEMENT_TOTAL)
         assertEquals(ALL_ACHIEVEMENTS.size, ACHIEVEMENT_TOTAL)
     }
 
