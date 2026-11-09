@@ -192,6 +192,11 @@ identifications and read the `SpeciesIdentifier` p50 per stage (`locate`, `encod
 
 ## 7. Publishing the v2 pack (author)
 
+> Update 2026-11-09: the packs to publish are the CC-BY ones of section 8
+> (`C:/rerun_v9/runs/_species_2026-11-09/pack_v2_bioclip_int8_ccby/`, fp32 reference in `..._fp32_ccby/`): reference
+> index without CC-BY-SA photos, so the pack can be released as CC-BY 4.0. The paragraph below describes the first
+> build (with CC-BY-SA references).
+
 The packs are built in `C:/rerun_v9/runs/_species_2026-11-08/pack_v2_bioclip_fp32/` (and `..._int8/`). To activate
 them, upload their five files to `asferrer/oceanguard-biodex` (keeping the v1 files for older app versions):
 `species_pack.json`, `biodex_bioclip_v2.onnx`, `species_index_v2.bin`, `species_catalog_v1.json`,
@@ -199,3 +204,130 @@ them, upload their five files to `asferrer/oceanguard-biodex` (keeping the v1 fi
 model card. Only embeddings of the CC0/CC-BY/CC-BY-SA reference photos are shipped; `reference_provenance.jsonl`
 lists observation, photo, licence and attribution of each one. Until then the app keeps using v1 with the new,
 calibrated thresholds.
+
+
+## 8. Pack without CC-BY-SA references and check with photos from other sources (2026-11-09)
+
+Decision: BioCLIP ViT-B/16 RAG, **fp32 by default** (int8 does not run correctly on the phone, 8.4), reference index built **only from CC0 and CC-BY photos** (5 010 of
+the 5 442 train photos: 4 302 CC-BY + 708 CC0, 198 species) so the pack can be published as CC-BY 4.0. Before
+publishing it, it was run on real photos that do **not** come from iNaturalist.
+
+### 8.1 Rebuild
+
+```bash
+RUN=C:/rerun_v9/runs/_species_2026-11-08; OUT=C:/rerun_v9/runs/_species_2026-11-09
+python -I $T/build_pack.py --data $RUN/data/inat --encoder bioclip --catalog $RUN/hf_pack/species_catalog_v1.json \
+    --out $OUT/pack_v2_bioclip_int8_ccby --gallery proto6 --licenses cc0,cc-by --calibrate --int8
+python -I $T/build_pack.py ... --out $OUT/pack_v2_bioclip_fp32_ccby --gallery proto6 --licenses cc0,cc-by --calibrate
+python -I $T/verify_pack.py --pack $OUT/pack_v2_bioclip_int8_ccby --data $RUN/data/inat
+```
+
+`build_pack.py` got `--licenses` (gallery filter) and `--calibrate`: with the shipped ONNX (int8 for the int8 pack) it
+embeds val, fits the softmax temperature and takes as `tauHigh` / `tauLow` the lowest threshold whose val selective
+precision (wrong species or accepted out-of-catalogue photo = error) is >= 0.90 / >= 0.80, the same criterion as the
+first v2. `species_pack.json` (with self-test, cosine 1.000000 against the PC reference) and
+`reference_provenance.jsonl` (5 010 lines, licences only `cc-by` and `cc0`) are regenerated. Calibration:
+
+| Pack | Temperature | tauHigh | tauLow |
+|---|---|---|---|
+| int8, CC-BY (new) | 0.02283 | 0.938 | 0.768 |
+| fp32, CC-BY (new) | 0.02111 | 0.939 | 0.795 |
+| int8, with CC-BY-SA (previous) | 0.02283 | 0.949 | 0.798 |
+| fp32, with CC-BY-SA (previous) | 0.02111 | 0.937 | 0.841 |
+
+### 8.2 iNaturalist test split (observers disjoint from the gallery; 3 236 catalogue photos, 198 species, 305 negatives)
+
+`eval_pack.py` (app chain on the ONNX of the pack; v1 = published pack):
+
+| Pack | Top-1 | Top-5 | Macro top-1 | RAG_CORE cov. / prec. | RAG_TENTATIVE cov. / prec. | Negatives UNIDENTIFIED |
+|---|---|---|---|---|---|---|
+| v1 published (no calibrated thresholds) | 0.489 | 0.768 | 0.507 | n/a | n/a | n/a |
+| v2 with CC-BY-SA, fp32 | 0.643 | 0.863 | 0.624 | 0.282 / 0.941 | 0.085 / 0.729 | 0.836 |
+| v2 with CC-BY-SA, int8 | 0.604 | 0.834 | 0.588 | 0.227 / 0.966 | 0.125 / 0.775 | 0.869 |
+| **v2 CC-BY, fp32** | 0.643 | 0.858 | 0.621 | 0.281 / 0.945 | 0.112 / 0.706 | 0.830 |
+| v2 CC-BY, int8 (not deployable, 8.4) | 0.602 | 0.828 | 0.587 | 0.235 / 0.951 | 0.133 / 0.694 | 0.803 |
+
+Coverage is over catalogue photos. Removing the CC-BY-SA references costs 0.0 to 0.2 points of top-1 and 0.5 to 0.6
+points of top-5 (the CC-BY-SA photos are 8 % of the gallery); int8 costs 4 points against fp32 in both. The v1 row is
+0.489 here against 0.492 in section 3 because this run uses the pack's own resize chain; same pack, same photos.
+
+### 8.3 Independent set (no iNaturalist)
+
+`fetch_gbif_independent.py` + `fetch_commons_independent.py` + `filter_indep.py` + `tag_non_photos.py`; data in
+`C:/rerun_v9/runs/_species_2026-11-09/data/indep/` (not redistributed, evaluation only).
+
+* **Sources.** GBIF occurrences with `mediaType=StillImage`, `basisOfRecord` HUMAN_OBSERVATION / OBSERVATION (no
+  museum specimens), the iNaturalist dataset `50c9509d-22c7-4a22-a47d-8c48425ef4a7` excluded, taxon = GBIF backbone
+  species key; and files directly in `Category:<scientific name>` of Wikimedia Commons. Licences CC0, CC-BY, CC-BY-SA
+  only (4 107 catalogue photos: 2 025 CC-BY, 1 857 CC-BY-SA, 225 CC0); at most 3 photos per photographer per species.
+  Label = the species of the GBIF record or Commons category, not re-checked by an expert: some errors in the
+  labels are possible and count against the model. Sources of the catalogue photos: Wikimedia Commons 2 796, Explore
+  Your Shore 656, Arter.dk 199, Norwegian Species Observation Service 185, Observation.org 158, southern African
+  fish occurrence records 83, others 30. Many CC-NC photos (most of Observation.org) are excluded by licence.
+  Dead links (e.g. minka-sdg.org) are skipped.
+* **Cleaning.** 5 177 downloaded; dropped 250 near-duplicates of any iNaturalist photo of the study (dHash <= 4 bits,
+  train + val + test + the ones dropped before), 115 duplicates inside the set, and 369 non-photos by colour
+  statistics (mostly white 143, fewer than 60 colours 190, aspect > 3:1 35, too small 1). Kept 4 443: 4 107
+  catalogue photos of 197 species and 336 out-of-catalogue photos of 29 taxa (the negative taxa of section 2).
+  A zero-shot OpenCLIP prompt check (`tag_non_photos.py`) tags drawings, maps, labels, museum specimens, shells on a
+  table, people and screenshots: 3 712 catalogue photos (196 species, median 17 per species, 147 species with at
+  least 10) and 324 negatives pass it ("photo_ok"). Looking at samples, what it rejects is almost all
+  not-a-photo or specimens; what it keeps still contains some food plates, aquarium shots and a few drawings.
+  Both sets are reported.
+* **Chain.** Centre-square crop, bilinear 224, pack mean/std, the pack ONNX on CPU, max-prototype cosine over the
+  shipped index, softmax at the pack temperature, thresholds of the pack.
+
+| Pack | Set | Top-1 | Top-5 | Macro top-1 | RAG_CORE cov. / prec. | RAG_TENTATIVE cov. / prec. | Negatives UNIDENTIFIED |
+|---|---|---|---|---|---|---|---|
+| v1 published | all 4 107 | 0.404 | 0.699 | 0.429 | n/a | n/a | n/a |
+| v2 with CC-BY-SA, fp32 | all | 0.599 | 0.824 | 0.572 | 0.312 / 0.924 | 0.102 / 0.705 | 0.818 |
+| v2 with CC-BY-SA, int8 | all | 0.559 | 0.790 | 0.540 | 0.226 / 0.948 | 0.149 / 0.761 | 0.830 |
+| v2 CC-BY, fp32 | all | 0.594 | 0.825 | 0.575 | 0.304 / 0.916 | 0.147 / 0.680 | 0.774 |
+| v2 CC-BY, int8 (not deployable, 8.4) | all | 0.550 | 0.785 | 0.540 | 0.241 / 0.935 | 0.153 / 0.692 | 0.804 |
+| v1 published | photo_ok 3 712 | 0.416 | 0.716 | 0.449 | n/a | n/a | n/a |
+| v2 CC-BY, fp32 | photo_ok | 0.616 | 0.849 | 0.597 | 0.316 / 0.916 | 0.153 / 0.679 | 0.769 |
+| v2 CC-BY, int8 (not deployable, 8.4) | photo_ok | 0.570 | 0.809 | 0.559 | 0.252 / 0.934 | 0.159 / 0.688 | 0.796 |
+
+Top-1 per source (int8 CC-BY, all): Observation.org 0.665 (n = 158), Explore Your Shore 0.591 (656), Norwegian
+service 0.578 (185), southern African fish 0.542 (83), Wikimedia Commons 0.540 (2 796), Arter.dk 0.477 (199).
+The int8 CC-BY pack is 5.2 points below its iNaturalist figure (0.550 against 0.602) and 14.6 points above the
+v1 pack; the confident answers keep a precision above 0.90 (target of `tauHigh`), the tentative ones (0.69) are
+below the 0.80 of their val target, as they already were on the iNaturalist test (0.694). Of the negatives, 6.5 %
+get a confident species (RAG_CORE) and 13.1 % a "possible" one.
+
+Weakest species (int8 CC-BY, photo_ok, species with >= 8 photos; top-1, wrong answer): *Solea solea* 0.00 (27;
+*Bothus podas*), *Sardina pilchardus* 0.00 (15; *Engraulis encrasicolus*), *Hippocampus hippocampus* 0.00 (11;
+*H. guttulatus*), *Xiphias gladius* 0.00 (8; *Alopias vulpinus*), *Carcharodon carcharias* 0.05 (19; *Mola mola*),
+*Thunnus thynnus* 0.07, *Myliobatis aquila* 0.08, *Merluccius merluccius* 0.09, *Lepidochelys kempii* 0.09,
+*Paramuricea clavata* 0.11, *Squalus acanthias* 0.12 (*Mustelus mustelus*), *Mullus surmuletus* 0.17 (*M.
+barbatus*), *Caretta caretta* 0.25 (40; 20 as *Eretmochelys imbricata*). 4 of the 157 species with >= 8 photos have
+top-1 0 and 33 have >= 0.8. Most frequent confusions (photos): *Caretta caretta* -> *E. imbricata* 20,
+*Delphinus delphis* -> *Tursiops truncatus* 14, *Felimare picta* -> *Hypselodoris picta* 14, *Chelonia mydas* ->
+*E. imbricata* 13, *M. surmuletus* -> *M. barbatus* 10, *S. acanthias* -> *M. mustelus* 10, *S. pilchardus* ->
+*E. encrasicolus* 9, *S. solea* -> *B. podas* 9. They are congeneric or look-alike pairs, as the top-5 (0.785 to 0.809)
+suggests; a few may be mislabelled in Commons categories. The most frequent answer is *Chaetodon lunula* (78 of
+4 107), so the pipeline does not collapse. Wrong answers with confidence above 0.98 exist (a *Serranus cabrilla*
+read as *Eunicella cavolini*, a *Carcharodon carcharias* as *Mola mola*): the "identified" badge is right about
+93 % of the times, not always.
+
+Files: `eval/indep_*.json` and `eval/inat_test_*.json` under the run folder (per-species table, confusions, 25 most
+confident errors); commands: `eval_pack.py --pack <pack> --rows data/indep/indep.jsonl --base data/indep`
+(independent) and `--rows <inat>/splits.jsonl --base <inat> --split test` (iNaturalist).
+
+### 8.4 Check on Android: int8 is not deployable, fp32 is the default
+
+Both packs were installed in the app (release APK, ONNX Runtime 1.20.0, Android 16 emulator with arm64 translation)
+and run on test photos:
+
+* **int8 as built above** does not load: ONNX Runtime 1.20 has no `ConvInteger` kernel for int8 weights, and
+  `quantize_dynamic` had quantised the patch-embedding convolution (`Could not find an implementation for
+  ConvInteger(10)`; reproduced on the PC with `onnxruntime==1.20.1`). `build_pack.py` now quantises MatMul only.
+* **int8, MatMul only** loads, but the self-test fails on the device: cosine 0.978 between the ARM embedding and the
+  PC embedding of the same pattern (minimum 0.99). The int8 kernels round differently on x86 and ARM, and on the PC
+  the int8 embedding is already 0.954 away from fp32 on that pattern, so the int8 figures above, measured on x86, do
+  not describe the phone. The app refuses the pack and now shows the encoder error instead of "no species".
+* **fp32** (`pack_v2_bioclip_fp32_ccby`): self-test cosine 1.0, about 0.6 s per photo on the emulator, correct answers
+  with high confidence on the test photos tried (*Chromis chromis* 0.99, *Thalassoma pavo* 0.85) and "not
+  identified" below the thresholds. It is the published default: 345 MB to download (the v1 encoder was 352 MB),
+  top-1 0.643 on the iNaturalist test split and 0.594 on the independent set, answers with high confidence for 30 %
+  of the independent photos with 91.6 % precision.
