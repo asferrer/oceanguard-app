@@ -720,6 +720,7 @@
     <string name="biodex_result_none_short">Aucune espèce</string>
     <string name="species_batch_title">Lot d\'espèces</string>
     <string name="species_batch_summary_species">Espèces trouvées</string>
+    <string name="species_batch_summary_identified">Identifiées</string>
     <string name="species_batch_summary_images">Images</string>
     <string name="species_batch_btn_new_batch">Nouveau lot</string>
     <string name="species_batch_btn_view_biodex">Voir BioDex</string>

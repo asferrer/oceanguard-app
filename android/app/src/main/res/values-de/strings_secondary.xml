@@ -718,6 +718,7 @@
     <string name="biodex_result_none_short">Keine Arten</string>
     <string name="species_batch_title">Arten-Batch</string>
     <string name="species_batch_summary_species">Arten gefunden</string>
+    <string name="species_batch_summary_identified">Bestimmt</string>
     <string name="species_batch_summary_images">Bilder</string>
     <string name="species_batch_btn_new_batch">Neuer Batch</string>
     <string name="species_batch_btn_view_biodex">BioDex anzeigen</string>

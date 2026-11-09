@@ -745,6 +745,7 @@
     <string name="species_batch_title">Species Batch</string>
     <!-- Summary stat labels -->
     <string name="species_batch_summary_species">Species found</string>
+    <string name="species_batch_summary_identified">Identified</string>
     <string name="species_batch_summary_images">Images</string>
     <!-- Action buttons -->
     <string name="species_batch_btn_new_batch">New Batch</string>

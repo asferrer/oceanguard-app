@@ -719,6 +719,7 @@
     <string name="biodex_result_none_short">Sem espécies</string>
     <string name="species_batch_title">Lote de espécies</string>
     <string name="species_batch_summary_species">Espécies encontradas</string>
+    <string name="species_batch_summary_identified">Identificadas</string>
     <string name="species_batch_summary_images">Imagens</string>
     <string name="species_batch_btn_new_batch">Novo lote</string>
     <string name="species_batch_btn_view_biodex">Ver BioDex</string>

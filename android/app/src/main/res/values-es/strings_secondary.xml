@@ -720,6 +720,7 @@
     <string name="biodex_result_none_short">Sin especies</string>
     <string name="species_batch_title">Lote de especies</string>
     <string name="species_batch_summary_species">Especies encontradas</string>
+    <string name="species_batch_summary_identified">Identificadas</string>
     <string name="species_batch_summary_images">Imágenes</string>
     <string name="species_batch_btn_new_batch">Nuevo lote</string>
     <string name="species_batch_btn_view_biodex">Ver BioDex</string>

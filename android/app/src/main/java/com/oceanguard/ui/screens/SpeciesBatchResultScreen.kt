@@ -209,10 +209,12 @@ private fun SpeciesBatchGridContent(
     val completedCount = items.count {
         it.state is SpeciesBatchItemState.Done || it.state is SpeciesBatchItemState.Failed
     }
-    val failedCount = items.count { it.state is SpeciesBatchItemState.Failed }
-    val totalSpeciesFound = items.sumOf { item ->
-        (item.state as? SpeciesBatchItemState.Done)?.results?.size ?: 0
+    // Only identified results count: "not identified" crops are hints, not species found.
+    val identified = items.map { item ->
+        (item.state as? SpeciesBatchItemState.Done)?.results.orEmpty().filterNot { it.isUnidentified }
     }
+    val identifiedImages = identified.count { it.isNotEmpty() }
+    val totalSpeciesFound = identified.flatten().map { it.speciesKey }.distinct().size
     val progressFraction = if (totalCount == 0) 0f else completedCount.toFloat() / totalCount
     val animatedProgress by animateFloatAsState(targetValue = progressFraction, label = "species_batch_progress")
 
@@ -239,7 +241,7 @@ private fun SpeciesBatchGridContent(
                     SpeciesBatchSummaryCard(
                         totalImages = totalCount,
                         totalSpecies = totalSpeciesFound,
-                        failedCount = failedCount,
+                        identifiedImages = identifiedImages,
                         totalTimeMs = totalTimeMs,
                     )
                 }
@@ -375,7 +377,7 @@ private fun SpeciesBatchProgressHeader(
 private fun SpeciesBatchSummaryCard(
     totalImages: Int,
     totalSpecies: Int,
-    failedCount: Int,
+    identifiedImages: Int,
     totalTimeMs: Long,
 ) {
     val totalSeconds = totalTimeMs / 1000L
@@ -416,9 +418,9 @@ private fun SpeciesBatchSummaryCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 SpeciesSummaryStat(
-                    label = stringResource(R.string.batch_summary_success_rate),
+                    label = stringResource(R.string.species_batch_summary_identified),
                     value = if (totalImages == 0) "—"
-                    else "${((totalImages - failedCount) * 100) / totalImages}%",
+                    else "${(identifiedImages * 100) / totalImages}%",
                     valueColor = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.weight(1f),
                 )
