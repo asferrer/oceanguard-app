@@ -336,7 +336,7 @@ and run on test photos:
 ## 9. Species catalogue v2 (2026-11-09)
 
 `tools/species/build_catalog_v2.py` builds `species_catalog_v2.json` (same wrapper and fields as v1, `version: 2`) for the
-198 species of the v2 index (the 5 without references are dropped). Output and cache live outside the repository
+202 species of the v3 index (`pack_best`, BioCLIP 2 + text: 197 with photos plus 5 recognised by text; `hypselodoris_picta` is merged into `felimare_picta` and dropped). The species are read from the SPEX metadata of `species_index_v3.bin` (`--index`). Output and cache live outside the repository
 (`C:/rerun_v9/runs/_species_catalog_v2/`: catalogue, `names_provenance.jsonl`, `summary.json`).
 
 * **Identity.** `speciesKey` never changes. The AphiaID is checked against WoRMS REST; 16 v1 AphiaIDs belonged to another
@@ -359,9 +359,9 @@ and run on test photos:
   unknown fields, so older apps read the file unchanged.
 * **Tests.** `SpeciesCatalogV2Test` parses a v2 sample (with an unknown extra field), checks that the info tab picks
   `descriptions[lang]` with English fallback (same expression as `SpeciesInfoTabContent`) and, if present, parses the generated
-  file (198 species, six names and descriptions each).
+  file (202 species, six names and descriptions each).
 
 ```bash
-P=C:/rerun_v9/runs/_species_2026-11-09/pack_v2_bioclip_fp32_ccby
-python -I tools/species/build_catalog_v2.py --catalog $P/species_catalog_v1.json --provenance $P/reference_provenance.jsonl     --hierarchy C:/rerun_v9/runs/_species_2026-11-08/hf_pack/ecoregion_hierarchy_v1.json --out C:/rerun_v9/runs/_species_catalog_v2
+P=C:/rerun_v9/runs/_species_precision/pack_best
+python -I tools/species/build_catalog_v2.py --catalog $P/species_catalog_v1.json --index $P/species_index_v3.bin \n    --hierarchy C:/rerun_v9/runs/_species_2026-11-08/hf_pack/ecoregion_hierarchy_v1.json --out C:/rerun_v9/runs/_species_catalog_v2
 ```

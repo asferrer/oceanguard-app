@@ -85,7 +85,7 @@ class SpeciesCatalogV2Test {
         assumeTrue(f.exists())
         val catalog = SpeciesCatalog(f)
         catalog.load()
-        assertEquals(198, catalog.totalCount())
+        assertEquals(202, catalog.totalCount())
         val langs = listOf("en", "es", "fr", "de", "it", "pt")
         for (e in catalog.all()) {
             assertNotNull(e.group)

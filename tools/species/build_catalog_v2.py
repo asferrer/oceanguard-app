@@ -1,6 +1,6 @@
 """Build species_catalog_v2.json (BioDex catalogue v2) from v1 plus WoRMS / GBIF.
 
-* keeps the species of the v2 pack index (species_key in reference_provenance.jsonl) and their AphiaID;
+* keeps the species of the v2 pack index (speciesKey of the SPEX index, or species_key in reference_provenance.jsonl) and their AphiaID;
 * checks AphiaID / accepted name against WoRMS (reports; never changes the key; if the v1 AphiaID belongs to another
   taxon it is replaced by the one WoRMS gives for the exact name, and listed under name_mismatch);
 * common names in en/es/fr/de/it/pt only from WoRMS vernaculars (CC BY 4.0) or GBIF vernacular names, otherwise the
@@ -11,7 +11,7 @@
 * optional field `group` (stable English key) derived from the WoRMS classification.
 
 Usage:
-  python -I build_catalog_v2.py --catalog species_catalog_v1.json --provenance reference_provenance.jsonl \
+  python -I build_catalog_v2.py --catalog species_catalog_v1.json --index species_index_v3.bin \
       --hierarchy ecoregion_hierarchy_v1.json --out C:/rerun_v9/runs/_species_catalog_v2
 Network calls are cached in <out>/cache (re-runs do not hit the APIs again).
 """
@@ -344,6 +344,8 @@ CURATED = {
     ("sphaerechinus_granularis", "es"): "Erizo violáceo", ("hexaplex_trunculus", "es"): "Búsano",
     ("dermochelys_coriacea", "es"): "Tortuga laúd", ("spongia_officinalis", "es"): "Esponja de baño",
     ("sargassum_vulgare", "es"): "Sargazo común", ("dasyatis_pastinaca", "es"): "Pastinaca",
+    ("patella_ferruginea", "es"): "Lapa ferrugínea", ("patella_ferruginea", "en"): "Ribbed Mediterranean limpet",
+    ("patella_ferruginea", "de"): "Fleckige Napfschnecke",
     ("lepidochelys_kempii", "es"): "Tortuga lora", ("thunnus_thynnus", "es"): "Atún rojo",
 }
 
@@ -380,10 +382,24 @@ def describe(sp, group, ch, rec, med_ids):
     return desc
 
 
+def index_keys(path: Path):
+    """speciesKey set of a SPEX index: 32-byte header (magic, version, n, dim), n*dim float16, then one JSON per row."""
+    import struct
+    b = path.read_bytes()
+    magic, _ver, n, dim = struct.unpack("<4sIII", b[:16])
+    if magic != b"XEPS":
+        sys.exit(f"{path} is not a SPEX index")
+    rows = [json.loads(l) for l in b[32 + n * dim * 2:].decode("utf-8").splitlines() if l.strip()]
+    if len(rows) != n:
+        sys.exit(f"{path}: {len(rows)} metadata rows for {n} vectors")
+    return {r["speciesKey"] for r in rows}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--catalog", required=True)
-    ap.add_argument("--provenance", required=True)
+    ap.add_argument("--index", help="species_index_vN.bin (SPEX): species = the speciesKey of its JSON lines (preferred)")
+    ap.add_argument("--provenance", help="reference_provenance.jsonl: fallback list of species (only those with photos)")
     ap.add_argument("--hierarchy", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--asfis", help="ASFIS_sp CSV (default: <out>/ASFIS_sp_2026.1.csv, downloaded if missing)")
@@ -394,7 +410,11 @@ def main():
     asfis = load_asfis(Path(a.asfis) if a.asfis else out / "ASFIS_sp_2026.1.csv")
 
     v1 = json.loads(Path(a.catalog).read_text(encoding="utf-8"))
-    keep = {json.loads(l)["species_key"] for l in Path(a.provenance).read_text(encoding="utf-8").splitlines() if l.strip()}
+    keep = index_keys(Path(a.index)) if a.index else {
+        json.loads(l)["species_key"] for l in Path(a.provenance).read_text(encoding="utf-8").splitlines() if l.strip()}
+    missing = keep - {s["speciesKey"] for s in v1["species"]}
+    if missing:
+        sys.exit(f"species of the index absent from the v1 catalogue: {sorted(missing)}")
     hier = json.loads(Path(a.hierarchy).read_text(encoding="utf-8"))
     med_ids = {h["ecoregionId"] for h in hier if h["provinceName"] == "Mediterranean Sea"}
     species = [s for s in v1["species"] if s["speciesKey"] in keep]
