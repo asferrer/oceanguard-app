@@ -14,7 +14,9 @@ Scripts that build and evaluate the BioDex species pack (visual RAG). Results, d
 | `train_classifier.py`, `eval_classifier.py` | Ad hoc light classifiers (alternative b) |
 | `export_variants.py`, `bench_latency.py` | ONNX fp32 / int8 export, retrieval cost of int8, CPU latency and size |
 | `gemma_rerank.py`, `score_policies.py`, `gemma_verify.py` | Gemma 4 E2B as judge of the RAG candidates and the decision policies |
-| `build_pack.py`, `verify_pack.py` | Build the v2 pack (encoder, SPEX index, `species_pack.json`, provenance) and check it as the app decides |
+| `build_pack.py`, `verify_pack.py` | Build the v2 pack (encoder, SPEX index, `species_pack.json`, provenance; `--licenses cc0,cc-by` for a gallery without CC-BY-SA, `--calibrate` to fit temperature and thresholds on val) and check it as the app decides |
+| `fetch_gbif_independent.py`, `fetch_commons_independent.py`, `filter_indep.py`, `tag_non_photos.py` | Evaluation photos that do not come from iNaturalist (GBIF non-iNaturalist datasets, Wikimedia Commons), near-duplicate and not-a-photo filters |
+| `eval_pack.py` | Pack on a labelled set with the app chain: top-1/5, macro, coverage and precision per decision, negatives, worst species, confusions |
 | `biodex_common.py`, `gpu_guard.py` | Shared helpers (app parity) and the lab GPU guard |
 
 Run them with `python -I` (Python 3.12 with torch, open_clip, timm, transformers, onnxruntime, Pillow, requests).
