@@ -17,6 +17,26 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
+/**
+ * True when release [latest] (e.g. "1.2.0") is newer than the installed [current].
+ * Versions compare by their numeric x.y.z part. A build after a tag
+ * (`git describe`: "1.1.1-30-g6014fca") or a release candidate of a later
+ * version ("1.2.0-rc1") is never offered an older or equal release, which the
+ * former string inequality did.
+ */
+internal fun isNewerVersion(latest: String, current: String): Boolean {
+    fun numbers(v: String) = v.removePrefix("v").substringBefore('-').split('.').map { it.toIntOrNull() ?: 0 }
+    val a = numbers(latest)
+    val b = numbers(current)
+    for (i in 0 until maxOf(a.size, b.size)) {
+        val x = a.getOrElse(i) { 0 }
+        val y = b.getOrElse(i) { 0 }
+        if (x != y) return x > y
+    }
+    // Same x.y.z: only a release candidate of it ("1.2.0-rc1") is older than the release.
+    return current.contains("-rc", ignoreCase = true) && !latest.contains('-')
+}
+
 data class UpdateInfo(
     val versionName: String,
     val releaseNotes: String,
@@ -55,7 +75,7 @@ class UpdateChecker(private val settings: SettingsRepository) {
 
         val currentVersion = BuildConfig.VERSION_NAME
             .removeSuffix("-debug")
-        if (info.versionName == currentVersion) return null
+        if (!isNewerVersion(info.versionName, currentVersion)) return null
 
         val skipped = settings.skippedVersion.first()
         if (info.versionName == skipped) return null
