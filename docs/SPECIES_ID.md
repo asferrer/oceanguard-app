@@ -331,3 +331,37 @@ and run on test photos:
   identified" below the thresholds. It is the published default: 345 MB to download (the v1 encoder was 352 MB),
   top-1 0.643 on the iNaturalist test split and 0.594 on the independent set, answers with high confidence for 30 %
   of the independent photos with 91.6 % precision.
+
+
+## 9. Species catalogue v2 (2026-11-09)
+
+`tools/species/build_catalog_v2.py` builds `species_catalog_v2.json` (same wrapper and fields as v1, `version: 2`) for the
+198 species of the v2 index (the 5 without references are dropped). Output and cache live outside the repository
+(`C:/rerun_v9/runs/_species_catalog_v2/`: catalogue, `names_provenance.jsonl`, `summary.json`).
+
+* **Identity.** `speciesKey` never changes. The AphiaID is checked against WoRMS REST; 16 v1 AphiaIDs belonged to another
+  taxon and are replaced by the one WoRMS gives for the exact name (listed in `summary.json`, `name_mismatch`). Names that
+  WoRMS no longer accepts are only reported (`not_accepted`); the key and the displayed scientific name stay.
+* **Common names (en, es, fr, de, it, pt).** Rule, same for the six languages: (1) en/fr/es come from the FAO ASFIS list
+  (`ASFIS_sp_2026.1.csv`, https://www.fao.org/fishery/en/collection/asfis; FAO statistical databases are CC BY 4.0, credit FAO)
+  when the species is in it, with the "(=...)" alternatives of ASFIS removed; (2) otherwise the v1 name is kept unless it is
+  empty, identical to the English one in a non-English language, several names in one string, listed by WoRMS/GBIF only for
+  another language (Catalan, Galician...) or of another taxon (manual review); only then the WoRMS/GBIF name with the exact
+  ISO-639-3 language, the one repeated most across both sources; if none, the scientific name. Only the first letter is
+  capitalised (Title Case is undone; German keeps its nouns). `names_provenance.jsonl` gives the real source of each name
+  (`asfis` / `v1` / `worms` / `gbif` / `scientific`) and why a v1 name was replaced.
+* **Descriptions.** Per-language templates filled only with WoRMS (group, class/order/family, marine/brackish/freshwater/
+  terrestrial flags), the IUCN code already in the catalogue and the number of MEOW ecoregions (Mediterranean = the seven
+  ecoregions of province "Mediterranean Sea"); cosmopolitan species say so. No sizes, diets or other facts.
+* **`group` (optional, new).** Stable key derived from the WoRMS classification: `bony_fish`, `sharks_rays`, `turtles`,
+  `mammals`, `cephalopods`, `other_molluscs`, `crustaceans`, `echinoderms`, `corals_anemones`, `jellyfish_hydrozoans`,
+  `sponges`, `polychaetes`, `ascidians`, `seagrasses`, `algae`. `SpeciesCatalogEntry.group` is nullable; Gson ignores
+  unknown fields, so older apps read the file unchanged.
+* **Tests.** `SpeciesCatalogV2Test` parses a v2 sample (with an unknown extra field), checks that the info tab picks
+  `descriptions[lang]` with English fallback (same expression as `SpeciesInfoTabContent`) and, if present, parses the generated
+  file (198 species, six names and descriptions each).
+
+```bash
+P=C:/rerun_v9/runs/_species_2026-11-09/pack_v2_bioclip_fp32_ccby
+python -I tools/species/build_catalog_v2.py --catalog $P/species_catalog_v1.json --provenance $P/reference_provenance.jsonl     --hierarchy C:/rerun_v9/runs/_species_2026-11-08/hf_pack/ecoregion_hierarchy_v1.json --out C:/rerun_v9/runs/_species_catalog_v2
+```
