@@ -697,7 +697,7 @@
     <!-- BioDex Enrichissement en ligne (M7)                                 -->
     <!-- ================================================================== -->
     <string name="settings_species_enrichment_title">Infos espèces en ligne</string>
-    <string name="settings_species_enrichment_subtitle">L\'identification est 100%% locale. Seules des fiches externes (WoRMS / GBIF / iNaturalist) sont téléchargées ; votre image n\'est jamais envoyée.</string>
+    <string name="settings_species_enrichment_subtitle" formatted="false">L\'identification est 100% locale. Seules des fiches externes (WoRMS / GBIF / iNaturalist) sont téléchargées ; votre image n\'est jamais envoyée.</string>
     <string name="biodex_enrichment_section_title">Informations en ligne</string>
     <string name="biodex_enrichment_label_status">Statut</string>
     <string name="biodex_enrichment_label_distribution">Distribution</string>

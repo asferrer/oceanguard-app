@@ -695,7 +695,7 @@
     <!-- BioDex Arricchimento online (M7)                                    -->
     <!-- ================================================================== -->
     <string name="settings_species_enrichment_title">Info specie online</string>
-    <string name="settings_species_enrichment_subtitle">Il riconoscimento è 100%% locale. Vengono scaricate solo schede esterne (WoRMS / GBIF / iNaturalist); la tua immagine non viene mai inviata.</string>
+    <string name="settings_species_enrichment_subtitle" formatted="false">Il riconoscimento è 100% locale. Vengono scaricate solo schede esterne (WoRMS / GBIF / iNaturalist); la tua immagine non viene mai inviata.</string>
     <string name="biodex_enrichment_section_title">Informazioni online</string>
     <string name="biodex_enrichment_label_status">Stato</string>
     <string name="biodex_enrichment_label_distribution">Distribuzione</string>

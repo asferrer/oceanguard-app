@@ -14,6 +14,7 @@ import com.oceanguard.ai.inference.TextModelTier
 import com.oceanguard.ai.inference.TextModelVariant
 import com.oceanguard.ai.inference.VlmDownloadState
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 /**
@@ -59,9 +60,10 @@ private fun isReportModelMissing(app: OceanGuardApp): Boolean {
 @Composable
 private fun rememberIsDownloading(app: OceanGuardApp): State<Boolean> {
     val flow = remember(app) {
-        app.vlmModelManager.downloadState
-            .map { it is VlmDownloadState.Preparing || it is VlmDownloadState.Downloading || it is VlmDownloadState.Installing }
-            .distinctUntilChanged()
+        // The species pack has its own progress card: it must not also show as the detector downloading.
+        combine(app.vlmModelManager.downloadState, app.vlmModelManager.speciesPackSelected) { state, species ->
+            !species && (state is VlmDownloadState.Preparing || state is VlmDownloadState.Downloading || state is VlmDownloadState.Installing)
+        }.distinctUntilChanged()
     }
     return flow.collectAsStateWithLifecycle(initialValue = false)
 }
