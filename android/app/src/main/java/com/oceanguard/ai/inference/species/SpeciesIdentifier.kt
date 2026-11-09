@@ -160,8 +160,9 @@ class SpeciesIdentifier(
         if (matches.isEmpty()) return unidentified(crop, null, emptyList())
 
         val top1 = matches[0]
-        val margin = top1.cosineScore - (matches.getOrNull(1)?.cosineScore ?: 0f)
-        val outOfRange = top1.geoMatchLevel == GeoMatchLevel.GLOBAL && region != null
+        // Margin in the ranking order (cosine units with the geo prior), so it is never negative.
+        val margin = top1.rankScore - (matches.getOrNull(1)?.rankScore ?: 0f)
+        val outOfRange = top1.geoMatchLevel == GeoMatchLevel.OUT_OF_RANGE
         val shown = matches.take(TOP_K)
         return when (confidence.idSource(top1.confidence, margin)) {
             "RAG_CORE" -> matchResult(top1, crop, SpeciesIdSource.RAG_CORE, outOfRange, shown)
@@ -193,7 +194,7 @@ class SpeciesIdentifier(
             is VlmChoice.Picked -> {
                 val pick = offered[choice.index]
                 matchResult(pick, crop, SpeciesIdSource.RAG_TENTATIVE,
-                    outOfRange && pick.geoMatchLevel == GeoMatchLevel.GLOBAL, shown, vlmChosen = true)
+                    pick.geoMatchLevel == GeoMatchLevel.OUT_OF_RANGE, shown, vlmChosen = true)
             }
         }
     }

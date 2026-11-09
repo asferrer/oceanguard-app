@@ -18,4 +18,6 @@ data class SpeciesMatch(
     val cosineScore: Float,
     val confidence: Float,
     val geoMatchLevel: GeoMatchLevel,
+    /** Ranking score in cosine units: cosine + T * ln g(level) (the cosine without a region). */
+    val rankScore: Float = cosineScore,
 )

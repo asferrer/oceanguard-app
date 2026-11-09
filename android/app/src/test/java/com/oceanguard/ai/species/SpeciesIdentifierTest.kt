@@ -287,7 +287,7 @@ class SpeciesIdentifierTest {
      * Uses [FakeRegionResolverPort] to inject a non-null region without file I/O.
      */
     @Test
-    fun `outOfRange true when resolved region is foreign and species relaxed to GLOBAL`() = runBlocking {
+    fun `outOfRange true when resolved region is foreign to the species`() = runBlocking {
         // Foreign region: realm 99, no overlap with sp_A (realm 1) or sp_B (realm 2)
         val foreignRegion = MarineRegion(ecoregionId = 999, provinceId = 99, realmId = 99)
         // hierarchy: sp_A.ecoregions [10,20] → province 5, realm 1 (not 99 → REALM mismatch)
@@ -308,10 +308,10 @@ class SpeciesIdentifierTest {
         )
         val result = sut.identify(nullBitmap(), location = Location(0.0, 0.0)).first()
 
-        // sp_A is found (cosine=1 beats all thresholds after relajación)
+        // sp_A is still found (a perfect image match outweighs the 0.1 prior), flagged out of range
         assertEquals("sp_A", result.speciesKey)
         assertTrue("outOfRange must be true for a foreign-region match", result.outOfRange)
-        assertEquals(GeoMatchLevel.GLOBAL.name, result.geoMatchLevel)
+        assertEquals(GeoMatchLevel.OUT_OF_RANGE.name, result.geoMatchLevel)
     }
 
     @Test

@@ -199,6 +199,44 @@ class SpeciesReferenceIndexTest {
     // Geographic pre-filter + relajación
     // -----------------------------------------------------------------------
 
+    /** Index with the softmax confidence of the real packs (temperature > 0). */
+    private fun softmaxIndex() = SpeciesReferenceIndex(catalog, SpeciesConfidence(temperature = 0.02111f)).apply { load(indexFile) }
+
+    /** Query closest to sp_C (cosmopolitan, cosine 0.75) and a bit less to sp_A (cosine 0.66). */
+    private fun nearCosmopolitan() = FloatArray(DIM).also { it[200] = 0.75f; it[0] = 0.66f }.let { l2(it) }
+
+    @Test
+    fun `best-matching cosmopolitan species is top-1 without GPS`() {
+        val top = softmaxIndex().search(nearCosmopolitan(), region = null, topK = 3)
+        assertEquals("sp_C", top.first().speciesKey)
+        assertEquals(GeoMatchLevel.GLOBAL, top.first().geoMatchLevel)
+    }
+
+    @Test
+    fun `best-matching cosmopolitan species is top-1 with GPS in another species ecoregion`() {
+        val region = MarineRegion(ecoregionId = 10, provinceId = 5, realmId = 2)
+        val top = softmaxIndex().search(
+            nearCosmopolitan(), region = region, topK = 3,
+            hierarchy = { ecoId -> if (ecoId == 10 || ecoId == 20) Pair(5, 2) else null },
+        )
+        assertEquals("sp_C", top.first().speciesKey)
+        assertEquals(GeoMatchLevel.COSMOPOLITAN, top.first().geoMatchLevel)
+    }
+
+    @Test
+    fun `geo prior breaks a near tie in favour of the local species`() {
+        // sp_A (local) and sp_B (only in ecoregion 30, another realm) almost tied on the image.
+        val q = FloatArray(DIM).also { it[0] = 0.70f; it[100] = 0.71f }.let { l2(it) }
+        val region = MarineRegion(ecoregionId = 10, provinceId = 5, realmId = 2)
+        val top = softmaxIndex().search(
+            q, region = region, topK = 3,
+            hierarchy = { ecoId -> when (ecoId) { 10, 20 -> Pair(5, 2); 30 -> Pair(7, 9); else -> null } },
+        )
+        assertEquals("sp_A", top.first().speciesKey)
+        assertEquals(GeoMatchLevel.OUT_OF_RANGE, top.first { it.speciesKey == "sp_B" }.geoMatchLevel)
+        assertTrue("ranking margin is never negative", top[0].rankScore >= top[1].rankScore)
+    }
+
     @Test
     fun `cosmopolitan species never excluded by geo filter in STRICT mode`() {
         // sp_C is cosmopolitan; region is in realm 99 (completely foreign)

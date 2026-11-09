@@ -18,6 +18,8 @@ enum class GeoMatchLevel {
     REALM,
     /** Species is marked cosmopolitan — present everywhere regardless of GPS. */
     COSMOPOLITAN,
-    /** No GPS available or filter set to OFF — global search, no geo constraint. */
+    /** No GPS available, filter OFF, or the species has no distribution data: no geo weight. */
     GLOBAL,
+    /** The photo's realm is outside every known range of the species. */
+    OUT_OF_RANGE,
 }

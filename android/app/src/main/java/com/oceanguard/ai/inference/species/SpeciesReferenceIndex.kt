@@ -203,18 +203,13 @@ class SpeciesReferenceIndex(
      *
      * [emb] must be a L2-normalised float32 vector of length [dimension].
      *
-     * When [region] is non-null the geo-filter is applied:
-     *  - Hard-filter: species outside the realm (for BALANCED) or province (for STRICT)
-     *    are excluded from the initial candidate set, UNLESS cosmopolitan or no data.
-     *  - Soft-prior: adjusted_score = cosineScore * [GeoPrior.g](level).
-     *  - Relajación: if after the hard-filter the best remaining score is below
-     *    [SpeciesConfidence.tauLow], the search falls back to global (filter=OFF)
-     *    with [SpeciesMatch.geoMatchLevel] = GLOBAL and [outOfRange] semantics
-     *    propagated by the caller.
+     * With a [region] (and the filter not OFF) the geographic prior [GeoPrior.g]
+     * multiplies each species probability: logits cosine / T + ln g, ranking and
+     * confidence included. STRICT also drops species known only from other
+     * provinces or realms (never cosmopolitan or no-data ones; if that leaves
+     * nothing, nothing is dropped). Without a region every species has g = 1.
      *
-     * When [region] is null (no GPS or filter=OFF) all species are searched.
-     *
-     * @param sensitivity Controls the hard-filter level (default BALANCED).
+     * @param sensitivity BALANCED (default): prior only; STRICT: prior + filter; OFF: no geography.
      * @return            Top-[topK] matches sorted by adjusted score descending.
      *                    May be shorter than [topK] if fewer species exist in
      *                    the index after filtering.
@@ -241,37 +236,23 @@ class SpeciesReferenceIndex(
             val current = speciesScores[key] ?: -1f
             if (rawScores[i] > current) speciesScores[key] = rawScores[i]
         }
-        val confOf = confidenceFunction(speciesScores)
-
-        // Compute geo match level and apply prior; build candidates list
-        fun buildCandidates(useFilter: Boolean): List<SearchCandidate> =
-            speciesScores.entries.mapNotNull { (key, cosine) ->
-                val entry = catalogEntries[key] ?: return@mapNotNull null
-                val level = GeoPrior.matchLevel(entry, region, hierarchy)
-                if (useFilter && !passesHardFilter(level, sensitivity, region)) return@mapNotNull null
-                SearchCandidate(key, cosine, cosine * GeoPrior.g(level), level)
-            }
-
-        val filtered = buildCandidates(useFilter = true)
-
-        // Relajación: if the geo-filtered set is empty OR the best calibrated score is
-        // below tauLow, fall back to a global (unfiltered) search so we never return
-        // an empty result just because of geography.
-        val bestFilteredConfidence = filtered.maxOfOrNull { confOf(it.key, it.cosine) } ?: 0f
-        val needsRelaxation = region != null &&
-            sensitivity != GeoFilterSensitivity.OFF &&
-            (filtered.isEmpty() || confidence.isUnknown(bestFilteredConfidence))
-
-        val effectiveCandidates: List<SearchCandidate> = if (needsRelaxation) {
-            buildCandidates(useFilter = false)
-                .map { c -> SearchCandidate(c.key, c.cosine, c.cosine, GeoMatchLevel.GLOBAL) }
-        } else {
-            filtered
+        val t = confidence.temperature
+        val useGeo = region != null && sensitivity != GeoFilterSensitivity.OFF
+        val candidates = speciesScores.entries.mapNotNull { (key, cosine) ->
+            val entry = catalogEntries[key] ?: return@mapNotNull null
+            val level = if (useGeo) GeoPrior.matchLevel(entry, region, hierarchy) else GeoMatchLevel.GLOBAL
+            // Cosine units: cosine + T ln g, i.e. logits cosine / T + ln g (prior on the probability).
+            val rank = if (t > 0f) cosine + t * kotlin.math.ln(GeoPrior.g(level)) else cosine * GeoPrior.g(level)
+            SearchCandidate(key, cosine, rank, level)
         }
+        // STRICT drops species only seen in other realms or provinces; never cosmopolitan or no-data ones.
+        val strict = if (useGeo && sensitivity == GeoFilterSensitivity.STRICT) {
+            candidates.filter { it.level != GeoMatchLevel.REALM && it.level != GeoMatchLevel.OUT_OF_RANGE }
+        } else candidates
+        val effective = strict.ifEmpty { candidates }
+        val confOf = confidenceFunction(effective.associate { it.key to it.adjusted })
 
-        // Sort by adjusted score descending, take top-k
-        val top = effectiveCandidates.sortedByDescending { it.adjusted }.take(topK)
-
+        val top = effective.sortedByDescending { it.adjusted }.take(topK)
         return top.map { c ->
             val entry = catalogEntries[c.key]
             SpeciesMatch(
@@ -280,6 +261,7 @@ class SpeciesReferenceIndex(
                 cosineScore    = c.cosine,
                 confidence     = confOf(c.key, c.cosine),
                 geoMatchLevel  = c.level,
+                rankScore      = c.adjusted,
             )
         }
     }
@@ -350,25 +332,6 @@ class SpeciesReferenceIndex(
             else -> (sign shl 31) or ((exponent + 112) shl 23) or (mantissa shl 13)
         }
         return java.lang.Float.intBitsToFloat(bits)
-    }
-
-    /**
-     * True if [level] passes the hard-filter for [sensitivity].
-     *
-     * Cosmopolitan and GLOBAL (no-data) species ALWAYS pass regardless of sensitivity.
-     */
-    private fun passesHardFilter(
-        level: GeoMatchLevel,
-        sensitivity: GeoFilterSensitivity,
-        region: MarineRegion?,
-    ): Boolean {
-        if (region == null || sensitivity == GeoFilterSensitivity.OFF) return true
-        if (level == GeoMatchLevel.COSMOPOLITAN || level == GeoMatchLevel.GLOBAL) return true
-        return when (sensitivity) {
-            GeoFilterSensitivity.STRICT   -> level == GeoMatchLevel.ECOREGION || level == GeoMatchLevel.PROVINCE
-            GeoFilterSensitivity.BALANCED -> level != GeoMatchLevel.GLOBAL
-            GeoFilterSensitivity.OFF      -> true
-        }
     }
 
     // -----------------------------------------------------------------------

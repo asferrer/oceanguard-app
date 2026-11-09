@@ -5,37 +5,29 @@ import com.oceanguard.ai.data.species.SpeciesCatalogEntry
 /**
  * Biogeographic prior for species identification.
  *
- * Computes the geographic plausibility weight `g(species, region)` used to
- * modulate the raw cosine score before ranking:
+ * The prior is a weight `g` on the probability of each species (it is added as
+ * `ln g` to the softmax logits `cosine / T` in [SpeciesReferenceIndex.search]),
+ * so geography nudges close calls without overriding the image:
+ *   ECOREGION    1.0  (recorded in the photo's ecoregion)
+ *   PROVINCE     0.5  (same province)
+ *   REALM        0.3  (same realm)
+ *   OUT_OF_RANGE 0.1  (recorded only in other realms)
+ *   COSMOPOLITAN 1.0  (wide-ranging: geography says nothing)
+ *   GLOBAL       1.0  (no GPS, filter OFF, or no distribution data)
  *
- *   adjusted_score = cosineScore * g(level)
- *
- * The prior is intentionally soft: a foreign species with a very high cosine
- * score can still emerge at the top — it is not silenced, only down-weighted.
- *
- * Prior values per match level (calibrated conservatively to avoid false
- * exclusions while still boosting local species):
- *   ECOREGION   → 1.0   (species confirmed in this exact ecoregion)
- *   PROVINCE    → 0.6   (same province, adjacent ecoregions)
- *   REALM       → 0.3   (same realm, e.g. North Atlantic)
- *   COSMOPOLITAN→ 0.1   (wide-ranging; ubiquitous — small prior, cosine dominates)
- *   GLOBAL      → 1.0   (no GPS / filter OFF → no penalty)
- *
- * Note: COSMOPOLITAN gets a low weight because the prior encodes "how much does
- * geography help here?" — for cosmopolitan species it adds no information, so
- * the raw cosine score should dominate with minimal distortion.
+ * Weights chosen on the validation split with the photos' real coordinates
+ * (docs/SPECIES_ID.md). The former multiplier on the cosine (cosmopolitan 0.1,
+ * applied even without GPS) made the 35 cosmopolitan species unreachable.
  */
 object GeoPrior {
 
-    /**
-     * Returns the geographic plausibility multiplier for [level].
-     * Always in (0, 1].
-     */
+    /** Probability weight for [level]. Always in (0, 1]. */
     fun g(level: GeoMatchLevel): Float = when (level) {
         GeoMatchLevel.ECOREGION    -> 1.0f
-        GeoMatchLevel.PROVINCE     -> 0.6f
+        GeoMatchLevel.PROVINCE     -> 0.5f
         GeoMatchLevel.REALM        -> 0.3f
-        GeoMatchLevel.COSMOPOLITAN -> 0.1f
+        GeoMatchLevel.OUT_OF_RANGE -> 0.1f
+        GeoMatchLevel.COSMOPOLITAN -> 1.0f
         GeoMatchLevel.GLOBAL       -> 1.0f
     }
 
@@ -43,12 +35,13 @@ object GeoPrior {
      * Returns the [GeoMatchLevel] for a species given the resolved [region].
      *
      * Logic (in priority order):
-     * 1. Cosmopolitan → always [GeoMatchLevel.COSMOPOLITAN].
-     * 2. No region data → [GeoMatchLevel.GLOBAL].
+     * 1. No region (no GPS / filter OFF) → [GeoMatchLevel.GLOBAL].
+     * 2. Cosmopolitan → [GeoMatchLevel.COSMOPOLITAN].
      * 3. Ecoregion in species.ecoregions → [GeoMatchLevel.ECOREGION].
      * 4. Any species ecoregion in same province → [GeoMatchLevel.PROVINCE].
      * 5. Any species ecoregion in same realm → [GeoMatchLevel.REALM].
      * 6. Species has no ecoregion data → [GeoMatchLevel.GLOBAL] (no penalty).
+     * 7. Otherwise → [GeoMatchLevel.OUT_OF_RANGE].
      *
      * @param species   Catalog entry with distribution data.
      * @param region    Resolved marine region, or null if no GPS.
@@ -60,8 +53,8 @@ object GeoPrior {
         region: MarineRegion?,
         hierarchy: (ecoregionId: Int) -> Pair<Int, Int>?,
     ): GeoMatchLevel {
-        if (species.cosmopolitan) return GeoMatchLevel.COSMOPOLITAN
         if (region == null) return GeoMatchLevel.GLOBAL
+        if (species.cosmopolitan) return GeoMatchLevel.COSMOPOLITAN
         if (species.ecoregions.isEmpty()) return GeoMatchLevel.GLOBAL
 
         if (region.ecoregionId in species.ecoregions) return GeoMatchLevel.ECOREGION
@@ -73,7 +66,7 @@ object GeoPrior {
         if (region.provinceId in speciesProvinces) return GeoMatchLevel.PROVINCE
         if (region.realmId in speciesRealms) return GeoMatchLevel.REALM
 
-        // Species exists but outside this realm → still valid, just out-of-range
-        return GeoMatchLevel.GLOBAL
+        // Recorded only in other realms: still possible, but unlikely here.
+        return GeoMatchLevel.OUT_OF_RANGE
     }
 }

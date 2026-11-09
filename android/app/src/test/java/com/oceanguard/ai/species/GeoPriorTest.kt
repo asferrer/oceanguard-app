@@ -25,8 +25,8 @@ class GeoPriorTest {
     }
 
     @Test
-    fun `g PROVINCE returns 0_6`() {
-        assertEquals(0.6f, GeoPrior.g(GeoMatchLevel.PROVINCE), 1e-6f)
+    fun `g PROVINCE returns 0_5`() {
+        assertEquals(0.5f, GeoPrior.g(GeoMatchLevel.PROVINCE), 1e-6f)
     }
 
     @Test
@@ -35,8 +35,13 @@ class GeoPriorTest {
     }
 
     @Test
-    fun `g COSMOPOLITAN returns 0_1`() {
-        assertEquals(0.1f, GeoPrior.g(GeoMatchLevel.COSMOPOLITAN), 1e-6f)
+    fun `g COSMOPOLITAN returns 1_0 (geography says nothing)`() {
+        assertEquals(1.0f, GeoPrior.g(GeoMatchLevel.COSMOPOLITAN), 1e-6f)
+    }
+
+    @Test
+    fun `g OUT_OF_RANGE returns 0_1`() {
+        assertEquals(0.1f, GeoPrior.g(GeoMatchLevel.OUT_OF_RANGE), 1e-6f)
     }
 
     @Test
@@ -67,12 +72,19 @@ class GeoPriorTest {
     }
 
     @Test
-    fun `cosmopolitan species returns COSMOPOLITAN with null region`() {
+    fun `cosmopolitan species returns GLOBAL without a region (no weight without GPS)`() {
         val species = catalogEntry(ecoregions = emptyList(), cosmopolitan = true)
         assertEquals(
-            GeoMatchLevel.COSMOPOLITAN,
+            GeoMatchLevel.GLOBAL,
             GeoPrior.matchLevel(species, null) { null },
         )
+    }
+
+    @Test
+    fun `cosmopolitan species returns COSMOPOLITAN with a region`() {
+        val species = catalogEntry(ecoregions = emptyList(), cosmopolitan = true)
+        val region = MarineRegion(ecoregionId = 15, provinceId = 3, realmId = 1)
+        assertEquals(GeoMatchLevel.COSMOPOLITAN, GeoPrior.matchLevel(species, region) { null })
     }
 
     // -----------------------------------------------------------------------
@@ -131,12 +143,12 @@ class GeoPriorTest {
     }
 
     @Test
-    fun `species completely outside realm returns GLOBAL (out-of-range)`() {
+    fun `species completely outside realm returns OUT_OF_RANGE`() {
         val species = catalogEntry(ecoregions = listOf(30), cosmopolitan = false)
         val region = MarineRegion(ecoregionId = 15, provinceId = 3, realmId = 1)
         // ecoregion 30 → realm 9 (completely different from region.realmId=1)
         assertEquals(
-            GeoMatchLevel.GLOBAL,
+            GeoMatchLevel.OUT_OF_RANGE,
             GeoPrior.matchLevel(species, region) { ecoId ->
                 if (ecoId == 30) Pair(7, 9) else null
             },
