@@ -38,16 +38,20 @@ import java.nio.ByteOrder
  * 1. Deserialize prototypes to float32 (upcast from float16 at load time).
  * 2. For a query embedding q (L2-normalised, length [dimension]):
  *    cosine(p_i, q) = dot(p_i, q)   (both L2-norm → cosine = dot product)
- * 3. Aggregate scores per species by taking the max across its prototypes.
+ * 3. Aggregate scores per species by taking the max across its prototypes; with a
+ *    [SpeciesPackConfig.Scoring] (pack v3) the image rows (max) and the text row of each
+ *    species are combined with the pack weights instead.
  * 4. Apply geo-filter + soft-prior (multiply by [GeoPrior.g]).
  * 5. Sort descending, return top-[topK] as [SpeciesMatch].
  *
  * @param catalogEntries  Map from speciesKey → [SpeciesCatalogEntry] (loaded from catalog JSON).
  * @param confidence      Calibration parameters (Platt sigmoid + thresholds).
+ * @param scoring         Image + text row combination of pack v3; null = max over all rows.
  */
 class SpeciesReferenceIndex(
     private val catalogEntries: Map<String, SpeciesCatalogEntry>,
     private val confidence: SpeciesConfidence = SpeciesConfidence(),
+    private val scoring: SpeciesPackConfig.Scoring? = null,
 ) {
     companion object {
         private const val MAGIC = 0x53504558.toInt()
@@ -63,11 +67,13 @@ class SpeciesReferenceIndex(
          * @param scientificName Binomial name copied to index metadata.
          * @param vector         L2-normalised float32 embedding; all seeds share one length.
          *                       Callers are responsible for normalisation before passing.
+         * @param viewTag        View of the row; "text" marks a text row in a v3 pack.
          */
         data class ProtoSeed(
             val speciesKey: String,
             val scientificName: String,
             val vector: FloatArray,
+            val viewTag: String = "in_memory",
         )
 
         /**
@@ -89,8 +95,9 @@ class SpeciesReferenceIndex(
             prototypes: List<ProtoSeed>,
             dim: Int = EMBEDDING_DIM,
             confidence: SpeciesConfidence = SpeciesConfidence(),
+            scoring: SpeciesPackConfig.Scoring? = null,
         ): SpeciesReferenceIndex {
-            val index = SpeciesReferenceIndex(catalogEntries, confidence)
+            val index = SpeciesReferenceIndex(catalogEntries, confidence, scoring)
             index.loadFromSeeds(prototypes, dim)
             return index
         }
@@ -183,7 +190,7 @@ class SpeciesReferenceIndex(
             ProtoMeta(
                 speciesKey     = seeds[i].speciesKey,
                 scientificName = seeds[i].scientificName,
-                viewTag        = "in_memory",
+                viewTag        = seeds[i].viewTag,
                 nRefs          = 1,
             )
         }
@@ -229,13 +236,7 @@ class SpeciesReferenceIndex(
         // Score each prototype
         val rawScores = FloatArray(prototypes.size) { i -> dotProduct(prototypes[i], emb) }
 
-        // Aggregate per species (max-prototype strategy)
-        val speciesScores = mutableMapOf<String, Float>()
-        for (i in prototypes.indices) {
-            val key = meta[i].speciesKey
-            val current = speciesScores[key] ?: -1f
-            if (rawScores[i] > current) speciesScores[key] = rawScores[i]
-        }
+        val speciesScores = aggregate(rawScores)
         val t = confidence.temperature
         val useGeo = region != null && sensitivity != GeoFilterSensitivity.OFF
         val candidates = speciesScores.entries.mapNotNull { (key, cosine) ->
@@ -264,6 +265,27 @@ class SpeciesReferenceIndex(
                 rankScore      = c.adjusted,
             )
         }
+    }
+
+    /** Per-species score from the row cosines: max over all rows, or image + text with [scoring]. */
+    private fun aggregate(rawScores: FloatArray): Map<String, Float> {
+        val sc = scoring ?: return maxPerSpecies(rawScores) { true }
+        val image = maxPerSpecies(rawScores) { it.viewTag != sc.textViewTag }
+        val text = maxPerSpecies(rawScores) { it.viewTag == sc.textViewTag }
+        return (image.keys + text.keys).associateWith { key ->
+            sc.imageWeight * (image[key] ?: sc.missingImageScore) + sc.textWeight * (text[key] ?: 0f)
+        }
+    }
+
+    private fun maxPerSpecies(rawScores: FloatArray, accept: (ProtoMeta) -> Boolean): Map<String, Float> {
+        val out = mutableMapOf<String, Float>()
+        for (i in prototypes.indices) {
+            if (!accept(meta[i])) continue
+            val key = meta[i].speciesKey
+            val current = out[key] ?: -1f
+            if (rawScores[i] > current) out[key] = rawScores[i]
+        }
+        return out
     }
 
     /**

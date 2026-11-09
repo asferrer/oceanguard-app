@@ -26,6 +26,7 @@ class SpeciesPipelineProvider(
     private val dir: () -> File,
     private val catalog: SpeciesCatalog,
     private val vlmEngine: VlmImageEngine,
+    private val onMergedKeys: (Map<String, String>) -> Unit = {},
 ) {
     companion object {
         private const val TAG = "SpeciesPipeline"
@@ -68,14 +69,18 @@ class SpeciesPipelineProvider(
         catalog.reload(File(d, config.catalogFile))
         val entries = catalog.all().associateBy { it.speciesKey }
         val confidence = config.calibration.toConfidence()
-        val index = SpeciesReferenceIndex(entries, confidence).apply { load(File(d, config.indexFile)) }
+        val index = SpeciesReferenceIndex(entries, confidence, config.scoring).apply { load(File(d, config.indexFile)) }
         check(index.dimension == config.encoder.dim) {
             "Index dim ${index.dimension} != encoder dim ${config.encoder.dim}"
         }
         val resolver = if (File(d, RASTER).exists() && File(d, HIERARCHY).exists()) {
             MarineRegionResolver(File(d, RASTER), File(d, HIERARCHY)).apply { load() }
         } else null
-        val enc = OnnxSpeciesEmbedder(File(d, config.encoderFile), config.encoder, config.selfTest)
+        if (config.mergedKeys.isNotEmpty()) onMergedKeys(config.mergedKeys)
+        val enc = OnnxSpeciesEmbedder(
+            File(d, config.encoderFile), config.encoder, config.selfTest,
+            optimization = config.optimization, fullCrop = config.fullCrop,
+        )
         embedder = enc
         detector = File(d, DETECTOR_FILE).takeIf { it.exists() }?.let { f ->
             runCatching { OnnxOrganismDetector(f) }.onFailure { Log.w(TAG, "Detector init failed", it) }.getOrNull()
@@ -88,7 +93,7 @@ class SpeciesPipelineProvider(
             resolver = resolver,
             confidence = confidence,
             describer = SpeciesDescriber(vlmEngine),
-            locator = OrganismLocator(vlmEngine, detector),
+            locator = OrganismLocator(vlmEngine, detector, fullFrameSize = config.encoder.size.takeIf { config.fullCrop }),
             vlmChoiceTopK = config.vlmChoiceTopK,
         )
     }

@@ -63,6 +63,8 @@ data class PixelRect(
 class OrganismLocator(
     private val engine: VlmImageEngine? = null,
     private val detector: OnnxOrganismDetector? = null,
+    /** Edge of the square the whole frame is squashed to in the last-resort crop; null = centre square. */
+    private val fullFrameSize: Int? = null,
 ) : CropProvider {
     companion object {
         private const val TAG = "OrganismLocator"
@@ -337,6 +339,7 @@ class OrganismLocator(
     // -----------------------------------------------------------------------
 
     private fun centerSquareCrop(bitmap: Bitmap): OrganismCrop {
+        fullFrameSize?.let { return fullFrameCrop(bitmap, it) }
         val size = minOf(bitmap.width, bitmap.height)
         val xOff = (bitmap.width  - size) / 2
         val yOff = (bitmap.height - size) / 2
@@ -347,6 +350,13 @@ class OrganismLocator(
             width  = size.toFloat(),
             height = size.toFloat(),
         )
+        return OrganismCrop(bbox = bbox, crop = crop, confidence = 1.0f)
+    }
+
+    /** Pack cropMode "full": the whole photo resized (aspect not kept) to [size] x [size]. */
+    private fun fullFrameCrop(bitmap: Bitmap, size: Int): OrganismCrop {
+        val crop = Bitmap.createScaledBitmap(bitmap, size, size, true)
+        val bbox = BoundingBox(x = 0f, y = 0f, width = bitmap.width.toFloat(), height = bitmap.height.toFloat())
         return OrganismCrop(bbox = bbox, crop = crop, confidence = 1.0f)
     }
 }

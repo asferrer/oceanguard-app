@@ -26,6 +26,14 @@ import java.io.File
  *                     tentative band; 0 (default) disables the Gemma step. Off
  *                     because Gemma 4 E2B picked the right species among the
  *                     RAG top 5 only 31.7 % of the time (docs/SPECIES_ID.md).
+ * @param scoring      Pack v3: how image and text rows of the index combine into a
+ *                     species score; null = maximum cosine over all rows (v1, v2).
+ * @param sessionOptimization ONNX Runtime graph optimisation: "all" (default), "basic" or
+ *                     "none". v3 stores fp16 weights with a Cast each and constant folding
+ *                     would raise the RAM to ~2.5 GB.
+ * @param cropMode     "center" (default) or "full": without an organism locator, crop the
+ *                     centre square or resize the whole photo to size x size.
+ * @param merged       Informative: species keys merged into another one (old -> new).
  * @param selfTest     Optional reference embedding of [SelfTest.pattern] computed
  *                     on the PC in fp32, used to detect a numerically broken
  *                     accelerator path on the device.
@@ -39,7 +47,35 @@ data class SpeciesPackConfig(
     val calibration: Calibration,
     val vlmChoiceTopK: Int = 0,
     val selfTest: SelfTest? = null,
+    val scoring: Scoring? = null,
+    val sessionOptimization: String? = null,
+    val cropMode: String? = null,
+    val merged: Map<String, String>? = null,
 ) {
+    /**
+     * Species score = imageWeight * max cosine of its image rows + textWeight * cosine of its
+     * text row (rows whose viewTag is [textViewTag]). A species without image rows uses
+     * [missingImageScore] for the image part; one without a text row contributes 0 there.
+     */
+    data class Scoring(
+        val imageWeight: Float = 1f,
+        val textWeight: Float = 0f,
+        val textViewTag: String = TEXT_TAG,
+        val missingImageScore: Float = 0f,
+    )
+
+    /** Graph optimisation level for the ONNX session; unknown values mean "all". */
+    val optimization: Optimization
+        get() = Optimization.entries.firstOrNull { it.key == sessionOptimization } ?: Optimization.ALL
+
+    /** True when the whole photo is resized instead of cropping the centre square. */
+    val fullCrop: Boolean get() = cropMode == CROP_FULL
+
+    /** Merged keys (old -> new); empty when the pack has none. */
+    val mergedKeys: Map<String, String> get() = merged.orEmpty()
+
+    enum class Optimization(val key: String) { ALL("all"), BASIC("basic"), NONE("none") }
+
     /** Input/output contract of the ONNX encoder. */
     data class EncoderSpec(
         val inputName: String = "pixel_values",
@@ -79,6 +115,8 @@ data class SpeciesPackConfig(
 
     companion object {
         const val MANIFEST = "species_pack.json"
+        const val TEXT_TAG = "text"
+        const val CROP_FULL = "full"
 
         val CLIP_MEAN = listOf(0.48145466f, 0.4578275f, 0.40821073f)
         val CLIP_STD = listOf(0.26862954f, 0.26130258f, 0.27577711f)
@@ -119,11 +157,31 @@ data class SpeciesPackConfig(
 
         /** Parse a manifest; null when it is not valid JSON or misses a field. */
         fun parse(json: String): SpeciesPackConfig? = try {
-            Gson().fromJson(json, SpeciesPackConfig::class.java)?.takeIf { it.isValid() }
+            Gson().fromJson(json, SpeciesPackConfig::class.java)?.takeIf { it.isValid() }?.withDefaults()
         } catch (e: JsonSyntaxException) {
             null
         } catch (e: NullPointerException) {
             null // a nested field Gson left null
+        }
+
+        /** Gson leaves absent or null optional fields null: fill them with the defaults. */
+        @Suppress("SENSELESS_COMPARISON")
+        private fun SpeciesPackConfig.withDefaults(): SpeciesPackConfig {
+            val sc = scoring?.let { s ->
+                Scoring(
+                    imageWeight = s.imageWeight.takeIf { it.isFinite() } ?: 1f,
+                    textWeight = s.textWeight.takeIf { it.isFinite() } ?: 0f,
+                    textViewTag = s.textViewTag?.takeIf { it.isNotBlank() } ?: TEXT_TAG,
+                    missingImageScore = s.missingImageScore.takeIf { it.isFinite() } ?: 0f,
+                )
+            }
+            val clean = merged?.filter { (k, v) -> k != null && v != null && k != v }
+            return copy(
+                scoring = sc,
+                sessionOptimization = optimization.key,
+                cropMode = if (fullCrop) CROP_FULL else "center",
+                merged = clean ?: emptyMap(),
+            )
         }
 
         // Gson ignores Kotlin nullability and leaves missing fields as null: check them.

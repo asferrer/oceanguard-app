@@ -34,7 +34,8 @@ import kotlin.math.sqrt
  *
  * ## Preprocessing (same as tools/species/biodex_common.py::clip_tensor)
  *   1. Centre-square crop + bilinear resize to `size` (skipped when the input
- *      already is `size`x`size`, the normal path through [RagCropPreparer]).
+ *      already is `size`x`size`, the normal path through [RagCropPreparer]); with
+ *      `cropMode` "full" the whole photo is resized to `size`x`size` instead.
  *   2. Normalise with the pack mean/std; NCHW float32 [1, 3, size, size].
  *   3. Output [1, dim] is L2-normalised.
  */
@@ -42,6 +43,8 @@ class OnnxSpeciesEmbedder(
     private val modelFile: File,
     private val spec: SpeciesPackConfig.EncoderSpec = SpeciesPackConfig.EncoderSpec(),
     private val selfTest: SpeciesPackConfig.SelfTest? = null,
+    private val optimization: SpeciesPackConfig.Optimization = SpeciesPackConfig.Optimization.ALL,
+    private val fullCrop: Boolean = false,
 ) : SpeciesEmbedder {
 
     companion object {
@@ -62,6 +65,12 @@ class OnnxSpeciesEmbedder(
 
     /** Serialises the one-time session creation (prewarm racing the first embed). */
     private val initMutex = Mutex()
+
+    private fun optLevel(o: SpeciesPackConfig.Optimization) = when (o) {
+        SpeciesPackConfig.Optimization.ALL -> OrtSession.SessionOptions.OptLevel.ALL_OPT
+        SpeciesPackConfig.Optimization.BASIC -> OrtSession.SessionOptions.OptLevel.BASIC_OPT
+        SpeciesPackConfig.Optimization.NONE -> OrtSession.SessionOptions.OptLevel.NO_OPT
+    }
 
     override val isReady: Boolean
         get() = modelFile.exists()
@@ -104,7 +113,7 @@ class OnnxSpeciesEmbedder(
             runCatching { addNnapi(EnumSet.of(NNAPIFlags.USE_FP16)) }.onFailure { addNnapi() }
         }
         setIntraOpNumThreads(CPU_THREADS)
-        setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
+        setOptimizationLevel(optLevel(optimization))
     }
 
     /** True when there is no self-test or the session reproduces the PC embedding. */
@@ -169,9 +178,14 @@ class OnnxSpeciesEmbedder(
             scaled = bitmap
             cropped = null
         } else {
-            val side = minOf(bitmap.width, bitmap.height)
-            cropped = Bitmap.createBitmap(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side)
-            scaled = Bitmap.createScaledBitmap(cropped, size, size, true)
+            if (fullCrop) {
+                cropped = null
+                scaled = Bitmap.createScaledBitmap(bitmap, size, size, true)
+            } else {
+                val side = minOf(bitmap.width, bitmap.height)
+                cropped = Bitmap.createBitmap(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side)
+                scaled = Bitmap.createScaledBitmap(cropped, size, size, true)
+            }
         }
         val pixels = IntArray(size * size)
         scaled.getPixels(pixels, 0, size, 0, 0, size, size)
