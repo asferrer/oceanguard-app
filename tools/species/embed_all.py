@@ -36,7 +36,7 @@ HALF = ((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 
 # name -> (input size, (mean, std))
 SPECS = {
-    "pack_onnx": (224, CLIP), "openclip_b32": (224, CLIP), "bioclip": (224, CLIP),
+    "pack_onnx": (224, CLIP), "openclip_b32": (224, CLIP), "bioclip": (224, CLIP), "bioclip2": (224, CLIP),
     "dinov2_small": (224, IMNET), "dinov2_base": (224, IMNET), "siglip2_base": (224, HALF),
     "mnv3_large": (224, IMNET), "effnet_lite0": (224, IMNET),
 }
@@ -60,9 +60,10 @@ def build_torch(name: str):
         def forward(self, pixel_values):
             return self.fn(self.m, pixel_values)
 
-    if name in ("openclip_b32", "bioclip"):
+    if name in ("openclip_b32", "bioclip", "bioclip2"):
         import open_clip
-        mid, pre = ("ViT-B-32", "laion2b_s34b_b79k") if name == "openclip_b32" else ("hf-hub:imageomics/bioclip", None)
+        mid, pre = {"openclip_b32": ("ViT-B-32", "laion2b_s34b_b79k"), "bioclip": ("hf-hub:imageomics/bioclip", None),
+                    "bioclip2": ("hf-hub:imageomics/bioclip-2", None)}[name]
         m = open_clip.create_model_and_transforms(mid, pretrained=pre)[0].visual
         return Wrap(m, lambda m, x: m(x)).eval()
     if name.startswith("dinov2"):

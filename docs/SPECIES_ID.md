@@ -333,7 +333,326 @@ and run on test photos:
   of the independent photos with 91.6 % precision.
 
 
-## 9. Species catalogue v2 (2026-11-09)
+## 9. Geographic prior: what the app did and what it should do (2026-11-09)
+
+Everything above was measured **without** a location. The app also reorders the candidates with the position of the
+photo, so this section replays that code on the PC (`tools/species/geo_prior_eval.py`: port of `MarineRegionResolver`
+with the MEOW raster and the ring search, `GeoPrior.matchLevel` / `g`, `SpeciesReferenceIndex.search` with the
+relaxation, `SpeciesConfidence.idSource`) with the **real coordinates of the photos**: iNaturalist observation
+coordinates (3 222 test photos with a resolved ecoregion, val 1 131) and, for the independent set, GBIF
+`decimalLatitude/Longitude` (1 267 photos) and Commons GeoData (781 photos): 1 917 catalogue photos with a resolved
+ecoregion (`fetch_indep_coords.py`). Pack of section 8 (BioCLIP, 6 prototypes, CC-BY references), same photos for every row.
+
+Defects of the code before the fix:
+
+1. `matchLevel` returned `COSMOPOLITAN` before looking at the region, so the 35 cosmopolitan species were multiplied by
+   0.1 **even without GPS**: top-1 of the cosmopolitan species was 0.000 (458 test photos, 14 % of the test; 483 in the
+   independent set) and the global top-5 fell from 0.856 to 0.748.
+2. Species outside the realm of the photo got `g = 1.0` (level `GLOBAL`), more than `PROVINCE` 0.6 and `REALM` 0.3, and
+   `passesHardFilter` lets `GLOBAL` / `COSMOPOLITAN` always pass, so the `BALANCED` branch `level != GLOBAL` was dead code:
+   nothing was excluded and only the multiplier worked.
+3. The relaxation to a global search (best filtered confidence below `tauLow` = 0.795) fired for 63 % (test) / 57 %
+   (independent) of the photos, which is why cosmopolitan species reappeared with GPS (0.38 / 0.28); the confident photos
+   kept the penalty. The margin used the adjusted order and could be negative (with `delta = 0` that blocks `RAG_CORE`).
+
+| Test (3 222 photos with region) | Top-1 | Top-5 | RAG_CORE cov. / prec. | Top-1 cosmopolitan (458) |
+|---|---|---|---|---|
+| No location, plain cosine | 0.642 | 0.856 | 0.284 / 0.944 | 0.520 |
+| Old app code, no GPS | 0.574 | 0.748 | 0.273 / 0.946 | 0.000 |
+| Old app code, with GPS | 0.623 | 0.831 | 0.271 / 0.951 | 0.384 |
+| Soft prior, with GPS | 0.653 | 0.863 | 0.296 / 0.947 | 0.535 |
+
+| Independent (1 917 photos with coordinates) | Top-1 | Top-5 | RAG_CORE cov. / prec. | Top-1 cosmopolitan (483) |
+|---|---|---|---|---|
+| No location, plain cosine | 0.621 | 0.844 | 0.298 / 0.948 | 0.530 |
+| Old app code, no GPS | 0.513 | 0.643 | 0.257 / 0.954 | 0.000 |
+| Old app code, with GPS | 0.561 | 0.772 | 0.254 / 0.955 | 0.280 |
+| Soft prior, with GPS | 0.638 | 0.849 | 0.316 / 0.949 | 0.534 |
+
+**Soft prior (recommended, now implemented in the app):** `logit_s = cos_s / T + ln g_s`, confidence = softmax of the
+logits, `T` = pack temperature, pack thresholds unchanged; `g` = ECOREGION 1.0, PROVINCE 0.5, REALM 0.3, out of range
+(species with distribution data, none in the realm) 0.1, COSMOPOLITAN 1.0, no distribution data 1.0; without region
+`g = 1` for all; no hard filter in BALANCED, no relaxation; `STRICT` only removes REALM and out-of-range. Weights were
+searched on val (log-likelihood of the true species over prov {0.5..1} x realm {0.2..1} x out {0.02..1}): the optimum is
+(0.5, 0.2, 0.02) but the surface is flat (any prov <= 0.7, realm <= 0.4, out <= 0.1 gives 0.653-0.656 top-1 on test,
+0.641-0.645 on the independent set). Out-of-range is rare in these samples (the true species is in its ecoregion in 85 % /
+73 % of the photos, cosmopolitan in 14 % / 25 %, in another province or realm in < 1 %), so a hard penalty cannot be
+validated; 0.1 was chosen for caution. Geography adds +1.1 (test) / +1.7 (independent) points of top-1 over no location;
+the old code lost 1.9 / 6.0 with GPS and 6.8 / 10.8 without. With the final scoring of section 10 (BioCLIP 2 + text rows,
+T = 0.0542) the same prior gives test 0.889 -> 0.895 and independent 0.839 -> 0.847 top-1.
+
+## 10. Precision study: more references, other encoders, text rows (2026-11-09)
+
+Goal: the most accurate species identification that still fits the deployment limits (ONNX Runtime 1.20 on Android,
+no int8, fp32 or fp16 only if the self-test passes, download up to ~600 MB, CC0 / CC-BY references, MIT / Apache encoder).
+Artefacts: `C:/rerun_v9/runs/_species_precision/`. All figures use the app chain (centre square, bilinear 224, CLIP
+mean/std); experiments run on fp32 GPU embeddings (torch vs ONNX CPU agree to 0.99999 on 24 photos), the candidate packs
+are re-measured on ONNX Runtime 1.20.1 (CPU) in a clean venv. Val picks the configuration; test = iNaturalist test split
+(3 210 catalogue photos after merging the duplicate species below, 305 negatives), indep = independent set (4 107
+catalogue photos, 336 negatives). `hypselodoris_picta` and `felimare_picta` are the same nudibranch (identical
+observations under both keys, which also made the old confusion "Felimare picta -> Hypselodoris picta" a catalogue
+artefact): the duplicate rows were dropped and the references merged under `felimare_picta` (202 catalogue entries
+remain, 197 with photos; the published-pack rows below were measured with the duplicate).
+
+### 10.1 Datasets
+
+Counts measured with the APIs (`count_inat_available.py`, `count_gbif_available.py`, 2026-11-09) unless marked.
+
+| Source | Licence | Images for our species | Underwater | Reference (published index) | Evaluation |
+|---|---|---|---|---|---|
+| iNaturalist research grade, photo CC0 / CC-BY | per photo | **52 817 observations** for 202 species (median 104 per species, 64 species >= 250, 38 < 30, 15 < 10) | mostly in situ (dive, shore) | **yes** (CC BY index with attribution file) | yes |
+| iNaturalist, photo CC-BY-SA | per photo | 3 549 | idem | no (index is CC BY 4.0) | yes |
+| iNaturalist, CC-BY-NC / all rights reserved | per photo | not downloaded (467 731 CC-BY-NC still images over all GBIF publishers) | idem | no | no |
+| GBIF, other publishers (Observation.org, Arter.dk, Explore Your Shore, Norwegian service, SANBI...) | CC0 / CC-BY only | 12 713 CC0 / CC-BY still images over 203 species (median 9 per species); most of Observation.org is CC-BY-NC | mixed | possible but small; **kept as independent test** | yes (part of the 4 107 photos in `indep`) |
+| Wikimedia Commons, `Category:<species>` | CC0 / CC-BY / CC-BY-SA | 2 796 photos in the independent set (drawings and specimens included) | mixed | no (SA, noisy labels); **kept as test** | yes |
+| FishBase / SeaLifeBase | per photo CC-BY or CC-BY-NC; copyright stays with the contributor (web search, not measured) | not counted | mostly specimens / aquarium | only individual CC-BY photos after checking each one | possible |
+| Reef Life Survey photo quadrats (IMAS) | CC BY 3.0 AU (catalogue record) | habitat cover quadrats, Australia; no organism-level labels for our species | yes | no | no |
+| FathomNet (MBARI) | Data Use Policy, contributor copyright | deep sea, practically no overlap with our shallow species (not counted) | yes | no | no |
+| iNat2021, TreeOfLife-10M / 200M, Rare Species, BIOSCAN | dataset card CC0 for metadata, images keep their source licences (not verified one by one) | they are BioCLIP / BioCLIP 2 training data; BIOSCAN is insects | mixed | no | no: the encoders have seen them |
+| CleanSea, JAMSTEC | excluded by rule | | | | |
+
+Conclusion: iNaturalist is the only source with enough CC0 / CC-BY photos per species to publish references; GBIF
+non-iNaturalist and Commons stay as the independent test. Independence of the new references: the 13 711 added
+iNaturalist photos (`fetch_inat_more.py`, up to 250 train photos per species, <= 15 per observer and species, newest
+first) come only from observers whose salted hash puts them in the **train** split of `make_splits.py`, so the val and
+test observers are unchanged and disjoint; 121 photos within 4 bits of dHash of any val / test / negative photo, 59 within
+4 bits of any independent photo and 53 duplicates inside the set were dropped (`dedupe_ext.py`); the independent set never
+supplied a reference photo. 130 of 202 species received extra photos (the others had no more CC0 / CC-BY photos from
+train observers). BioCLIP 2 was trained on data up to 2024; its gain holds on iNaturalist test photos created after
+2025-06-01 (662 photos, below), so it is not memorisation of the test.
+
+### 10.2 Experiments (no location; calibrated on val)
+
+Same calibration criterion everywhere (val selective precision >= 0.90 / 0.80, negatives count as errors); coverage and
+precision of the confident answers of the packs are in 10.3. "RAG" = max cosine over image prototypes.
+
+| # | Configuration | Test top-1 / top-5 / macro | Indep top-1 / top-5 / macro | Index / extra size |
+|---|---|---|---|---|
+| 1 | BioCLIP B/16, RAG 6 prototypes (published recipe, 5 010 refs) | 0.645 / 0.855 / 0.628 | 0.597 / 0.825 / 0.585 | 1.2 MB |
+| 2 | same, 12 / 24 prototypes | 0.634 / 0.856 / 0.623; 0.618 / 0.852 / 0.611 | 0.592 / 0.819 / 0.576; 0.574 / 0.814 / 0.564 | 2.2 / 4.1 MB |
+| 3 | same, kNN max over all refs; kNN mean of top 3 | 0.618 / 0.851 / 0.611; 0.638 / 0.850 / 0.619 | 0.570 / 0.815 / 0.562; 0.614 / 0.831 / 0.598 | 5.1 MB |
+| 4 | BioCLIP, 6 prototypes, up to 250 refs per species (18 695) | 0.660 / 0.860 / 0.639 | 0.625 / 0.827 / 0.586 | 1.2 MB |
+| 5 | BioCLIP + logistic head (L-BFGS, wd 1e-4); head + RAG | 0.701 / 0.894 / 0.680; 0.706 / 0.895 / 0.690 | 0.637 / 0.817 / 0.611; 0.650 / 0.835 / 0.629 | +0.2 MB |
+| 6 | BioCLIP + text row, RAG + 1.0 x cos(text) | 0.676 / 0.872 / 0.663 | 0.672 / 0.857 / 0.658 | +0.2 MB |
+| 7 | **BioCLIP 2** ViT-L/14, RAG 6 prototypes | 0.822 / 0.955 / 0.807 | 0.743 / 0.884 / 0.722 | 1.8 MB |
+| 8 | BioCLIP 2, 12 / 24 prototypes; kNN top-3 mean | 0.808 / 0.950 / 0.802; 0.810 / 0.948 / 0.798; 0.820 / 0.957 / 0.809 | 0.732 / 0.883 / 0.710; 0.721 / 0.883 / 0.697; 0.746 / 0.897 / 0.727 | 3.4 / 6.1 / 7.7 MB |
+| 9 | BioCLIP 2, 6 prototypes, up to 250 refs per species | 0.817 / 0.955 / 0.798 | 0.743 / 0.888 / 0.713 | 1.8 MB |
+| 10 | BioCLIP 2 + logistic head (wd 1e-4) | 0.845 / 0.963 / 0.830 | 0.757 / 0.898 / 0.734 | +0.3 MB |
+| 11 | BioCLIP 2, text rows only (zero-shot, "a photo of Genus species") | 0.886 / 0.977 / 0.883 | 0.789 / 0.916 / 0.773 | 0.3 MB |
+| 12 | BioCLIP 2, RAG + 1.0 x text | 0.876 / 0.975 / 0.862 | 0.790 / 0.911 / 0.775 | +0.3 MB |
+| 13 | **BioCLIP 2, RAG (extra refs) + 4.0 x text (candidate)** | **0.888 / 0.977 / 0.878** | **0.800 / 0.922 / 0.781** | 2.2 MB |
+| 14 | BioCLIP 2, RAG + 4.0 x text + 0.5 x head | 0.893 / 0.976 / 0.882 | 0.807 / 0.923 / 0.788 | +0.3 MB |
+| 15 | BioCLIP 2 RAG, TTA flip; centre + whole photo; 6 views | 0.818 / 0.955 / 0.801; 0.828 / 0.958 / 0.812; 0.827 / 0.959 / 0.808 | 0.741 / 0.884 / 0.719; 0.751 / 0.896 / 0.734; 0.746 / 0.890 / 0.722 | x2 / x2 / x6 encodes |
+| 16 | BioCLIP 2, text + 672 congeners as "not in the catalogue" classes (x1) | 0.820 / 0.945 / 0.798 | 0.665 / 0.833 / 0.624 | negative result |
+
+Rows 2, 3 and 8 were measured before the duplicate merge (differences <= 0.006). Findings:
+
+* **a. More references.** For BioCLIP B/16, up to 250 photos per species give +1.5 / +2.8 points (it saturates at ~100);
+  for BioCLIP 2 nothing (0.822 -> 0.817), and val and test disagree (val 0.828 -> 0.847): the new photos are recent and
+  unselected, val and test are the older, most-voted ones. The index does not grow (6 prototypes per species).
+* **b. Gallery.** 6 prototypes is the best size for both encoders; more prototypes or kNN over all photos lower top-1
+  (the maximum over many near-duplicates picks the wrong species more often) although they raise precision at a given
+  threshold; the top-3 mean is the only variant that matches 6 prototypes (-0.7 / +1.7 for BioCLIP, -0.2 / +0.3 for
+  BioCLIP 2) and it needs 4x the index.
+* **c. Encoder.** BioCLIP 2 (MIT, ViT-L/14, 304 M parameters in the image tower, output 768) gives +17.7 / +14.6 points of
+  top-1 over BioCLIP with the same recipe. On test photos created after 2025-06-01 (662): BioCLIP 0.657, BioCLIP 2 0.831,
+  RAG + 4 x text 0.893. Size: 1.22 GB fp32, 609 MB with fp16 weight storage (10.3).
+* **d. Linear head.** +5.6 points for BioCLIP, +2.3 for BioCLIP 2, 0.2-0.3 MB, but only +0.5 on top of RAG + text for
+  BioCLIP 2: **not worth an app change** once text rows exist.
+* **Text rows (not in the brief, the largest single gain).** The BioCLIP 2 text tower knows our species by name:
+  zero-shot "a photo of <Genus species>" beats the image RAG (0.886 vs 0.822); adding it to the RAG score (weight 4)
+  gives 0.888 and keeps the adaptation to our photos. It also covers the 5 species without any reference photo
+  (*Cystoseira amentacea*, *Eledone moschata*, *Patella ferruginea*, *Sepia elegans*, *Sphyraena sphyraena*) and helps
+  the ones with very few. Prompts with the full lineage or the common name are
+  1-2 points worse.
+* **e. TTA.** Flip: no gain (-0.4 / -0.2); centre + whole photo (squashed, no crop): +0.6 / +0.8 for 2 encodes; 6 views:
+  +0.5 / +0.3. Not worth the phone cost. The whole photo alone beats the centre square (0.895 vs 0.888 test, 0.811 vs
+  0.799 independent, with the final scoring) at no extra cost: **a free +0.7 / +1.2 points if the app resized the whole
+  photo instead of cropping the centre square**.
+* **f. Organism crop (potential only).** An oracle that knows the label and takes the best of 5 fixed crops (centre, whole
+  photo, two edge squares, central 80 %) reaches 0.950 test / 0.874 independent against 0.888 / 0.799 with the centre
+  square, i.e. an upper bound of +6.2 / +7.5 points for perfect localisation; the cheap heuristic "most confident of the
+  5 crops" gets 0.904 / 0.822 (+1.6 / +2.3) at 5 encodes. Nothing was implemented.
+* **Distractors (negative).** Adding 672 congeneric species as text-only "not in the catalogue" classes cuts the accepted
+  negatives (core 22 % -> 13 %) but costs 7 points of top-1, because a congener often takes the true species.
+
+Per group (test / independent, top-1; BioCLIP RAG -> BioCLIP 2 RAG + text): turtles 0.493 / 0.338 -> 0.732 / 0.824;
+mammals 0.469 / 0.433 -> 0.821 / 0.772; sharks and rays 0.509 / 0.383 -> 0.826 / 0.696; cnidarians 0.827 / 0.722 ->
+0.960 / 0.885; molluscs 0.799 / 0.643 -> 0.926 / 0.826; plants and algae 0.694 / 0.673 -> 0.871 / 0.766. What remains
+are look-alike pairs: *Sardina pilchardus* / *Engraulis encrasicolus*, the two *Hippocampus*, *Sabella spallanzanii* /
+*Protula tubularia*, *Mugil cephalus* / *Chelon labrosus*, *Conger conger* / *Anguilla anguilla*, *Scorpaena porcus* /
+*S. scrofa*, *Pagrus pagrus* / *Pagellus erythrinus*.
+
+### 10.3 Candidate packs (ONNX Runtime 1.20.1, CPU, clean venv `ort120`)
+
+`build_pack_plus.py` builds both; `eval_pack_ort.py` loads each with `onnxruntime==1.20.1`, runs the self-test (cosine
+1.000000, minimum 0.99) and measures the app chain. The published row is section 8 (v2 CC-BY, fp32).
+
+| Pack | Test top-1 / top-5 / macro | RAG_CORE cov. / prec. | RAG_TENTATIVE cov. / prec. | Test negatives: core / tentative / unidentified | Indep top-1 / top-5 / macro | RAG_CORE cov. / prec. | Indep negatives: core / tentative / unidentified |
+|---|---|---|---|---|---|---|---|
+| Published v2 CC-BY fp32 | 0.643 / 0.858 / 0.621 | 0.281 / 0.945 | 0.112 / 0.706 | n/a / n/a / 0.830 | 0.594 / 0.825 / 0.575 | 0.304 / 0.916 | n/a / n/a / 0.774 |
+| **pack_best**: BioCLIP 2 (fp16 storage), 6 prototypes, text rows (weight 4) | **0.890 / 0.979 / 0.876** | 0.787 / 0.957 | 0.120 / 0.599 | 0.213 / 0.207 / 0.580 | **0.798 / 0.925 / 0.769** | 0.699 / 0.931 | 0.146 / 0.262 / 0.592 |
+| pack_light: BioCLIP B/16 fp32, 6 prototypes, text rows (weight 1) | 0.679 / 0.869 / 0.660 | 0.366 / 0.962 | 0.134 / 0.750 | 0.066 / 0.128 / 0.807 | 0.660 / 0.841 / 0.626 | 0.425 / 0.929 | 0.113 / 0.146 / 0.741 |
+
+The precision of the decisions counts accepted negatives as errors. Open set got worse for pack_best: 21 % / 15 % of the
+out-of-catalogue photos get a confident species (6 % before), because the text tower places other species close to
+ours. Raising the val precision target of `tauHigh` from 0.90 to 0.95 (tauHigh 0.91 instead of 0.773) gives: test
+coverage 0.669, precision of the answers 0.980, negatives accepted 8.9 %; independent 0.586 / 0.964 / 4.8 % (target 0.97:
+tauHigh 0.973, coverage 0.531 / 0.457, precision 0.993 / 0.981, negatives 3.6 % / 1.8 %). The choice is a product one.
+
+Sizes and CPU cost on the PC (ONNX Runtime 1.20.1, 4 threads, batch 1; the phone was not available):
+
+| Encoder file | Size | p50 | Peak RAM |
+|---|---|---|---|
+| BioCLIP B/16 fp32 (pack_light) | 345 MB | 118 ms | 0.77 GB |
+| BioCLIP 2 fp32 | 1 217 MB (over the limit) | 546 ms | 2.57 GB |
+| **BioCLIP 2, fp16 weights + Cast (pack_best)** | **609 MB** | 534 ms | 2.57 GB (ORT folds the Casts at load) |
+| same, `optimization.disable_specified_optimizers = ConstantFolding` | 609 MB | 723 ms | **0.79 GB** |
+
+fp16 here is *storage only* (`onnx_fp16_storage.py`: fp16 initialisers plus a Cast to fp32 per weight, fp32 compute), so
+no fp16 kernel is needed on ARM; embeddings differ from fp32 by cosine >= 0.9999999. A fully fp16 graph was not tried
+(ORT 1.20 CPU has no x86 fp16 MatMul and it could not be checked on ARM). pack_best is 611.5 MB (609.1 encoder + 2.2
+index + 0.2 catalogue) plus the 3.2 MB attribution file. Expect about 4.5x the BioCLIP B/16 latency on the phone (the S22
+figure is not measured).
+
+Files and SHA-256 (`C:/rerun_v9/runs/_species_precision/`, not committed):
+
+```
+pack_best/biodex_bioclip2_v3.onnx        aee44cd78984b1ea0f41364f881071040c4b648c124d73803d038d30eaac4bf7
+pack_best/species_index_v3.bin           c1672a131e0ad49d54f96b11071d1cf1739db5fe93da4bc6aaacacc90cc437ff
+pack_best/species_pack.json              decd03c3d974d5070667a91563d3bab2492dc6969404096f7eaedf909ec10c50
+pack_best/species_catalog_v1.json        249f5d99da41681d636756a3377429169c7d30df1dfa530d72f7d5055edf0b6c
+pack_best/reference_provenance.jsonl     0709da07aa431ef076252f29321f6f7befdf4414012efb335d70fc4cf1d085aa
+pack_light/biodex_bioclip_v3.onnx        3d9129e394821437eee051a586dac66723c8d19cf9f410b876111225ab137822
+pack_light/species_index_v3.bin          2cb3ffcf6c82fa4bccae19d4c0a89ac0bf263dc1524daf5288c9954097396ba6
+pack_light/species_pack.json             2d7532d693459cc15d4747a5c36c69dea5868d68539c07da2899cfc12726d770
+```
+
+`species_pack.json` of pack_best: temperature 0.05421, tauHigh 0.773, tauLow 0.531 (val precision >= 0.90 / 0.80 with
+negatives as errors), `scoring` = {imageWeight 1, textWeight 4, textViewTag "text", missingImageScore 0.8427}, 768-d,
+`encoderLicense` MIT (imageomics/bioclip-2). The index keeps the SPEX v1 layout: 1 137 image prototypes (`viewTag`
+"proto6") and 202 rows with `viewTag` "text" (one per species), 1 339 rows in total.
+
+### 10.4 What the app must change for pack_best
+
+The SPEX file and the encoder contract are unchanged, so an app that ignores `scoring` still loads the pack and runs as
+plain RAG with BioCLIP 2 (the text rows are ordinary prototypes whose cosines, 0.1-0.4, never win the max), which measures
+0.822 / 0.743 top-1; the gain of the text rows needs this:
+
+1. `SpeciesPackConfig`: read the optional `scoring` object (`imageWeight`, `textWeight`, `textViewTag`, `missingImageScore`).
+2. `SpeciesReferenceIndex`: per species, image score = max cosine over its rows whose `viewTag` != `textViewTag` (or
+   `missingImageScore` when it has none); text score = cosine with its `textViewTag` row; species score = `imageWeight`
+   x image + `textWeight` x text. Then the geographic logits `score / T + ln g` (section 9) and the softmax. The top-1 /
+   top-2 margin should use these scores.
+3. Optional, memory: create the session with `optimization.disable_specified_optimizers = ConstantFolding` for this pack
+   (peak 0.79 GB instead of 2.57 GB, 723 ms instead of 534 ms on the PC). Not tried on ARM.
+4. Optional, +0.7 / +1.2 points: resize the whole photo to 224 instead of cropping the centre square.
+5. The catalogue still lists `hypselodoris_picta`; the pack has no image or text row for it (merged into `felimare_picta`).
+
+pack_light has the size of the published pack (347 MB) and needs the same app change (text weight 1); it is +3.6 / +6.6
+points of top-1 over it.
+
+### 10.5 Recommendation
+
+Publish pack_best (BioCLIP 2 + text rows) if the S22 shows a latency of a few seconds and no memory kills (with the
+ConstantFolding option if needed): +24.7 points of top-1 on the iNaturalist test (0.643 -> 0.890) and +20.4 on the
+independent set (0.594 -> 0.798), top-5 0.979 / 0.925; turtles, mammals and sharks go from 0.34-0.51 to 0.70-0.83. Ship
+it together with the geographic fix of section 9 (otherwise the cosmopolitan species, turtles and cetaceans among them,
+never come out). Raise the `tauHigh` precision target if wrong confident answers matter more than coverage (10.3). Keep
+pack_light as the fallback for phones that cannot hold the larger model. More photos, a linear head, kNN, more
+prototypes and TTA are not worth their cost once the encoder and the text rows change.
+
+Reproduce (outputs in the run folder): `count_inat_available.py`, `count_gbif_available.py`, `fetch_taxonomy.py`,
+`fetch_inat_more.py`, `dedupe_ext.py`, `embed_set.py` (bioclip, bioclip2; `--flip`, `--crop full|start|end|c80`),
+`embed_text.py`, `precision_exp.py --exp gallery|head|tta|text|refs|combo|distract`, `build_pack_plus.py --encoder bioclip2
+--text-weight 4 --w16 --ext ext_rows.jsonl`, `eval_pack_ort.py` (inside the `onnxruntime==1.20.1` venv).
+
+
+## 11. Final pack for 1.2.0-rc3 (pack_final, 2026-11-09)
+
+`C:/rerun_v9/runs/_species_precision/pack_final/`: the encoder of pack_best (same ONNX, same SHA-256) with a new index,
+calibration for precision and three optional manifest fields. Built with `build_pack_plus.py --crop-mode full
+--precision-high 0.95 --precision-low 0.80 --session-optimization none --catalog-name species_catalog_v2.json
+--reuse-encoder pack_best`.
+
+**Calibration (val).** `tauHigh` = lowest threshold with val selective precision >= 0.95, `tauLow` = lowest with >= 0.80
+(the "possible" band is a suggestion, never stored); wrong species and accepted out-of-catalogue photos count as errors.
+The softmax temperature is still the optimum of the val fit: 0.05421. Result: **tauHigh 0.904, tauLow 0.525** (the
+0.91 quoted in 10.3 was for the centre-square pack; pack_best at target 0.90 had 0.773 / 0.531).
+
+**`cropMode`: "full".** Without a locator the encoder gets the whole photo resized to 224 x 224 (aspect ratio not kept)
+instead of the centre square; the reference photos are embedded the same way. Same pipeline, same val calibration:
+
+| Input (references / queries) | Val top-1 | Test top-1 / top-5 / macro | Independent top-1 / top-5 / macro |
+|---|---|---|---|
+| centre square / centre square | 0.891 | 0.888 / 0.977 / 0.869 | 0.800 / 0.922 / 0.766 |
+| centre square / whole photo | 0.887 | 0.896 / 0.977 / 0.881 | 0.810 / 0.931 / 0.786 |
+| **whole photo / whole photo (pack_final)** | 0.884 | **0.898 / 0.977 / 0.886** | **0.811 / 0.931 / 0.785** |
+
+Confirmed on both held-out sets (+1.0 test, +1.1 independent, 3 210 and 4 107 photos; the same direction as the +0.7 /
++1.2 of 10.2); val (1 131 photos) goes the other way by -0.7, within its noise. The app resize is bilinear on the whole
+bitmap, as in `embed_set.py --crop full`.
+
+**`sessionOptimization`: "none".** `mem_lat2.py`: peak working set and p50 of one photo, ONNX Runtime 1.20.1, 4 threads,
+x86 CPU, the pack ONNX (fp16 storage + Cast). The Java levels map to `ORT_DISABLE_ALL / BASIC / EXTENDED / ALL`; every level
+gives the same embedding (cosine >= 0.9999998).
+
+| Level (Java) | Load | p50 | Peak RAM |
+|---|---|---|---|
+| none (`NO_OPT`) | 0.7 s | 505 ms | **786 MB** |
+| basic (`BASIC_OPT`) | 2.9 s | 404 ms | 2 568 MB |
+| extended (`EXTENDED_OPT`) | 2.9 s | 372 ms | 2 567 MB |
+| all (`ALL_OPT`) | 2.9 s | 376 ms | 2 568 MB |
+
+The constant folding of the fp16 -> fp32 Casts (it starts at BASIC) materialises the 1.2 GB fp32 weights; only `NO_OPT`
+stays under 1 GB, and it costs ~35 % of latency on this CPU (no operator fusion). On ARM the penalty may be different
+(not measured). No fp32 or pure-fp16 ONNX is needed for the memory limit, but the real S22 figure is still unknown.
+
+**`catalogFile`: `species_catalog_v2.json`** (SHA-256 48e47f34...a112e, the regenerated one): the 202 species keys of the
+index (197 with image prototypes + 5 text-only: *Cystoseira amentacea*, *Eledone moschata*, *Patella ferruginea*, *Sepia
+elegans*, *Sphyraena sphyraena*) are exactly the 202 keys of the catalogue, no key in only one of them (`verify_pack.py`).
+`merged` {hypselodoris_picta: felimare_picta} is kept in the manifest. 18 677 reference photos (CC0 / CC-BY).
+
+**Results (ONNX Runtime 1.20.1, CPU, clean venv; cropMode full, level none; no location).** Decisions count accepted
+out-of-catalogue photos as errors in the precision.
+
+| Set | Top-1 / top-5 / macro | RAG_CORE cov. / prec. | RAG_TENTATIVE cov. / prec. | Negatives: core / tentative / unidentified |
+|---|---|---|---|---|
+| iNaturalist test (3 210 + 305 negatives) | 0.899 / 0.979 / 0.890 | 0.686 / 0.980 | 0.234 / 0.709 | 0.089 / 0.348 / 0.564 |
+| Independent (4 107 + 336 negatives) | 0.810 / 0.934 / 0.792 | 0.616 / 0.963 | 0.236 / 0.652 | 0.062 / 0.339 / 0.598 |
+
+Against pack_best (target 0.90): CORE coverage falls from 0.787 / 0.699 to 0.686 / 0.616 and the precision of the
+confident answers rises from 0.957 / 0.931 to 0.980 / 0.963; accepted negatives fall from 21.3 % / 14.6 % to 8.9 % /
+6.2 %. The tentative band is wide (0.23-0.24 of the photos) and only 0.65-0.71 right: it is a suggestion.
+
+**With the new geographic prior of the app** (section 9: `logit = score / T + ln g`, g = 1 / 0.5 / 0.3 / 0.1 / 1,
+pack thresholds; photos with a resolved ecoregion: test 3 196 + 305 negatives, independent 1 917 + 106 negatives; same
+photos for both rows, `geo/geo_final2.txt`):
+
+| Set | Prior | Top-1 / top-5 | RAG_CORE cov. / prec. | RAG_TENTATIVE cov. / prec. | Negatives: core / tentative |
+|---|---|---|---|---|---|
+| Test | none | 0.899 / 0.979 | 0.686 / 0.980 | 0.234 / 0.707 | 0.089 / 0.348 |
+| Test | new app prior | **0.905 / 0.981** | 0.693 / 0.983 | 0.230 / 0.704 | 0.079 / 0.380 |
+| Independent | none | 0.840 / 0.949 | 0.652 / 0.977 | 0.222 / 0.675 | 0.066 / 0.387 |
+| Independent | new app prior | **0.847 / 0.953** | 0.671 / 0.977 | 0.203 / 0.677 | 0.075 / 0.387 |
+
+Geography adds +0.6 / +0.7 points of top-1 and keeps the precision of the confident answers (0.983 / 0.977).
+
+`verify_pack.py` was rewritten (no torch needed): manifest and file check, SHA-256 of every file, index vs catalogue
+keys, session with the manifest level, self-test and the app chain on a split (it calls `eval_pack_ort.py`, which now
+honours `cropMode` and `sessionOptimization`).
+
+Files (`pack_final/`, not committed):
+
+```
+biodex_bioclip2_v3.onnx        aee44cd78984b1ea0f41364f881071040c4b648c124d73803d038d30eaac4bf7   (609.11 MB)
+species_index_v3.bin           9dd4d8ae870385438f58fd506d77cd75654ee8f8a2b574568379b500a05eccd7   (2.19 MB)
+species_pack.json              dd5c56c3f47b36ec23adb82c8dcb82b4de2d1c220b50d765dc9820edb41f05cc
+species_catalog_v2.json        48e47f343918efca837bd87df53135bbd901903afddfa075a17c37d12cfa112e   (0.38 MB)
+reference_provenance.jsonl     0709da07aa431ef076252f29321f6f7befdf4414012efb335d70fc4cf1d085aa   (3.20 MB)
+build_report.json              57879d2d5cd38e53634ef233509d3b99603d310dedc02c1bb30f146f882db73f
+
+## 12. Species catalogue v2 (2026-11-09)
 
 `tools/species/build_catalog_v2.py` builds `species_catalog_v2.json` (same wrapper and fields as v1, `version: 2`) for the
 202 species of the v3 index (`pack_best`, BioCLIP 2 + text: 197 with photos plus 5 recognised by text; `hypselodoris_picta` is merged into `felimare_picta` and dropped). The species are read from the SPEX metadata of `species_index_v3.bin` (`--index`). Output and cache live outside the repository
