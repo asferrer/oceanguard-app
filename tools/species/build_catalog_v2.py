@@ -104,7 +104,7 @@ def dist_sentence(lang, n, med):
     if lang == "en":
         return f"Recorded in {n} marine ecoregion{'' if one else 's'}{m}."
     if lang == "es":
-        return f"Presente en {n} ecorregión{'' if one else 'es'} marina{'' if one else 's'}{m}."
+        return f"Presente en {n} {'ecorregión' if one else 'ecorregiones'} marina{'' if one else 's'}{m}."
     if lang == "fr":
         return f"Présente dans {n} écorégion{'' if one else 's'} marine{'' if one else 's'}{m}."
     if lang == "de":
@@ -312,6 +312,9 @@ def pick_names(sp, asfis_rec, wn, gn, gkey):
                     detail = f"{ranked[0][1]} entries, languages {code}" + (f"; also GBIF {gkey}" if "gbif" in ranked[0][2] else "")
                 else:
                     name, src, detail = sci, "scientific", "no verifiable name"
+        if (sp["speciesKey"], lg) in CURATED:
+            reason = reason or ("curated_over_" + src)
+            name, src, detail = CURATED[(sp["speciesKey"], lg)], "curated", "usual name (manual review, 2026-11-09)"
         out[lg] = name
         prov.append({"speciesKey": sp["speciesKey"], "aphiaId": sp["aphiaId"], "lang": lg, "name": name, "source": src,
                      "v1": old.get(lg), "changed": (old.get(lg) or "") != name, "replaced_v1_because": reason, "detail": detail})
@@ -320,6 +323,29 @@ def pick_names(sp, asfis_rec, wn, gn, gkey):
 
 # v1 names found wrong in the manual review of the final lists: (speciesKey, lang) -> reason. Filled after review.
 OVERRIDES = {}
+
+# Final names fixed in the manual review (2026-11-09): the usual name in Spain / in English where the ASFIS trade
+# name is unusual for divers and beachgoers (e.g. "Caguama", "Tursion", "Alga de vidrieros"), plus accents and
+# typos of the ASFIS list. The name that the rule picked stays in names_provenance.jsonl (field "detail" of the rule).
+CURATED = {
+    ("posidonia_oceanica", "es"): "Posidonia", ("posidonia_oceanica", "en"): "Neptune grass",
+    ("caretta_caretta", "es"): "Tortuga boba", ("tursiops_truncatus", "es"): "Delfín mular",
+    ("mobula_mobular", "es"): "Manta del Mediterráneo", ("mobula_mobular", "en"): "Giant devil ray",
+    ("aurelia_aurita", "es"): "Medusa común", ("trachinus_draco", "es"): "Araña blanca",
+    ("coris_julis", "es"): "Doncella", ("stenella_coeruleoalba", "es"): "Delfín listado",
+    ("corallium_rubrum", "es"): "Coral rojo", ("corallium_rubrum", "en"): "Red coral",
+    ("pinna_nobilis", "es"): "Nacra", ("carcharodon_carcharias", "es"): "Tiburón blanco",
+    ("alopias_vulpinus", "es"): "Pez zorro", ("epinephelus_marginatus", "es"): "Mero",
+    ("hippocampus_guttulatus", "es"): "Caballito de mar narigudo", ("diodon_hystrix", "es"): "Pez erizo",
+    ("sparisoma_cretense", "es"): "Vieja", ("grampus_griseus", "es"): "Delfín de Risso",
+    ("ziphius_cavirostris", "es"): "Zifio de Cuvier", ("myliobatis_aquila", "es"): "Águila marina",
+    ("sarda_sarda", "es"): "Bonito del Atlántico", ("scomber_scombrus", "es"): "Caballa",
+    ("asparagopsis_armata", "es"): "Espárrago marino", ("condylactis_aurantiaca", "es"): "Anémona dorada",
+    ("sphaerechinus_granularis", "es"): "Erizo violáceo", ("hexaplex_trunculus", "es"): "Búsano",
+    ("dermochelys_coriacea", "es"): "Tortuga laúd", ("spongia_officinalis", "es"): "Esponja de baño",
+    ("sargassum_vulgare", "es"): "Sargazo común", ("dasyatis_pastinaca", "es"): "Pastinaca",
+    ("lepidochelys_kempii", "es"): "Tortuga lora", ("thunnus_thynnus", "es"): "Atún rojo",
+}
 
 
 def describe(sp, group, ch, rec, med_ids):
