@@ -19,6 +19,7 @@ import argparse
 import collections
 import hashlib
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -32,11 +33,11 @@ GBIF = "https://api.gbif.org/v1"
 UA = {"User-Agent": "oceanguard-catalog/1.0"}
 PAUSE = 0.25  # <= 4 requests/s
 
-SOURCES = ["OBIS", "GBIF", "AquaMaps", "WoRMS"]
+SOURCES = ["OBIS", "GBIF", "AquaMaps", "WoRMS", "FAO ASFIS"]
 LICENSE_NOTE = (
     "MEOW: TNC libre uso con atribución (Spalding et al. 2007). OBIS/GBIF: CC BY 4.0. "
     "AquaMaps: CC BY-NC (verificar antes de uso comercial). "
-    "WoRMS (nombres comunes y clasificación): CC BY 4.0. "
+    "WoRMS (clasificación y nombres comunes): CC BY 4.0. FAO ASFIS (nombres oficiales en inglés, francés y español): CC BY 4.0, atribución a FAO. "
     "Nombres comunes complementarios: GBIF vernacular names (cada conjunto con su licencia, ver names_provenance.jsonl)."
 )
 
@@ -151,11 +152,6 @@ def val(c):
 
 
 # ---------------------------------------------------------------- logic
-def norm(name):
-    name = " ".join(name.strip().split())
-    return name[:1].upper() + name[1:] if name else name
-
-
 def chain(node):
     out = []
     while node:
@@ -205,16 +201,40 @@ def resolve_by_name(fetch, name):
     return recs[0] if recs else None
 
 
+ASFIS_URL = "https://www.fao.org/fishery/static/ASFIS/ASFIS_sp.zip"
+ASFIS_COLS = {"en": "English_name", "fr": "French_name", "es": "Spanish_name"}
+
+
+def load_asfis(path: Path):
+    """FAO ASFIS list (CSV): scientific name -> {en, fr, es}. Downloads the zip if the CSV is not in <out>."""
+    if not path.exists():
+        import io
+        import zipfile
+        r = requests.get(ASFIS_URL, headers=UA, timeout=120)
+        r.raise_for_status()
+        z = zipfile.ZipFile(io.BytesIO(r.content))
+        csv_name = next(n for n in z.namelist() if n.lower().endswith(".csv"))
+        path.write_bytes(z.read(csv_name))
+    import csv
+    out = {}
+    with path.open(encoding="utf-8-sig", newline="") as f:
+        rd = csv.DictReader(f)
+        rd.fieldnames = [c.strip() for c in rd.fieldnames]
+        for row in rd:
+            out[row["Scientific_Name"].strip()] = {lg: (row[c] or "").strip() for lg, c in ASFIS_COLS.items()}
+    return out
+
+
 def worms_names(fetch, aphia):
+    """All WoRMS vernaculars of the accepted taxon: ISO-639-3 code -> [names]."""
     res = collections.defaultdict(list)
     for v in val(fetch.get(f"{WORMS}/AphiaVernacularsByAphiaID/{aphia}")) or []:
-        lg = ISO3.get(v.get("language_code"))
-        if lg:
-            res[lg].append(v["vernacular"])
+        res[v.get("language_code")].append(v["vernacular"])
     return res
 
 
 def gbif_names(fetch, sci):
+    """All GBIF vernacular names of the exactly matched species: ISO-639-3 code -> [(name, source)]."""
     m = val(fetch.get(f"{GBIF}/species/match", {"name": sci})) or {}
     if m.get("matchType") != "EXACT" or m.get("rank") != "SPECIES":
         return {}, None
@@ -222,40 +242,84 @@ def gbif_names(fetch, sci):
     res = collections.defaultdict(list)
     d = val(fetch.get(f"{GBIF}/species/{key}/vernacularNames", {"limit": 1000})) or {}
     for v in d.get("results", []):
-        lg = ISO3.get(v.get("language"))
-        if lg and v.get("vernacularName"):
-            res[lg].append((v["vernacularName"], v.get("source", "")))
+        if v.get("language") and v.get("vernacularName"):
+            res[v["language"]].append((v["vernacularName"], v.get("source", "")))
     return res, key
 
 
-def pick_names(sp, wn, gn, gkey):
+def sentence_case(name, lg):
+    """Capitalise only the first letter. Undo Title Case ("Pez León Común" -> "Pez león común"); German keeps its nouns."""
+    name = " ".join(name.strip().replace("’", "'").split())
+    name = re.sub(r"\s*\(=[^)]*\)", "", name)  # ASFIS notation "Angler(=Monk)" -> "Angler"
+    if lg != "de":
+        toks = [t for t in name.replace("-", " ").split() if len(t) > 3]
+        if len(toks) >= 2 and all(t[:1].isupper() for t in toks):
+            name = name[:1] + name[1:].lower()
+    return name[:1].upper() + name[1:]
+
+
+def pick_names(sp, asfis_rec, wn, gn, gkey):
+    """Name rule (coordinator, 2026-11-09), same for the six languages:
+    1. en/fr/es: the FAO ASFIS name when the species is in ASFIS and has one in that language.
+    2. Otherwise keep the v1 name, unless it is empty, identical to the English one (non-English language), a name that
+       WoRMS/GBIF list for ANOTHER language (Catalan, Galician, ...) and not for this one, or of another taxon
+       (found by the manual review of the final list, see OVERRIDES). Only then: WoRMS/GBIF names with the exact ISO-639-3
+       language, the one most repeated across both sources (ties: WoRMS order); if none, the scientific name.
+    """
     out, prov = {}, []
     sci = sp["scientificName"]
     old = sp["commonNames"]
-    en_old = old.get("en", "")
+    iso = {v: k for k, v in ISO3.items()}
+    en_v1 = (old.get("en") or "").strip().lower()
     for lg in LANGS:
-        w = list(dict.fromkeys(norm(x) for x in wn.get(lg, [])))
-        g = list(dict.fromkeys(norm(x) for x, _ in gn.get(lg, [])))
-        gsrc = {norm(x): s for x, s in gn.get(lg, [])}
-        cur = norm(old.get(lg, "") or "")
-        if cur and cur in w:
-            name, src = cur, "worms"
-        elif cur and cur in g:
-            name, src = cur, "gbif"
-        elif w:
-            name, src = w[0], "worms"
-        elif g:
-            name, src = g[0], "gbif"
-        elif cur and (lg == "en" or cur.lower() != en_old.lower()):
-            name, src = cur, "v1_unverified"
+        code = iso[lg]
+        cands = collections.OrderedDict()  # lowercase -> [display, count, sources]
+        for x in wn.get(code, []):
+            e = cands.setdefault(sentence_case(x, lg).lower(), [sentence_case(x, lg), 0, set()])
+            e[1] += 1; e[2].add("worms")
+        for x, src in gn.get(code, []):
+            e = cands.setdefault(sentence_case(x, lg).lower(), [sentence_case(x, lg), 0, set()])
+            e[1] += 1; e[2].add("gbif")
+        other = {sentence_case(x, lg).lower() for c, xs in wn.items() if c != code for x in xs}
+        other |= {sentence_case(x, lg).lower() for c, xs in gn.items() if c != code for x, _ in xs}
+        v1 = sentence_case(old.get(lg) or "", lg)
+        detail = ""
+        asf = asfis_rec.get(lg, "") if asfis_rec and lg in ASFIS_COLS else ""
+        reason = ""
+        if asf:
+            name, src, detail = sentence_case(asf, lg), "asfis", "FAO ASFIS (CC BY 4.0, attribution FAO)"
         else:
-            name, src = sci, "scientific_name"
+            bad = None
+            if not v1:
+                bad = "empty"
+            elif "," in v1 or "(" in v1:
+                bad = "several_names_in_one"
+            elif lg != "en" and v1.lower() == en_v1 and v1.lower() not in cands:
+                bad = "identical_to_english"
+            elif v1.lower() in other and v1.lower() not in cands:
+                bad = "other_language"
+            elif (sp["speciesKey"], lg) in OVERRIDES:
+                bad = "reviewed_wrong_" + OVERRIDES[(sp["speciesKey"], lg)]
+            if bad is None:
+                name, src = v1, "v1"
+                detail = "verified in " + "+".join(sorted(cands[v1.lower()][2])) if v1.lower() in cands else "not in WoRMS/GBIF"
+            else:
+                reason = bad
+                ranked = sorted((e for k, e in cands.items() if "," not in k and "(" not in k), key=lambda e: -e[1])  # stable: WoRMS order on ties
+                if ranked:
+                    name = ranked[0][0]
+                    src = "worms" if "worms" in ranked[0][2] else "gbif"
+                    detail = f"{ranked[0][1]} entries, languages {code}" + (f"; also GBIF {gkey}" if "gbif" in ranked[0][2] else "")
+                else:
+                    name, src, detail = sci, "scientific", "no verifiable name"
         out[lg] = name
-        detail = ("WoRMS AphiaVernacularsByAphiaID (CC BY 4.0)" if src == "worms" else
-                  f"GBIF species {gkey} vernacularNames; source {gsrc.get(name, '')}" if src == "gbif" else "")
         prov.append({"speciesKey": sp["speciesKey"], "aphiaId": sp["aphiaId"], "lang": lg, "name": name, "source": src,
-                     "v1": old.get(lg), "changed": cur != name, "detail": detail})
+                     "v1": old.get(lg), "changed": (old.get(lg) or "") != name, "replaced_v1_because": reason, "detail": detail})
     return out, prov
+
+
+# v1 names found wrong in the manual review of the final lists: (speciesKey, lang) -> reason. Filled after review.
+OVERRIDES = {}
 
 
 def describe(sp, group, ch, rec, med_ids):
@@ -296,10 +360,12 @@ def main():
     ap.add_argument("--provenance", required=True)
     ap.add_argument("--hierarchy", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--asfis", help="ASFIS_sp CSV (default: <out>/ASFIS_sp_2026.1.csv, downloaded if missing)")
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     fetch = Fetcher(out / "cache")
+    asfis = load_asfis(Path(a.asfis) if a.asfis else out / "ASFIS_sp_2026.1.csv")
 
     v1 = json.loads(Path(a.catalog).read_text(encoding="utf-8"))
     keep = {json.loads(l)["species_key"] for l in Path(a.provenance).read_text(encoding="utf-8").splitlines() if l.strip()}
@@ -336,7 +402,8 @@ def main():
             report["no_group"].append(sp["speciesKey"])
         wn = worms_names(fetch, eff)
         gn, gkey = gbif_names(fetch, sp["scientificName"])
-        names, p = pick_names(sp, wn, gn, gkey)
+        asf = asfis.get(sp["scientificName"]) or asfis.get(rec.get("valid_name") or "")
+        names, p = pick_names(sp, asf, wn, gn, gkey)
         prov += p
         e = dict(sp)
         e["aphiaId"] = ap_id

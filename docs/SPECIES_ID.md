@@ -342,10 +342,14 @@ and run on test photos:
 * **Identity.** `speciesKey` never changes. The AphiaID is checked against WoRMS REST; 16 v1 AphiaIDs belonged to another
   taxon and are replaced by the one WoRMS gives for the exact name (listed in `summary.json`, `name_mismatch`). Names that
   WoRMS no longer accepts are only reported (`not_accepted`); the key and the displayed scientific name stay.
-* **Common names (en, es, fr, de, it, pt).** Only WoRMS vernaculars (CC BY 4.0) or, if WoRMS has none in that language,
-  GBIF vernacular names (source recorded). A v1 name is kept if it appears in either source; if it does not and it is not
-  identical to the English one it is kept and flagged `v1_unverified`; otherwise the scientific name is used. First letter
-  upper-cased. `names_provenance.jsonl` gives source and detail per species and language.
+* **Common names (en, es, fr, de, it, pt).** Rule, same for the six languages: (1) en/fr/es come from the FAO ASFIS list
+  (`ASFIS_sp_2026.1.csv`, https://www.fao.org/fishery/en/collection/asfis; FAO statistical databases are CC BY 4.0, credit FAO)
+  when the species is in it, with the "(=...)" alternatives of ASFIS removed; (2) otherwise the v1 name is kept unless it is
+  empty, identical to the English one in a non-English language, several names in one string, listed by WoRMS/GBIF only for
+  another language (Catalan, Galician...) or of another taxon (manual review); only then the WoRMS/GBIF name with the exact
+  ISO-639-3 language, the one repeated most across both sources; if none, the scientific name. Only the first letter is
+  capitalised (Title Case is undone; German keeps its nouns). `names_provenance.jsonl` gives the real source of each name
+  (`asfis` / `v1` / `worms` / `gbif` / `scientific`) and why a v1 name was replaced.
 * **Descriptions.** Per-language templates filled only with WoRMS (group, class/order/family, marine/brackish/freshwater/
   terrestrial flags), the IUCN code already in the catalogue and the number of MEOW ecoregions (Mediterranean = the seven
   ecoregions of province "Mediterranean Sea"); cosmopolitan species say so. No sizes, diets or other facts.
