@@ -24,6 +24,8 @@ package com.oceanguard.ai.data.species
  *                         (shown on the BioDex detail screen).
  * @param iucnStatus       IUCN Red List category code (e.g. "VU", "EN", "LC"),
  *                         null if not assessed or unknown.
+ * @param group            Optional (catalog v2): stable English key of the taxonomic group
+ *                         (e.g. "bony_fish", "sharks_rays"), null in v1 catalogs.
  */
 data class SpeciesCatalogEntry(
     val speciesKey: String,
@@ -35,4 +37,5 @@ data class SpeciesCatalogEntry(
     val cosmopolitan: Boolean = false,
     val descriptions: Map<String, String> = emptyMap(),
     val iucnStatus: String? = null,
+    val group: String? = null,
 )

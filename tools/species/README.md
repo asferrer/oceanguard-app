@@ -17,6 +17,7 @@ Scripts that build and evaluate the BioDex species pack (visual RAG). Results, d
 | `build_pack.py`, `verify_pack.py` | Build the v2 pack (encoder, SPEX index, `species_pack.json`, provenance; `--licenses cc0,cc-by` for a gallery without CC-BY-SA, `--calibrate` to fit temperature and thresholds on val) and check it as the app decides |
 | `fetch_gbif_independent.py`, `fetch_commons_independent.py`, `filter_indep.py`, `tag_non_photos.py` | Evaluation photos that do not come from iNaturalist (GBIF non-iNaturalist datasets, Wikimedia Commons), near-duplicate and not-a-photo filters |
 | `eval_pack.py` | Pack on a labelled set with the app chain: top-1/5, macro, coverage and precision per decision, negatives, worst species, confusions |
+| `build_catalog_v2.py` | Catalogue v2 (198 species): WoRMS/GBIF common names with provenance, template descriptions, `group`; see SPECIES_ID.md section 9 |
 | `biodex_common.py`, `gpu_guard.py` | Shared helpers (app parity) and the lab GPU guard |
 
 Run them with `python -I` (Python 3.12 with torch, open_clip, timm, transformers, onnxruntime, Pillow, requests).
