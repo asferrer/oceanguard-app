@@ -37,7 +37,7 @@
     <string name="models_item_gemma_tuned">Gemma 4 E2B OceanGuard (.litertlm)</string>
     <string name="models_item_gemma_tuned_purpose">Gemma 4 entrenado con residuos marinos. Detecta, escribe informes e identifica especies.</string>
     <string name="models_item_species">Paquete de especies de BioDex</string>
-    <string name="models_item_species_purpose">Hace falta para identificar especies. Sin él, BioDex solo conoce cuatro especies de ejemplo.</string>
+    <string name="models_item_species_purpose">Hace falta para identificar especies: unas 200 especies marinas, sobre todo del Mediterráneo, reconocidas en el teléfono sin conexión.</string>
     <string name="models_item_qwen_fast">Qwen 3.5 0,8B</string>
     <string name="models_item_qwen_balanced">Qwen 3.5 2B</string>
     <string name="models_item_qwen_quality">Qwen 3.5 4B</string>

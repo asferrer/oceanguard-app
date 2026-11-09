@@ -37,7 +37,7 @@
     <string name="models_item_gemma_tuned">Gemma 4 E2B OceanGuard (.litertlm)</string>
     <string name="models_item_gemma_tuned_purpose">Gemma 4, trainiert auf Meeresmüll. Erkennt, schreibt Berichte und bestimmt Arten.</string>
     <string name="models_item_species">BioDex-Artenpaket</string>
-    <string name="models_item_species_purpose">Nötig, um Arten zu bestimmen. Ohne es kennt BioDex nur vier Beispielarten.</string>
+    <string name="models_item_species_purpose">Nötig, um Arten zu bestimmen: rund 200 Meeresarten, vor allem aus dem Mittelmeer, offline auf diesem Telefon erkannt.</string>
     <string name="models_item_qwen_fast">Qwen 3.5 0,8B</string>
     <string name="models_item_qwen_balanced">Qwen 3.5 2B</string>
     <string name="models_item_qwen_quality">Qwen 3.5 4B</string>
