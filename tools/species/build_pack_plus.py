@@ -32,6 +32,51 @@ from build_pack import MODEL_LICENSES, export_onnx, self_test_pattern  # noqa: E
 from embed_all import SPECS  # noqa: E402
 
 
+def sha256_file(path: Path) -> str:
+    import hashlib
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for b in iter(lambda: f.read(8 << 20), b""):
+            h.update(b)
+    return h.hexdigest()
+
+
+def _group_answers(S: np.ndarray, T: float, tau_low: float, sp_group: list):
+    """Rows the species rule leaves unidentified (conf < tauLow), best group and its summed probability (app rule)."""
+    P = L.softmax_rows(S / T)
+    unid = P.max(1) < tau_low
+    names = sorted({g for g in sp_group if g})
+    M = np.array([[g == n for n in names] for g in sp_group], np.float32)
+    G = P @ M
+    return unid, [names[j] for j in G.argmax(1)], G.max(1)
+
+
+def group_calibration(rows, S, T, tau_low, sp_group, true_group, target):
+    """Lowest group threshold whose precision on the unidentified val photos is >= target.
+
+    A group answer is right when the photo's group (catalogue species, or the negative's own group) is the best group;
+    a negative of a group outside the catalogue groups is always wrong.
+    """
+    unid, best, gp = _group_answers(S, T, tau_low, sp_group)
+    ok = np.array([true_group(r) == b for r, b in zip(rows, best)])
+    for t in np.linspace(tau_low, 1, 476):
+        m = unid & (gp >= t)
+        if m.sum() >= 20 and ok[m].mean() >= target:
+            return {"threshold": round(float(t), 3), "precision": round(float(ok[m].mean()), 4),
+                    "coverage": round(float(m.sum() / max(1, unid.sum())), 4), "n_unidentified": int(unid.sum())}
+    return {"threshold": 1.0, "precision": None, "coverage": 0.0, "n_unidentified": int(unid.sum())}
+
+
+def group_report(rows, S, T, tau_low, sp_group, true_group, threshold):
+    unid, best, gp = _group_answers(S, T, tau_low, sp_group)
+    ok = np.array([true_group(r) == b for r, b in zip(rows, best)])
+    m = unid & (gp >= threshold)
+    neg = np.array([r["role"] == "negative" for r in rows])
+    return {"precision": round(float(ok[m].mean()), 4) if m.any() else None,
+            "coverage": round(float(m.sum() / max(1, unid.sum())), 4), "n_unidentified": int(unid.sum()),
+            "negatives_with_group": int((m & neg).sum()), "negatives_unidentified": int((unid & neg).sum())}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--encoder", default="bioclip2")
@@ -54,6 +99,8 @@ def main() -> None:
     ap.add_argument("--reuse-encoder", type=Path, help="pack dir whose ONNX is copied instead of exported again")
     ap.add_argument("--precision-high", type=float, default=0.90)
     ap.add_argument("--precision-low", type=float, default=0.80)
+    ap.add_argument("--group-precision", type=float, help="calibrate groupFallback on val at this precision (e.g. 0.95)")
+    ap.add_argument("--neg-groups", type=Path, help="json {negative species_key: group} for the group calibration")
     a = ap.parse_args()
 
     enc = a.encoder
@@ -132,6 +179,18 @@ def main() -> None:
     T, th, tl = res["T"], res["tauHigh"], res["tauLow"]
     print(f"calibration: T={T} tauHigh={th} tauLow={tl} missingImageScore={rho:.3f}; "
           f"val top-1 {res['val_top1']:.3f}, test top-1 {res['test']['top1']:.3f} top-5 {res['test']['top5']:.3f}")
+    group_fb = None
+    if a.group_precision:
+        neg_groups = json.loads(a.neg_groups.read_text(encoding="utf-8")) if a.neg_groups else {}
+        sp_group = [cat[k].get("group") for k in species]
+        true_g = lambda rr: (cat[rr["species_key"]].get("group") if rr["role"] == "catalog" and rr["species_key"] in cat
+                             else neg_groups.get(rr["species_key"]))
+        gv = group_calibration([rows[i] for i in val_i], val.S, T, tl, sp_group, true_g, a.group_precision)
+        gt = group_report([rows[i] for i in test_i], test.S, T, tl, sp_group, true_g, gv["threshold"])
+        res["group_fallback"] = {"val": gv, "test": gt}
+        group_fb = {"threshold": gv["threshold"]}
+        print(f"group fallback: threshold {gv['threshold']} (val precision {gv['precision']}, coverage of the "
+              f"unidentified {gv['coverage']}); test precision {gt['precision']}, coverage {gt['coverage']}")
 
     # --- files ---
     a.out.mkdir(parents=True, exist_ok=True)
@@ -148,8 +207,9 @@ def main() -> None:
     tmp = a.out / "_fp32.onnx"
     import onnxruntime as ort
     if a.reuse_encoder:
-        shutil.copy2(a.reuse_encoder / json.loads((a.reuse_encoder / "species_pack.json").read_text())["encoderFile"],
-                     a.out / enc_file)
+        # same bytes and same file name as the reused pack, so an app updating from it keeps the encoder
+        enc_file = json.loads((a.reuse_encoder / "species_pack.json").read_text())["encoderFile"]
+        shutil.copy2(a.reuse_encoder / enc_file, a.out / enc_file)
     else:
         export_onnx(enc, tmp, size)
     if a.reuse_encoder:
@@ -198,6 +258,9 @@ def main() -> None:
         manifest["sessionOptimization"] = a.session_optimization
     if not use_text:
         manifest.pop("scoring")
+    if group_fb:
+        manifest["groupFallback"] = group_fb
+    manifest["sha256"] = {f: sha256_file(a.out / f) for f in (enc_file, idx_file, a.catalog_name)}
     (a.out / "species_pack.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
     with (a.out / "reference_provenance.jsonl").open("w", encoding="utf-8") as f:
         for r in prov:

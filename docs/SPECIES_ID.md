@@ -716,3 +716,73 @@ files are downloaded as `*.new` and verified (size, and SHA-256 when the optiona
 file); only then they replace the installed ones, the manifest last. A failed or cancelled update leaves the old pack
 untouched. Files whose SHA-256 matches are not downloaded again; without a `sha256` map only the encoder and the geographic
 files are reused.
+
+## 14. Pack v4: 30 tropical species and the group threshold (rc5, 2026-11-09)
+
+A tropical manta photographed by the author came out "not identified": the catalogue only had *Mobula mobular*. With
+24 iNaturalist photos of *M. birostris* / *M. alfredi*, pack v3 left 10 unidentified (the Mediterranean manta: 22 of 28
+identified or possible).
+
+**Species.** 30 tropical species often photographed by divers, kept when iNaturalist has CC0 / CC-BY research-grade photos
+of them (28-3 795 observations): *Mobula birostris*, *M. alfredi*, *Aetobatus narinari*, *Taeniura lymma*, *Carcharhinus
+melanopterus*, *Triaenodon obesus*, *Sphyrna lewini*, *Galeocerdo cuvier*, *Ginglymostoma cirratum*, *Hypanus americanus*,
+*Pterois volitans*, *Amphiprion percula*, *Zanclus cornutus*, *Paracanthurus hepatus*, *Pomacanthus imperator*,
+*Holacanthus ciliaris*, *Balistoides conspicillum*, *Rhinecanthus aculeatus*, *Ostracion meleagris*, *Arothron hispidus*,
+*Cheilinus undulatus*, *Lutjanus kasmira*, *Heniochus acuminatus*, *Linckia laevigata*, *Tridacna maxima*, *Octopus
+cyanea*, *Stenopus hispidus*, *Megaptera novaeangliae*, *Dugong dugon*, *Trichechus manatus* (four candidates were already
+in the catalogue: *Pterois miles*, *Amphiprion ocellaris*, *Chaetodon lunula*, *Acanthaster planci*). Catalogue v3
+(`species_catalog_v3.json`, 232 species): the 202 v2 entries unchanged; for the new ones AphiaID from WoRMS, MEOW
+ecoregions from up to 10 000 OBIS records per species mapped with the app raster (an ecoregion counts with >= 2 records),
+IUCN category from GBIF, names and descriptions with `build_catalog_v2.py` (31 names reviewed by hand, `CURATED`).
+
+**Data.** Same pipeline as v3, run folder `C:/rerun_v9/runs/_species_v4_2026-11-09/` (scripts `select_species.py`,
+`prepare_data.py`, `catalog_new_entries.py`, `neg_groups.py`, `combine_indep.py`, `eval_new.py`): 60 photos per new species
+with `fetch_inat_dataset.py`, `make_splits.py` again (the v3 observers keep their split: only 7 old val/test photos dropped
+as near-duplicates), up to 250 train references per species with `fetch_inat_more.py` (*M. birostris*, *G. cuvier*,
+*A. percula*, *P. hepatus* and *D. dugon* have no more CC0 / CC-BY photos from train observers), `dedupe_ext.py` against all
+held-out and independent photos (17 686 extra references kept), 655 independent photos of the new species from GBIF
+(non-iNaturalist) and Wikimedia Commons (`filter_indep.py`, `tag_non_photos.py`). Negatives: the 11 v3 negatives that are
+now catalogue species became catalogue photos (also in the independent set, 150 photos); 14 new negatives, mostly
+look-alike relatives (*Pterois antennata*, *Amphiprion clarkii*, *A. frenatus*, *Chaetodon auriga*, *Acanthurus
+triostegus*, *Aetobatus ocellatus*, *Carcharhinus amblyrhynchos*, *Stegostoma tigrinum*, *Tursiops aduncus*, *Pomacanthus
+paru*, *Arothron meleagris*, *Lysmata amboinensis*, *Heniochus diphreutes*, *Acanthaster solaris*). The last two are
+photo-indistinguishable from *H. acuminatus* / *A. planci* (24 of 25 and 23 of 25 accepted even at tauHigh 0.988): they
+are kept out of the calibration (`split = excluded_cryptic`) and are a known limitation (the app names them as the
+catalogue species).
+
+**Build.** `build_pack_plus.py --version 4 --crop-mode full --precision-high 0.95 --precision-low 0.80
+--session-optimization none --catalog-name species_catalog_v3.json --reuse-encoder pack_final --group-precision 0.95
+--neg-groups neg_groups.json`. New in the builder: `--reuse-encoder` keeps the encoder file name
+(`biodex_bioclip2_v3.onnx`, same SHA-256, so an update does not download it again), the manifest gets the `sha256` map and
+`groupFallback`. Group threshold: lowest value with precision >= 0.95 of the group answers on the val photos that the
+species rule leaves unidentified (a negative is right only if its own WoRMS group is the answer): **0.681**.
+
+**Results** (ONNX Runtime 1.20.1, CPU, app chain, no location; `eval_test.json`, `eval_indep.json`, `eval_new.py`):
+
+| Set | Top-1 / top-5 / macro | RAG_CORE cov. / prec. | RAG_TENTATIVE cov. / prec. | Negatives: core / tentative / unidentified |
+|---|---|---|---|---|
+| iNaturalist test (3 550 + 318 negatives) | 0.893 / 0.980 / 0.881 | 0.629 / 0.982 | 0.277 / 0.725 | 0.088 / 0.450 / 0.462 |
+| Independent (4 912 + 186 negatives) | 0.814 / 0.937 / 0.795 | 0.568 / 0.977 | 0.277 / 0.733 | 0.038 / 0.323 / 0.640 |
+
+tauHigh 0.936, tauLow 0.545 (v3: 0.904 / 0.525); the harder negatives lower the CORE coverage from 0.686 to 0.629 with
+the same precision. Group fallback: on the test photos left unidentified it answers 59 % of them with a group, right
+93.2 % of the time.
+
+| Subset | Top-1 | Identified (precision) | Possible (precision) | Unidentified -> with group (group right) |
+|---|---|---|---|---|
+| 30 new species, iNaturalist test (344) | 0.895 | 0.72 (1.000) | 0.20 (0.714) | 25 -> 18 (0.889) |
+| 30 new species, independent (805) | 0.892 | 0.68 (0.994) | 0.24 (0.791) | 65 -> 50 (0.980) |
+| Mantas *M. birostris* + *M. alfredi*, independent (47) | 0.447 | 0.09 | 0.68 (0.531) | 11 -> 8 (1.000) |
+
+The two tropical mantas are hard to tell apart (most confusions are *M. birostris* -> *M. alfredi*), but the most likely
+species is a manta in 92 % of the independent photos (73 % of 15 iNaturalist test photos) and every unidentified manta
+with a group gets "Sharks and rays".
+
+Files (`pack_v4/`, not committed; on Hugging Face as `species_pack_v4.json`, `species_index_v4.bin`,
+`species_catalog_v3.json`, `reference_provenance_v4.jsonl`; the encoder is the v3 file):
+
+```
+biodex_bioclip2_v3.onnx   aee44cd78984b1ea0f41364f881071040c4b648c124d73803d038d30eaac4bf7
+species_index_v4.bin      c46c173b462c6c03b0fae46de9f7a7f0f0689239f3f081407cbbe2bc7ea7f0cf   (232 species, 227 with photos, 23 668 references)
+species_catalog_v3.json   d206acdc67c82f35d5b786f2671550049f05c7bb6c967b17be4ff2f86b5a5e46
+```
