@@ -8,6 +8,9 @@ sealed interface SpeciesPackStatus {
     data object Ready : SpeciesPackStatus
     data object Missing : SpeciesPackStatus
 
+    /** Installed, but the repository publishes a newer pack version. */
+    data object UpdateAvailable : SpeciesPackStatus
+
     /** [progress] is null while preparing or installing (no byte count yet). */
     data class Downloading(
         val progress: Float?,
@@ -25,21 +28,27 @@ object SpeciesPackLogic {
      * Status of the pack. The download state is shared with the report and detector models, so it
      * only counts as the pack's own while [speciesSelected] says the last download was the pack's.
      */
-    fun status(installed: Boolean, speciesSelected: Boolean, state: VlmDownloadState): SpeciesPackStatus {
-        if (installed) return SpeciesPackStatus.Ready
-        if (!speciesSelected) return SpeciesPackStatus.Missing
+    fun status(
+        installed: Boolean,
+        speciesSelected: Boolean,
+        state: VlmDownloadState,
+        updateAvailable: Boolean = false,
+    ): SpeciesPackStatus {
+        if (installed && !updateAvailable) return SpeciesPackStatus.Ready
+        if (!speciesSelected) return if (installed) SpeciesPackStatus.UpdateAvailable else SpeciesPackStatus.Missing
         return when (state) {
             is VlmDownloadState.Downloading ->
                 SpeciesPackStatus.Downloading(state.progress, state.downloadedBytes, state.totalBytes)
             VlmDownloadState.Preparing, VlmDownloadState.Installing -> SpeciesPackStatus.Downloading(null)
             is VlmDownloadState.Error -> SpeciesPackStatus.Failed(state.kind)
-            else -> SpeciesPackStatus.Missing
+            else -> if (installed) SpeciesPackStatus.UpdateAvailable else SpeciesPackStatus.Missing
         }
     }
 
     /** The prompt that offers the download is hidden once the pack is installed. */
     fun offersDownload(status: SpeciesPackStatus): Boolean =
-        status is SpeciesPackStatus.Missing || status is SpeciesPackStatus.Failed
+        status is SpeciesPackStatus.Missing || status is SpeciesPackStatus.Failed ||
+            status is SpeciesPackStatus.UpdateAvailable
 
     /** True on the step where the pack goes from absent to installed, so a screen can resume its work. */
     fun justInstalled(previous: SpeciesPackStatus?, current: SpeciesPackStatus): Boolean =

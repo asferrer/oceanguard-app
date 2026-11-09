@@ -68,6 +68,7 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.species.SpeciesCatalog
+import com.oceanguard.ai.data.species.SpeciesGroups
 import com.oceanguard.ai.data.species.SpeciesIdSource
 import com.oceanguard.ai.data.species.SpeciesNames
 import com.oceanguard.ai.inference.species.IdentificationResult
@@ -493,15 +494,17 @@ private fun speciesBatchNormBoxes(
     catalog: SpeciesCatalog,
     unidentifiedLabel: String,
     possibleFormat: (String) -> String = { it },
+    groupTitle: (String) -> String = { it },
 ): List<NormBox> {
     if (done.imageWidth <= 0 || done.imageHeight <= 0) return emptyList()
     val lang = SpeciesNames.currentLanguage()
     return done.results.mapNotNull { result ->
         val bbox = result.bbox ?: return@mapNotNull null
-        val label = SpeciesNames.resultName(
-            result.speciesKey, result.scientificName, result.isUnidentified,
-            catalog, unidentifiedLabel, lang,
-        ).let { if (result.idSource == SpeciesIdSource.RAG_TENTATIVE) possibleFormat(it) else it }
+        val label = result.groupKey?.takeIf { result.isUnidentified }?.let(groupTitle)
+            ?: SpeciesNames.resultName(
+                result.speciesKey, result.scientificName, result.isUnidentified,
+                catalog, unidentifiedLabel, lang,
+            ).let { if (result.idSource == SpeciesIdSource.RAG_TENTATIVE) possibleFormat(it) else it }
         bboxToNormBox(
             x = bbox.x, y = bbox.y, width = bbox.width, height = bbox.height,
             imgWidth = done.imageWidth, imgHeight = done.imageHeight,
@@ -528,7 +531,7 @@ private fun SpeciesBatchThumbnailCard(item: SpeciesBatchItem, catalog: SpeciesCa
     val resources = LocalContext.current.resources
     val possibleFormat: (String) -> String = { resources.getString(R.string.species_possible_name, it) }
     val boxes = (state as? SpeciesBatchItemState.Done)?.let {
-        speciesBatchNormBoxes(it, catalog, unidentifiedLabel, possibleFormat)
+        speciesBatchNormBoxes(it, catalog, unidentifiedLabel, possibleFormat) { key -> SpeciesGroups.title(resources, key) }
     }
         ?: emptyList()
 
@@ -599,10 +602,12 @@ private fun SpeciesBatchThumbnailCard(item: SpeciesBatchItem, catalog: SpeciesCa
                 if (results.isNotEmpty()) {
                     val lang = Locale.getDefault().language
                     val top = results[0]
-                    val name = SpeciesNames.resultName(
-                        top.speciesKey, top.scientificName, top.isUnidentified,
-                        catalog, unidentifiedLabel, lang,
-                    ).let { if (top.idSource == SpeciesIdSource.RAG_TENTATIVE) possibleFormat(it) else it }
+                    val name = top.groupKey?.takeIf { top.isUnidentified }?.let { SpeciesGroups.title(resources, it) }
+                        ?: SpeciesNames.resultName(
+                            top.speciesKey, top.scientificName, top.isUnidentified,
+                            catalog, unidentifiedLabel, lang,
+                        ).let { if (top.idSource == SpeciesIdSource.RAG_TENTATIVE) possibleFormat(it) else it }
+                    val similar = if (top.isUnidentified) speciesSimilarLine(top, catalog, lang) else null
 
                     Box(
                         modifier = Modifier
@@ -624,6 +629,15 @@ private fun SpeciesBatchThumbnailCard(item: SpeciesBatchItem, catalog: SpeciesCa
                                 overflow = TextOverflow.Ellipsis,
                                 fontWeight = FontWeight.SemiBold,
                             )
+                            if (similar != null) {
+                                Text(
+                                    text = similar,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = SonarDarkColors.ink2,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                             if (results.size > 1) {
                                 Text(
                                     text = stringResource(R.string.species_batch_more, results.size - 1),
