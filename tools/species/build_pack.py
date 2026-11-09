@@ -151,8 +151,10 @@ def main() -> None:
     if args.int8:  # dynamic int8 weights; the fp32 export is removed from the pack
         from onnxruntime.quantization import QuantType, quantize_dynamic
         q_file = f"biodex_{args.encoder}_int8_v{args.version}.onnx"
+        # MatMul only: ONNX Runtime 1.20 (the app's) has no ConvInteger kernel for int8 weights, so a quantised
+        # patch-embedding Conv fails to load on the phone ("Could not find an implementation for ConvInteger").
         quantize_dynamic(str(args.out / enc_file), str(args.out / q_file), weight_type=QuantType.QInt8,
-                         per_channel=True)
+                         per_channel=True, op_types_to_quantize=["MatMul"])
         del sess
         (args.out / enc_file).unlink()
         enc_file = q_file

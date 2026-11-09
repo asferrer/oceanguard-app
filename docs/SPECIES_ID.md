@@ -208,7 +208,7 @@ calibrated thresholds.
 
 ## 8. Pack without CC-BY-SA references and check with photos from other sources (2026-11-09)
 
-Decision: BioCLIP ViT-B/16 RAG, int8 by default, reference index built **only from CC0 and CC-BY photos** (5 010 of
+Decision: BioCLIP ViT-B/16 RAG, **fp32 by default** (int8 does not run correctly on the phone, 8.4), reference index built **only from CC0 and CC-BY photos** (5 010 of
 the 5 442 train photos: 4 302 CC-BY + 708 CC0, 198 species) so the pack can be published as CC-BY 4.0. Before
 publishing it, it was run on real photos that do **not** come from iNaturalist.
 
@@ -245,7 +245,7 @@ first v2. `species_pack.json` (with self-test, cosine 1.000000 against the PC re
 | v2 with CC-BY-SA, fp32 | 0.643 | 0.863 | 0.624 | 0.282 / 0.941 | 0.085 / 0.729 | 0.836 |
 | v2 with CC-BY-SA, int8 | 0.604 | 0.834 | 0.588 | 0.227 / 0.966 | 0.125 / 0.775 | 0.869 |
 | **v2 CC-BY, fp32** | 0.643 | 0.858 | 0.621 | 0.281 / 0.945 | 0.112 / 0.706 | 0.830 |
-| **v2 CC-BY, int8 (default)** | 0.602 | 0.828 | 0.587 | 0.235 / 0.951 | 0.133 / 0.694 | 0.803 |
+| v2 CC-BY, int8 (not deployable, 8.4) | 0.602 | 0.828 | 0.587 | 0.235 / 0.951 | 0.133 / 0.694 | 0.803 |
 
 Coverage is over catalogue photos. Removing the CC-BY-SA references costs 0.0 to 0.2 points of top-1 and 0.5 to 0.6
 points of top-5 (the CC-BY-SA photos are 8 % of the gallery); int8 costs 4 points against fp32 in both. The v1 row is
@@ -283,10 +283,10 @@ points of top-5 (the CC-BY-SA photos are 8 % of the gallery); int8 costs 4 point
 | v2 with CC-BY-SA, fp32 | all | 0.599 | 0.824 | 0.572 | 0.312 / 0.924 | 0.102 / 0.705 | 0.818 |
 | v2 with CC-BY-SA, int8 | all | 0.559 | 0.790 | 0.540 | 0.226 / 0.948 | 0.149 / 0.761 | 0.830 |
 | v2 CC-BY, fp32 | all | 0.594 | 0.825 | 0.575 | 0.304 / 0.916 | 0.147 / 0.680 | 0.774 |
-| **v2 CC-BY, int8 (default)** | all | 0.550 | 0.785 | 0.540 | 0.241 / 0.935 | 0.153 / 0.692 | 0.804 |
+| v2 CC-BY, int8 (not deployable, 8.4) | all | 0.550 | 0.785 | 0.540 | 0.241 / 0.935 | 0.153 / 0.692 | 0.804 |
 | v1 published | photo_ok 3 712 | 0.416 | 0.716 | 0.449 | n/a | n/a | n/a |
 | v2 CC-BY, fp32 | photo_ok | 0.616 | 0.849 | 0.597 | 0.316 / 0.916 | 0.153 / 0.679 | 0.769 |
-| **v2 CC-BY, int8 (default)** | photo_ok | 0.570 | 0.809 | 0.559 | 0.252 / 0.934 | 0.159 / 0.688 | 0.796 |
+| v2 CC-BY, int8 (not deployable, 8.4) | photo_ok | 0.570 | 0.809 | 0.559 | 0.252 / 0.934 | 0.159 / 0.688 | 0.796 |
 
 Top-1 per source (int8 CC-BY, all): Observation.org 0.665 (n = 158), Explore Your Shore 0.591 (656), Norwegian
 service 0.578 (185), southern African fish 0.542 (83), Wikimedia Commons 0.540 (2 796), Arter.dk 0.477 (199).
@@ -313,3 +313,21 @@ read as *Eunicella cavolini*, a *Carcharodon carcharias* as *Mola mola*): the "i
 Files: `eval/indep_*.json` and `eval/inat_test_*.json` under the run folder (per-species table, confusions, 25 most
 confident errors); commands: `eval_pack.py --pack <pack> --rows data/indep/indep.jsonl --base data/indep`
 (independent) and `--rows <inat>/splits.jsonl --base <inat> --split test` (iNaturalist).
+
+### 8.4 Check on Android: int8 is not deployable, fp32 is the default
+
+Both packs were installed in the app (release APK, ONNX Runtime 1.20.0, Android 16 emulator with arm64 translation)
+and run on test photos:
+
+* **int8 as built above** does not load: ONNX Runtime 1.20 has no `ConvInteger` kernel for int8 weights, and
+  `quantize_dynamic` had quantised the patch-embedding convolution (`Could not find an implementation for
+  ConvInteger(10)`; reproduced on the PC with `onnxruntime==1.20.1`). `build_pack.py` now quantises MatMul only.
+* **int8, MatMul only** loads, but the self-test fails on the device: cosine 0.978 between the ARM embedding and the
+  PC embedding of the same pattern (minimum 0.99). The int8 kernels round differently on x86 and ARM, and on the PC
+  the int8 embedding is already 0.954 away from fp32 on that pattern, so the int8 figures above, measured on x86, do
+  not describe the phone. The app refuses the pack and now shows the encoder error instead of "no species".
+* **fp32** (`pack_v2_bioclip_fp32_ccby`): self-test cosine 1.0, about 0.6 s per photo on the emulator, correct answers
+  with high confidence on the test photos tried (*Chromis chromis* 0.99, *Thalassoma pavo* 0.85) and "not
+  identified" below the thresholds. It is the published default: 345 MB to download (the v1 encoder was 352 MB),
+  top-1 0.643 on the iNaturalist test split and 0.594 on the independent set, answers with high confidence for 30 %
+  of the independent photos with 91.6 % precision.
