@@ -13,6 +13,8 @@ data class HistoryFilter(
     val placeName: String? = null,
     val dateRangeStartMs: Long? = null,
     val dateRangeEndMs: Long? = null,
+    /** Debris analyses, species identifications or both. */
+    val kind: HistoryKind = HistoryKind.ALL,
 ) {
     /** True when anything narrows the list: what the "clear filters" action undoes. */
     val isActive: Boolean
@@ -42,7 +44,7 @@ data class HistoryFilter(
     }
 
     fun apply(sessions: List<DetectionSession>, placeNames: Map<Long, String>): List<DetectionSession> =
-        sessions.filter { matches(it, placeNames[it.id]) }
+        if (kind == HistoryKind.SPECIES) emptyList() else sessions.filter { matches(it, placeNames[it.id]) }
 
     private companion object {
         val WHITESPACE = Regex("\\s+")

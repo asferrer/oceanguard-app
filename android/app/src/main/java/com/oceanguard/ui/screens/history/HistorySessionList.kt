@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.DetectionSession
+import com.oceanguard.ai.data.species.SpeciesCatalog
 import com.oceanguard.ai.ui.components.sonar.SwipeUndoRow
 import com.oceanguard.ai.ui.components.sonar.UndoableDeletes
 import com.oceanguard.ai.ui.components.spotlight.spotlightTarget
@@ -38,7 +39,11 @@ class HistoryListActions(
     val onToggle: (Long) -> Unit,
     val onLongPress: (Long) -> Unit,
     val onEditLocation: (Long) -> Unit,
+    val onOpenSpecies: (String) -> Unit = {},
 )
+
+/** What the list needs to draw species identifications next to the debris analyses. */
+class HistorySpeciesContext(val catalog: SpeciesCatalog, val language: String)
 
 /** Analyses grouped by day under sticky headers. Swiping a card left deletes it, with undo. */
 @OptIn(ExperimentalFoundationApi::class)
@@ -52,36 +57,51 @@ fun HistorySessionList(
     actions: HistoryListActions,
     boundsMap: MutableMap<String, Rect>,
     modifier: Modifier = Modifier,
+    species: HistorySpeciesContext? = null,
 ) {
     val firstId = groups.firstOrNull()?.sessions?.firstOrNull()?.id
-    val total = groups.sumOf { it.sessions.size }
+    val withSpecies = species != null && !selecting
+    val total = groups.sumOf { it.sessions.size + if (withSpecies) it.species.size else 0 }
+    val mixed = groups.any { it.species.isNotEmpty() }
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(key = "count") { SessionCount(total) }
+        item(key = "count") { SessionCount(total, mixed && withSpecies) }
         groups.forEach { group ->
             stickyHeader(key = "day-${group.day}") { DayHeader(group) }
-            items(group.sessions, key = { it.id }) { session ->
-                SessionRow(
-                    session = session,
-                    geocoder = geocoder,
-                    selecting = selecting,
-                    checked = session.id in selectedIds,
-                    deletes = deletes,
-                    actions = actions,
-                    modifier = if (session.id == firstId) Modifier.spotlightTarget("history_card", boundsMap) else Modifier,
-                )
+            items(group.entries.filter { withSpecies || it is HistoryEntry.Debris }, key = { it.key }) { entry ->
+                when (entry) {
+                    is HistoryEntry.Debris -> SessionRow(
+                        session = entry.session,
+                        geocoder = geocoder,
+                        selecting = selecting,
+                        checked = entry.session.id in selectedIds,
+                        deletes = deletes,
+                        actions = actions,
+                        modifier = if (entry.session.id == firstId) Modifier.spotlightTarget("history_card", boundsMap) else Modifier,
+                    )
+                    is HistoryEntry.Species -> SpeciesHistoryCard(
+                        group = entry.group,
+                        catalog = species!!.catalog,
+                        language = species.language,
+                        geocoder = geocoder,
+                        onClick = { actions.onOpenSpecies(entry.group.key) },
+                        modifier = if (reducedMotionOff()) Modifier.animateItem() else Modifier,
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun SessionCount(count: Int) {
+private fun SessionCount(count: Int, mixed: Boolean) {
     Text(
-        text = if (count != 1) {
+        text = if (mixed) {
+            stringResource(R.string.history_entries_count, count)
+        } else if (count != 1) {
             stringResource(R.string.history_sessions_count_plural, count)
         } else {
             stringResource(R.string.history_sessions_count_singular, count)
@@ -124,6 +144,9 @@ private fun LazyItemScope.SessionRow(
         SwipeUndoRow(key = session.id, deletes = deletes, modifier = modifier.then(placement)) { card() }
     }
 }
+
+@Composable
+private fun reducedMotionOff(): Boolean = !LocalReducedMotion.current
 
 @Composable
 private fun DayHeader(group: HistoryDayGroup) {

@@ -41,6 +41,8 @@ import com.oceanguard.ai.OceanGuardApp
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.data.SessionDatesHelper
+import com.oceanguard.ai.data.species.SpeciesObservation
+import com.oceanguard.ai.data.species.SpeciesNames
 import com.oceanguard.ai.ui.MainViewModel
 import com.oceanguard.ai.ui.components.DataDotDatePickerDialog
 import com.oceanguard.ai.ui.components.SelectionTopBar
@@ -57,7 +59,11 @@ import com.oceanguard.ai.ui.screens.history.HistoryFilter
 import com.oceanguard.ai.ui.screens.history.HistoryFilterChips
 import com.oceanguard.ai.ui.screens.history.HistoryGrouping
 import com.oceanguard.ai.ui.screens.history.HistoryListActions
+import com.oceanguard.ai.ui.screens.history.HistoryKind
 import com.oceanguard.ai.ui.screens.history.HistoryScreenState
+import com.oceanguard.ai.ui.screens.history.HistorySpeciesContext
+import com.oceanguard.ai.ui.screens.history.SpeciesHistoryGrouping
+import com.oceanguard.ai.ui.screens.history.matchesSpecies
 import com.oceanguard.ai.ui.screens.history.HistorySearchField
 import com.oceanguard.ai.ui.screens.history.HistorySessionList
 import com.oceanguard.ai.ui.screens.history.HistoryTourOverlay
@@ -93,6 +99,13 @@ fun HistoryScreen(
     val visible = remember(sessions, state.filter, placeNames.toMap()) {
         state.filter.apply(sessions, placeNames)
     }
+    val observations by app.database.speciesObservationDao().getAll()
+        .collectAsStateWithLifecycle(initialValue = emptyList<SpeciesObservation>())
+    val language = remember { SpeciesNames.currentLanguage() }
+    val speciesGroups = remember(observations) { SpeciesHistoryGrouping.group(observations) }
+    val visibleSpecies = remember(speciesGroups, state.filter) {
+        speciesGroups.filter { state.filter.matchesSpecies(it, app.speciesCatalog, language) }
+    }
 
     BackHandler(enabled = state.selecting) { state.stopSelecting() }
     HistoryBulkDialogs(
@@ -125,6 +138,9 @@ fun HistoryScreen(
                 sessions = sessions,
                 loading = loaded == null,
                 visible = visible,
+                speciesGroups = speciesGroups,
+                visibleSpecies = visibleSpecies,
+                speciesContext = HistorySpeciesContext(app.speciesCatalog, language),
                 videoCount = videos.size,
                 videos = videos,
                 placeNames = placeNames.values.distinct().sorted(),
@@ -185,6 +201,9 @@ private fun HistoryBody(
     sessions: List<DetectionSession>,
     loading: Boolean,
     visible: List<DetectionSession>,
+    speciesGroups: List<com.oceanguard.ai.ui.screens.history.SpeciesHistoryGroup>,
+    visibleSpecies: List<com.oceanguard.ai.ui.screens.history.SpeciesHistoryGroup>,
+    speciesContext: HistorySpeciesContext,
     videoCount: Int,
     videos: List<com.oceanguard.ai.data.VideoAnalysis>,
     placeNames: List<String>,
@@ -202,11 +221,44 @@ private fun HistoryBody(
             HistoryVideoList(videos, onOpen = { navController.navigate("video_detail/$it") })
             return@Column
         }
-        PhotoFilters(sessions, placeNames, state, boundsMap)
-        PhotoList(sessions, loading, visible, state, boundsMap, navController, viewModel, snackbar, onEditLocation)
+        if (speciesGroups.isNotEmpty()) KindChips(state)
+        PhotoFilters(sessions, placeNames, state, boundsMap, speciesGroups.isNotEmpty())
+        PhotoList(
+            sessions, loading, visible, SpeciesPart(speciesGroups, visibleSpecies, speciesContext),
+            state, boundsMap, navController, viewModel, snackbar, onEditLocation,
+        )
     }
     HistoryDatePicker(sessions, state)
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun KindChips(state: HistoryScreenState) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        val kinds = listOf(
+            HistoryKind.ALL to R.string.history_kind_all,
+            HistoryKind.DEBRIS to R.string.history_kind_debris,
+            HistoryKind.SPECIES to R.string.history_kind_species,
+        )
+        for ((kind, label) in kinds) {
+            FilterChip(
+                selected = state.filter.kind == kind,
+                onClick = { state.filter = state.filter.copy(kind = kind) },
+                label = { Text(stringResource(label)) },
+            )
+        }
+    }
+}
+
+/** Species identifications of the history: all of them, the ones the filters keep, and how to draw them. */
+private class SpeciesPart(
+    val all: List<com.oceanguard.ai.ui.screens.history.SpeciesHistoryGroup>,
+    val visible: List<com.oceanguard.ai.ui.screens.history.SpeciesHistoryGroup>,
+    val context: HistorySpeciesContext,
+)
 
 @Composable
 private fun MediaTabs(photos: Int, videos: Int, state: HistoryScreenState, modifier: Modifier) {
@@ -240,6 +292,7 @@ private fun PhotoFilters(
     places: List<String>,
     state: HistoryScreenState,
     boundsMap: MutableMap<String, Rect>,
+    hasSpecies: Boolean = false,
 ) {
     HistorySearchField(
         query = state.filter.query,
@@ -249,7 +302,7 @@ private fun PhotoFilters(
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .spotlightTarget("history_search", boundsMap),
     )
-    if (sessions.isEmpty()) return
+    if (sessions.isEmpty() && !hasSpecies) return
     val types = remember(sessions) { sessions.flatMap { s -> s.debrisList.map { it.type } }.distinct().sorted() }
     HistoryFilterChips(
         filter = state.filter,
@@ -266,6 +319,7 @@ private fun PhotoList(
     sessions: List<DetectionSession>,
     loading: Boolean,
     visible: List<DetectionSession>,
+    species: SpeciesPart,
     state: HistoryScreenState,
     boundsMap: MutableMap<String, Rect>,
     navController: NavController,
@@ -278,11 +332,16 @@ private fun PhotoList(
     val deletes = rememberUndoableDeletes<Long>(snackbar) { id ->
         sessions.firstOrNull { it.id == id }?.let(viewModel::deleteSession)
     }
-    val groups = remember(visible) { HistoryGrouping.groupByDay(visible, System.currentTimeMillis()) }
+    val groups = remember(visible, species.visible) {
+        HistoryGrouping.groupByDay(visible, System.currentTimeMillis(), species = species.visible)
+    }
+    val kind = state.filter.kind
     when {
         loading -> ShimmerLoadingScreen(modifier = Modifier, itemCount = 5)
-        sessions.isEmpty() -> EmptyHistory()
-        visible.isEmpty() -> NoResults { state.filter = HistoryFilter() }
+        sessions.isEmpty() && species.all.isEmpty() -> EmptyHistory()
+        kind == HistoryKind.SPECIES && species.all.isEmpty() -> EmptySpeciesHistory()
+        kind == HistoryKind.DEBRIS && sessions.isEmpty() -> EmptyHistory()
+        visible.isEmpty() && species.visible.isEmpty() -> NoResults { state.filter = HistoryFilter() }
         else -> HistorySessionList(
             groups = groups,
             geocoder = app.geocoder,
@@ -294,9 +353,11 @@ private fun PhotoList(
                 onToggle = state::toggle,
                 onLongPress = { if (state.selecting) state.toggle(it) else state.startSelecting(it) },
                 onEditLocation = onEditLocation,
+                onOpenSpecies = { navController.navigate("species_analysis/$it") },
             ),
             boundsMap = boundsMap,
             modifier = Modifier.fillMaxSize(),
+            species = species.context,
         )
     }
 }
@@ -307,6 +368,16 @@ private fun EmptyHistory() {
         icon = Icons.Filled.History,
         title = stringResource(R.string.history_empty_title),
         message = stringResource(R.string.history_empty_message),
+        modifier = Modifier.fillMaxSize(),
+    )
+}
+
+@Composable
+private fun EmptySpeciesHistory() {
+    SonarEmptyState(
+        icon = Icons.Filled.History,
+        title = stringResource(R.string.history_species_empty_title),
+        message = stringResource(R.string.history_species_empty_message),
         modifier = Modifier.fillMaxSize(),
     )
 }

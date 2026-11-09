@@ -67,6 +67,20 @@ class SpeciesCatalog(@Volatile private var catalogFile: File) {
      */
     fun byKey(speciesKey: String): SpeciesCatalogEntry? = entries?.get(speciesKey)
 
+    @Volatile
+    private var byName: Pair<Map<String, SpeciesCatalogEntry>, Map<String, SpeciesCatalogEntry>>? = null
+
+    /**
+     * Entry whose binomial is [scientificName] (case-insensitive), or null. Observations carry the
+     * name, not the key, so the history and the reports resolve the catalogue through this.
+     */
+    fun byScientificName(scientificName: String): SpeciesCatalogEntry? {
+        val current = entries ?: return null
+        val index = byName?.takeIf { it.first === current }
+            ?: (current to current.values.associateBy { it.scientificName.lowercase() }).also { byName = it }
+        return index.second[scientificName.trim().lowercase()]
+    }
+
     /** Returns all entries in the loaded catalog. Empty list if not loaded. */
     fun all(): List<SpeciesCatalogEntry> = entries?.values?.toList() ?: emptyList()
 

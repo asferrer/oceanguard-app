@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="history_kind_all">Alle</string>
+    <string name="history_kind_debris">Abfall</string>
+    <string name="history_kind_species">Arten</string>
+    <string name="history_entries_count">Analysen: %1$d</string>
+    <string name="history_species_card_kind">Artbestimmung</string>
+    <string name="history_species_card_kind_legacy">Frühere Artbestimmungen</string>
+    <string name="history_species_names_more">%1$s und %2$d weitere</string>
+    <string name="history_species_counts">Arten: %1$d · Fotos: %2$d</string>
+    <string name="history_species_empty_title">Noch keine Arten bestimmt</string>
+    <string name="history_species_empty_message">Bestimme ein Tier im BioDex und sein Foto erscheint hier.</string>
+    <string name="species_analysis_title">Artbestimmung</string>
+    <string name="species_analysis_confidence">Konfidenz: %1$d%%</string>
+    <string name="species_analysis_open_biodex">Im BioDex ansehen</string>
+</resources>

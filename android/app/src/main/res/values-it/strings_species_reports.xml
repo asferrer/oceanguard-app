@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="history_kind_all">Tutto</string>
+    <string name="history_kind_debris">Rifiuti</string>
+    <string name="history_kind_species">Specie</string>
+    <string name="history_entries_count">Analisi: %1$d</string>
+    <string name="history_species_card_kind">Identificazione di specie</string>
+    <string name="history_species_card_kind_legacy">Identificazioni di specie precedenti</string>
+    <string name="history_species_names_more">%1$s e altre %2$d</string>
+    <string name="history_species_counts">Specie: %1$d · Foto: %2$d</string>
+    <string name="history_species_empty_title">Nessuna specie identificata finora</string>
+    <string name="history_species_empty_message">Identifica un animale dal BioDex e la sua foto apparirà qui.</string>
+    <string name="species_analysis_title">Identificazione di specie</string>
+    <string name="species_analysis_confidence">Confidenza: %1$d%%</string>
+    <string name="species_analysis_open_biodex">Vedi nel BioDex</string>
+</resources>
