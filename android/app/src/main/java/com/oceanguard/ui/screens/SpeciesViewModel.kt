@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.oceanguard.ai.utils.ImagePersistence
 import java.util.Locale
 
 // ---------------------------------------------------------------------------
@@ -248,9 +249,14 @@ class SpeciesViewModel(
 
     /** Persist the confident results; "possible" (tentative) and unidentified ones are not added to the BioDex. */
     private suspend fun saveIdentified(results: List<IdentificationResult>, uri: Uri, loc: Location?, analysisId: Long) {
-        resultsToSave(results).forEach { result ->
+        val toSave = resultsToSave(results)
+        if (toSave.isEmpty()) return
+        // Keep a copy in app storage (as the debris flow does): photo-picker content:// URIs lose their read
+        // permission when the app restarts, which left the BioDex gallery, history and reports without photos.
+        val stored = withContext(Dispatchers.IO) { ImagePersistence.persistImage(appContext, uri) }
+        toSave.forEach { result ->
             repo.saveObservation(
-                result = result, imageUri = uri.toString(), thumbnailUri = null, location = loc,
+                result = result, imageUri = stored, thumbnailUri = null, location = loc,
                 analysisId = analysisId,
             )
         }
