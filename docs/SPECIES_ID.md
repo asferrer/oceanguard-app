@@ -733,7 +733,7 @@ cyanea*, *Stenopus hispidus*, *Megaptera novaeangliae*, *Dugong dugon*, *Trichec
 in the catalogue: *Pterois miles*, *Amphiprion ocellaris*, *Chaetodon lunula*, *Acanthaster planci*). Catalogue v3
 (`species_catalog_v3.json`, 232 species): the 202 v2 entries unchanged; for the new ones AphiaID from WoRMS, MEOW
 ecoregions from up to 10 000 OBIS records per species mapped with the app raster (an ecoregion counts with >= 2 records),
-IUCN category from GBIF, names and descriptions with `build_catalog_v2.py` (31 names reviewed by hand, `CURATED`).
+IUCN category from GBIF, names and descriptions with `build_catalog_v2.py` (39 names reviewed by hand, `CURATED`).
 
 **Data.** Same pipeline as v3, run folder `C:/rerun_v9/runs/_species_v4_2026-11-09/` (scripts `select_species.py`,
 `prepare_data.py`, `catalog_new_entries.py`, `neg_groups.py`, `combine_indep.py`, `eval_new.py`): 60 photos per new species
@@ -742,7 +742,7 @@ as near-duplicates), up to 250 train references per species with `fetch_inat_mor
 *A. percula*, *P. hepatus* and *D. dugon* have no more CC0 / CC-BY photos from train observers), `dedupe_ext.py` against all
 held-out and independent photos (17 686 extra references kept), 655 independent photos of the new species from GBIF
 (non-iNaturalist) and Wikimedia Commons (`filter_indep.py`, `tag_non_photos.py`). Negatives: the 11 v3 negatives that are
-now catalogue species became catalogue photos (also in the independent set, 150 photos); 14 new negatives, mostly
+now catalogue species, and *Carcharodon carcharias* (already in the catalogue), became catalogue photos (also in the independent set, 150 photos); 14 new negatives, mostly
 look-alike relatives (*Pterois antennata*, *Amphiprion clarkii*, *A. frenatus*, *Chaetodon auriga*, *Acanthurus
 triostegus*, *Aetobatus ocellatus*, *Carcharhinus amblyrhynchos*, *Stegostoma tigrinum*, *Tursiops aduncus*, *Pomacanthus
 paru*, *Arothron meleagris*, *Lysmata amboinensis*, *Heniochus diphreutes*, *Acanthaster solaris*). The last two are
