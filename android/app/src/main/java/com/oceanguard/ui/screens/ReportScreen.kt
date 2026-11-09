@@ -24,8 +24,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalContext
@@ -38,6 +41,8 @@ import com.oceanguard.ai.R
 import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.data.GeneratedReport
 import com.oceanguard.ai.data.SettingsRepository
+import com.oceanguard.ai.data.species.SpeciesObservation
+import com.oceanguard.ai.inference.ReportType
 import com.oceanguard.ai.inference.TextModelTier
 import com.oceanguard.ai.inference.VlmDownloadState
 import com.oceanguard.ai.ui.MainViewModel
@@ -89,10 +94,13 @@ fun ReportScreen(
     val ui = remember { ReportUiState() }
     val snackbar = remember { SnackbarHostState() }
     val sessions by viewModel.allSessions.collectAsStateWithLifecycle(initialValue = emptyList())
-    val zones = rememberReportZones(sessions, preselectedLat, preselectedLon, preselectedName)
+    var type by rememberSaveable { mutableStateOf(ReportType.DEBRIS) }
+    val observations by app.database.speciesObservationDao().getAll()
+        .collectAsStateWithLifecycle(initialValue = emptyList<SpeciesObservation>())
+    val zones = rememberReportZones(sessions, observations, type, preselectedLat, preselectedLon, preselectedName)
     val choices = rememberReportChoices(app.settingsRepository)
-    val selection = remember(zones.selectedZone, choices.choices.period) {
-        ReportSelection.of(zones.selectedZone, choices.choices.period)
+    val selection = remember(zones.selectedArea, choices.choices.period, type) {
+        ReportSelection.ofArea(zones.selectedArea, choices.choices.period, type)
     }
     val boundsMap = rememberSpotlightBounds()
     val tour = rememberSpotlightController(TourDefinitions.REPORTS)
@@ -109,6 +117,9 @@ fun ReportScreen(
                 app = app,
                 ui = ui,
                 sessions = sessions,
+                hasObservations = observations.isNotEmpty(),
+                type = type,
+                onType = { type = it },
                 zones = zones,
                 choices = choices,
                 selection = selection,
@@ -156,6 +167,9 @@ private fun ReportPage(
     app: OceanGuardApp,
     ui: ReportUiState,
     sessions: List<DetectionSession>,
+    hasObservations: Boolean,
+    type: ReportType,
+    onType: (ReportType) -> Unit,
     zones: ReportZones,
     choices: ReportChoicesState,
     selection: ReportSelection,
@@ -182,6 +196,10 @@ private fun ReportPage(
             ReportSetupPanel(
                 zones = zones,
                 hasSessions = sessions.isNotEmpty(),
+                hasObservations = hasObservations,
+                type = type,
+                onType = onType,
+                selection = selection,
                 choices = choices.choices,
                 actions = choices.actions,
                 enabled = !data.info.generating,
@@ -229,12 +247,20 @@ private fun GenerateItem(
             downloadProgress = downloadProgress(data.download),
             generating = data.info.generating,
             hasZone = zones.selectedZone != null,
-            sessionCount = selection.sessions.size,
+            hasData = selection.ready,
+            missingData = missingDataMessage(selection),
         ),
         onGenerate = onGenerate,
         onCancelDownload = { app.vlmModelManager.cancelDownload() },
         boundsMap = boundsMap,
     )
+}
+
+/** What is missing for a species or combined report, or null when nothing is or it is a debris report. */
+private fun missingDataMessage(selection: ReportSelection): Int? = when {
+    selection.ready || selection.type == ReportType.DEBRIS -> null
+    selection.observations.isEmpty() -> R.string.report_no_species_data
+    else -> R.string.report_no_debris_data
 }
 
 @Composable

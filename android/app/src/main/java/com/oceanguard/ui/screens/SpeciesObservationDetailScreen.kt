@@ -38,6 +38,7 @@ import coil3.compose.AsyncImage
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.species.SpeciesCatalog
 import com.oceanguard.ai.data.species.SpeciesObservation
+import com.oceanguard.ai.data.species.entryFor
 import com.oceanguard.ai.ui.components.sonar.SonarCard
 import com.oceanguard.ai.ui.theme.SonarTheme
 import java.text.SimpleDateFormat
@@ -73,9 +74,7 @@ fun SpeciesObservationDetailScreen(
     onNavigateBack: () -> Unit,
 ) {
     val lang = remember { Locale.getDefault().language }
-    val catalogEntry = remember(observation.commonNameKey) {
-        observation.commonNameKey?.let { catalog.byKey(it) }
-    }
+    val catalogEntry = remember(observation) { catalog.entryFor(observation) }
     val displayName = remember(catalogEntry, lang) {
         catalogEntry?.commonNames?.get(lang)
             ?: catalogEntry?.commonNames?.get("en")

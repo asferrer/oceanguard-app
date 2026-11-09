@@ -450,6 +450,10 @@ data class GeneratedReport(
     val figPhotos: Int? = null,
     val figObjects: Int? = null,
     val figHealth: Int? = null,
+    // v15: "DEBRIS" (null on older reports), "SPECIES" or "COMBINED", and the species observations
+    // a species or combined report was written from (comma-separated ids).
+    val reportType: String? = null,
+    val observationIds: String? = null,
 )
 
 /**

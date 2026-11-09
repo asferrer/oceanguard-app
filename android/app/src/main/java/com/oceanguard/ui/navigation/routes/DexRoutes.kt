@@ -3,6 +3,7 @@ package com.oceanguard.ai.ui.navigation.routes
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
@@ -14,7 +15,9 @@ import com.oceanguard.ai.ui.navigation.oceanScreen
 import com.oceanguard.ai.ui.screens.AchievementsScreen
 import com.oceanguard.ai.ui.screens.MarineDexDetailScreen
 import com.oceanguard.ai.ui.screens.MarineDexScreen
+import com.oceanguard.ai.ui.screens.SpeciesAnalysisDetailScreen
 import com.oceanguard.ai.ui.screens.SpeciesBatchResultScreen
+import com.oceanguard.ai.ui.screens.history.SpeciesHistoryGrouping
 import com.oceanguard.ai.ui.screens.SpeciesBatchUiState
 import com.oceanguard.ai.ui.screens.SpeciesDexDetailScreen
 import com.oceanguard.ai.ui.screens.SpeciesDexScreen
@@ -106,6 +109,22 @@ private fun NavGraphBuilder.bioDexRoutes(context: OceanNavContext) {
             enrichmentProvider = { aphiaId, name ->
                 app.speciesEnrichmentRepository.enrich(aphiaId, name)
             },
+        )
+    }
+    oceanScreen(
+        route = "species_analysis/{key}",
+        arguments = listOf(navArgument("key") { type = NavType.StringType }),
+    ) { entry ->
+        val key = entry.arguments?.getString("key") ?: return@oceanScreen
+        val all by app.database.speciesObservationDao().getAll()
+            .collectAsStateWithLifecycle(initialValue = emptyList())
+        val rows = remember(all, key) { SpeciesHistoryGrouping.observationsOf(key, all) }
+        SpeciesAnalysisDetailScreen(
+            observations = rows,
+            catalog = app.speciesCatalog,
+            onNavigateBack = { navController.popBackStack() },
+            onOpenSpecies = { navController.navigate("biodex/$it") },
+            onOpenObservation = { navController.navigate("species_observation/$it") },
         )
     }
     oceanScreen(

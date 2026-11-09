@@ -26,12 +26,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.oceanguard.ai.R
-import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.ui.components.sonar.SonarButton
 import com.oceanguard.ai.ui.components.sonar.SonarButtonStyle
 import com.oceanguard.ai.ui.screens.results.ExportBlock
 import com.oceanguard.ai.ui.screens.results.ReportExportFormat
-import com.oceanguard.ai.ui.screens.results.exportBlock
 
 /**
  * Formats the open report can be exported in. A format that cannot be produced stays visible
@@ -40,7 +38,8 @@ import com.oceanguard.ai.ui.screens.results.exportBlock
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ReportExportSheet(
-    sessions: List<DetectionSession>,
+    blockOf: (ReportExportFormat) -> ExportBlock?,
+    canAddLocation: Boolean,
     onExport: (ReportExportFormat) -> Unit,
     onAddLocation: () -> Unit,
     onDismiss: () -> Unit,
@@ -54,9 +53,9 @@ internal fun ReportExportSheet(
                 modifier = Modifier.padding(bottom = 8.dp),
             )
             for (format in ReportExportFormat.entries) {
-                val block = exportBlock(format, sessions)
+                val block = blockOf(format)
                 ExportRow(format, block) { onExport(format) }
-                if (block == ExportBlock.NO_LOCATION) {
+                if (block == ExportBlock.NO_LOCATION && canAddLocation) {
                     SonarButton(
                         text = stringResource(R.string.results_add_location),
                         onClick = onAddLocation,

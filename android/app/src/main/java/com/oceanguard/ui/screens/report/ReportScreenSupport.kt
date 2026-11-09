@@ -10,6 +10,9 @@ import com.oceanguard.ai.data.GeneratedReport
 import com.oceanguard.ai.data.ZoneAggregator
 import com.oceanguard.ai.data.ZoneCluster
 import com.oceanguard.ai.data.settings.ReportPeriodSelection
+import com.oceanguard.ai.data.species.SpeciesObservation
+import com.oceanguard.ai.inference.ReportType
+import com.oceanguard.ai.inference.SpeciesReportInput
 import com.oceanguard.ai.inference.ZoneReportInput
 import com.oceanguard.ai.ui.screens.results.inRange
 
@@ -50,20 +53,57 @@ internal class ReportUiState {
     }
 }
 
-/** Sessions and days of the chosen zone that fall inside the chosen period. */
+/**
+ * Sessions, days and species observations of the chosen area that fall inside the chosen period,
+ * for the chosen [type] of report.
+ */
 internal class ReportSelection(
     val sessions: List<DetectionSession>,
     val days: List<DayGroup>,
     val startMs: Long?,
     val endMs: Long?,
+    val observations: List<SpeciesObservation> = emptyList(),
+    val type: ReportType = ReportType.DEBRIS,
 ) {
+    /** Whether there is data to write this kind of report: both kinds for a combined one. */
+    val ready: Boolean
+        get() = when (type) {
+            ReportType.DEBRIS -> sessions.isNotEmpty()
+            ReportType.SPECIES -> observations.isNotEmpty()
+            ReportType.COMBINED -> sessions.isNotEmpty() && observations.isNotEmpty()
+        }
+
     companion object {
+        /** The selection of [area] for a report of [type], limited to the period. */
+        fun ofArea(area: ReportArea?, period: ReportPeriodSelection, type: ReportType, nowMs: Long = System.currentTimeMillis()): ReportSelection {
+            val (start, end) = period.range(nowMs)
+            val base = of(area?.zone, period, nowMs)
+            val observations = area?.observations.orEmpty().filter { inRange(it.timestamp.time, start, end) }
+            return ReportSelection(
+                if (type.hasDebris) base.sessions else emptyList(), base.days, start, end, observations, type,
+            )
+        }
+
         fun of(zone: ZoneCluster?, period: ReportPeriodSelection, nowMs: Long = System.currentTimeMillis()): ReportSelection {
             val (start, end) = period.range(nowMs)
             val sessions = zone?.sessions.orEmpty().filter { inRange(it.timestamp.time, start, end) }
             val days = zone?.let { ZoneAggregator.groupByDay(it) }.orEmpty().filter { inRange(it.date.time, start, end) }
             return ReportSelection(sessions, days, start, end)
         }
+    }
+
+    fun toSpeciesInput(zones: ReportZones): SpeciesReportInput {
+        val zone = requireNotNull(zones.selectedZone) { "An area must be selected to build the report input" }
+        return SpeciesReportInput(
+            type = type,
+            locationName = zones.selectedName,
+            centroidLat = zone.centroidLat,
+            centroidLon = zone.centroidLon,
+            observations = observations,
+            sessions = if (type.hasDebris) sessions else emptyList(),
+            dateRangeStartMs = startMs,
+            dateRangeEndMs = endMs,
+        )
     }
 
     fun toInput(zones: ReportZones): ZoneReportInput {

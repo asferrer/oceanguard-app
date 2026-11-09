@@ -33,3 +33,22 @@ internal val MIGRATION_13_14 = object : Migration(13, 14) {
         db.execSQL("ALTER TABLE generated_reports ADD COLUMN figHealth INTEGER")
     }
 }
+
+/**
+ * v14 -> v15: species in the history and in reports.
+ *
+ * - `species_observations.analysisId`: the identification run (a photo or a gallery batch) a row
+ *   belongs to. NULL on old rows, which the history groups by day.
+ * - `generated_reports.reportType` and `observationIds`: what the report covers and which species
+ *   observations it was written from. NULL on old reports, which are all debris reports.
+ */
+internal val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE species_observations ADD COLUMN analysisId INTEGER")
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_species_observations_analysisId ON species_observations (analysisId)"
+        )
+        db.execSQL("ALTER TABLE generated_reports ADD COLUMN reportType TEXT")
+        db.execSQL("ALTER TABLE generated_reports ADD COLUMN observationIds TEXT")
+    }
+}

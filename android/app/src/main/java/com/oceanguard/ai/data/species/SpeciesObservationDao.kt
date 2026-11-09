@@ -54,6 +54,10 @@ interface SpeciesObservationDao {
     """)
     fun getForSpecies(aphiaIdStr: String?, scientificName: String): Flow<List<SpeciesObservation>>
 
+    /** The observations a report was written from, newest first; ids that no longer exist are skipped. */
+    @Query("SELECT * FROM species_observations WHERE id IN (:ids) ORDER BY timestamp DESC")
+    suspend fun getByIds(ids: List<Long>): List<SpeciesObservation>
+
     @Query("SELECT COUNT(*) FROM species_observations")
     fun getTotalCount(): Flow<Int>
 

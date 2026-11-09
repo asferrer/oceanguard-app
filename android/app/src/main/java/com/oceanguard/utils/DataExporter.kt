@@ -7,6 +7,8 @@ import android.util.Log
 import androidx.core.content.FileProvider
 import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.data.GeneratedReport
+import com.oceanguard.ai.data.species.SpeciesCatalog
+import com.oceanguard.ai.data.species.SpeciesObservation
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -69,6 +71,31 @@ object DataExporter {
         }
         return writeTextExport(context, "oceanguard_export_${FILE_TIMESTAMP_FORMAT.format(Date())}.geojson") {
             sessionsToExportGeoJson(sessions)
+        }
+    }
+
+    /** Writes the species observations as CSV (see [observationsToCsv]); null when there are none. */
+    fun exportObservationsToCsv(context: Context, observations: List<SpeciesObservation>, catalog: SpeciesCatalog, language: String): Uri? {
+        if (observations.isEmpty()) return null
+        return writeTextExport(context, "oceanguard_species_${FILE_TIMESTAMP_FORMAT.format(Date())}.csv") {
+            observationsToCsv(observations, catalog, language)
+        }
+    }
+
+    /**
+     * Writes a GeoJSON of the located species observations and, for a combined report, of the
+     * debris sessions too. Null when nothing has a location or the write failed.
+     */
+    fun exportSpeciesGeoJson(
+        context: Context,
+        sessions: List<DetectionSession>,
+        observations: List<SpeciesObservation>,
+        catalog: SpeciesCatalog,
+        language: String,
+    ): Uri? {
+        if (sessions.none { it.location != null } && observations.none { it.location != null }) return null
+        return writeTextExport(context, "oceanguard_species_${FILE_TIMESTAMP_FORMAT.format(Date())}.geojson") {
+            combinedToGeoJson(sessions, observations, catalog, language)
         }
     }
 

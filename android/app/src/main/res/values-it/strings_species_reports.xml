@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="history_kind_all">Tutto</string>
+    <string name="history_kind_debris">Rifiuti</string>
+    <string name="history_kind_species">Specie</string>
+    <string name="history_entries_count">Analisi: %1$d</string>
+    <string name="history_species_card_kind">Identificazione di specie</string>
+    <string name="history_species_card_kind_legacy">Identificazioni di specie precedenti</string>
+    <string name="history_species_names_more">%1$s e altre %2$d</string>
+    <string name="history_species_counts">Specie: %1$d · Foto: %2$d</string>
+    <string name="history_species_empty_title">Nessuna specie identificata finora</string>
+    <string name="history_species_empty_message">Identifica un animale dal BioDex e la sua foto apparirà qui.</string>
+    <string name="species_analysis_title">Identificazione di specie</string>
+    <string name="species_analysis_confidence">Confidenza: %1$d%%</string>
+    <string name="species_analysis_open_biodex">Vedi nel BioDex</string>
+    <string name="report_type_title">Tipo di rapporto</string>
+    <string name="report_type_debris">Rifiuti</string>
+    <string name="report_type_species">Specie</string>
+    <string name="report_type_combined">Rifiuti e specie</string>
+    <string name="report_no_species_data">Nessuna specie identificata in quest\'area e periodo. Scegli un\'altra area o un altro periodo, oppure identifica prima un animale.</string>
+    <string name="report_no_debris_data">Non ci sono analisi di rifiuti in quest\'area e periodo, quindi non si può scrivere un rapporto combinato. Scegli un altro periodo o il tipo Specie.</string>
+    <string name="report_no_species_yet">Nessuna specie identificata finora. Identifica un animale dal BioDex per scrivere rapporti sulle specie.</string>
+    <string name="report_species_no_gps">Nessuna delle tue identificazioni di specie ha una posizione, quindi non c\'è un\'area di cui scrivere. Identifica gli animali con la posizione attiva.</string>
+    <string name="report_area_species">Specie: %1$d osservazioni, %2$d specie</string>
+    <string name="report_area_debris">Rifiuti: %1$d foto, %2$d oggetti</string>
+    <string name="report_figure_observations">Osservazioni</string>
+    <string name="report_figure_species">Specie</string>
+    <string name="report_figure_threatened">Minacciate</string>
+    <string name="report_species_photos_title">Foto delle identificazioni</string>
+    <string name="report_species_map_title">Dove sono state viste</string>
+</resources>

@@ -26,6 +26,12 @@ import com.oceanguard.ai.inference.ReportAudience
 import com.oceanguard.ai.inference.ReportGenerator
 import com.oceanguard.ai.inference.ToolReportGenerator
 import com.oceanguard.ai.inference.ReportValidator
+import com.oceanguard.ai.inference.SpeciesReportAssembler
+import com.oceanguard.ai.inference.SpeciesReportBundle
+import com.oceanguard.ai.inference.SpeciesReportContext
+import com.oceanguard.ai.inference.SpeciesReportGenerator
+import com.oceanguard.ai.inference.SpeciesReportInput
+import com.oceanguard.ai.inference.SpeciesReportValidator
 import com.oceanguard.ai.inference.Gemma4PromptFormatter
 import com.oceanguard.ai.inference.TextModelTier
 import com.oceanguard.ai.inference.TextModelVariant
@@ -1115,6 +1121,122 @@ class OceanGuardApp : Application(), ContributionHost {
                 reportGenerationState.value = ReportGenerationState.Error(lastError.message ?: "Unknown error")
             }
             scheduleVlmRelease()
+        }
+    }
+
+    /**
+     * Launch the report of a species or combined (debris and species) area and period. Same flow as
+     * [launchZoneReportGeneration]: foreground service, retry with the smaller tier, auto-save. Only
+     * Gemma 4 (LiteRT-LM) writes it, through typed tools; any other engine gets the deterministic
+     * report (headings and tables, no prose), saved as a template.
+     */
+    fun launchSpeciesReportGeneration(input: SpeciesReportInput, language: String) {
+        val currentState = reportGenerationState.value
+        if (currentState is ReportGenerationState.Generating ||
+            currentState is ReportGenerationState.LoadingModel) return
+        vlmReleaseJob?.cancel()
+        startForegroundReportService()
+        applicationScope.launch {
+            val audience = ReportAudience.fromKey(settingsRepository.getReportAudienceSync())
+            val ctx = SpeciesReportContext(
+                input.type, input.observations, input.sessions, speciesCatalog, language, audience,
+                input.dateRangeStartMs, input.dateRangeEndMs,
+            )
+            val tiers = reportRetryTiers()
+            var lastError: Throwable? = null
+            for ((attempt, tier) in tiers.withIndex()) {
+                try {
+                    val engine = loadTextEngineIfNeeded(forceTier = tier)
+                    reportGenerationState.value = ReportGenerationState.Generating
+                    val tracker = GenerationTracker(maxTokens = 2200)
+                    val written = writeSpeciesReport(engine, ctx, tracker)
+                    val report = speciesReportRecord(input, ctx, written.first, written.second, language, audience, tier, engine)
+                    val id = database.generatedReportDao().insert(report)
+                    validateAndPersistSpecies(id, written.first, ctx)
+                    reportGenerationState.value = ReportGenerationState.Complete(report.copy(id = id))
+                    Log.i(TAG, "${input.type} report saved (id=$id, tier=${tier.displayName}, attempt=${attempt + 1})")
+                    lastError = null
+                    break
+                } catch (e: Exception) {
+                    lastError = e
+                    Log.w(TAG, "${input.type} report attempt ${attempt + 1}/${tiers.size} with ${tier.displayName} failed: ${e.message}", e)
+                    if (attempt < tiers.lastIndex) delay(1_500L * (attempt + 1))
+                }
+            }
+            if (lastError != null) {
+                Log.e(TAG, "${input.type} report generation failed after ${tiers.size} attempt(s)", lastError)
+                modelLoadingState.update { it.copy(qwenText = ModelStatus.Error) }
+                reportGenerationState.value = ReportGenerationState.Error(lastError.message ?: "Unknown error")
+            }
+            scheduleVlmRelease()
+        }
+    }
+
+    /** The text of a species report and whether a model wrote it (false: deterministic template). */
+    private suspend fun writeSpeciesReport(
+        engine: VlmTextEngine,
+        ctx: SpeciesReportContext,
+        tracker: GenerationTracker,
+    ): Pair<String, Boolean> {
+        if (engine !is LiteRTTextEngine) {
+            return SpeciesReportAssembler.template(ctx, SpeciesReportBundle.build(ctx)) to false
+        }
+        val toolCounter = java.util.concurrent.atomic.AtomicInteger(0)
+        var lastProgress: Pair<Int, Int> = 0 to 0
+        val text = SpeciesReportGenerator(engine).generate(
+            ctx = ctx,
+            onPartialResult = { partial -> reportGenerationState.value = tracker.snapshot(partial) },
+            onToolCallStarted = { name ->
+                reportGenerationState.value = ReportGenerationState.ToolExecuting(
+                    toolName = name,
+                    sequence = toolCounter.incrementAndGet(),
+                    progressCurrent = lastProgress.first,
+                    progressTotal = lastProgress.second,
+                )
+            },
+            onToolCallProgress = { current, total, _ -> lastProgress = current to total },
+            onPhaseChanged = { phase ->
+                if (phase == com.oceanguard.ai.inference.ReportPhase.PHASE_2_PROSE) {
+                    reportGenerationState.value = ReportGenerationState.ComposingProse
+                }
+            },
+        )
+        return text to true
+    }
+
+    private fun speciesReportRecord(
+        input: SpeciesReportInput,
+        ctx: SpeciesReportContext,
+        text: String,
+        usedAi: Boolean,
+        language: String,
+        audience: ReportAudience,
+        tier: TextModelTier,
+        engine: VlmTextEngine,
+    ): GeneratedReport = GeneratedReport(
+        text = text,
+        language = language,
+        sessionCount = ctx.photoCount + input.sessions.size,
+        usedAi = usedAi,
+        locationName = input.locationName,
+        centroidLat = input.centroidLat,
+        centroidLon = input.centroidLon,
+        dateRangeStartMs = input.dateRangeStartMs,
+        dateRangeEndMs = input.dateRangeEndMs,
+        audience = audience.name.lowercase(),
+        sessionIds = input.sessions.joinToString(",") { it.id.toString() }.ifEmpty { null },
+        modelName = if (usedAi) reportModelName(tier, engine) else null,
+        reportType = input.type.name,
+        observationIds = input.observations.joinToString(",") { it.id.toString() },
+    ).let { if (input.sessions.isEmpty()) it else it.withFigures(input.sessions) }
+
+    private suspend fun validateAndPersistSpecies(reportId: Long, text: String, ctx: SpeciesReportContext) {
+        try {
+            val validation = SpeciesReportValidator.validate(text, ctx, SpeciesReportBundle.build(ctx))
+            database.generatedReportDao().updateValidation(reportId, validation.overallScore, validation.toJsonString())
+            Log.i(TAG, "Species report $reportId validated: ${validation.toSummaryString()}")
+        } catch (e: Exception) {
+            Log.w(TAG, "Species report validation failed for id=$reportId", e)
         }
     }
 
