@@ -283,6 +283,7 @@ class SpeciesBioDexM5Test {
             override fun getTotalCount(): Flow<Int> = flowOf(0)
             override suspend fun deleteById(id: Long) {}
             override suspend fun getAllAscending(): List<SpeciesObservation> = emptyList()
+            override suspend fun renameSpecies(oldName: String, newName: String, newAphiaId: Long?) {}
         }
         val stubDexDao = object : SpeciesDexDao {
             override fun getAll() = flowOf<List<com.oceanguard.ai.data.species.SpeciesDexEntry>>(emptyList())

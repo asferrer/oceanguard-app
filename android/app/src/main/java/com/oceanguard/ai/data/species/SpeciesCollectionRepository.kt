@@ -168,6 +168,50 @@ class SpeciesCollectionRepository(
         }
     }
 
+    /**
+     * Fold the BioDex entries and observations of merged species keys (pack `merged`:
+     * old key -> new key) into the new key: counters add up, the first sighting is the
+     * earliest, the last the latest, and the favourite flag is kept if either had it.
+     * Idempotent, so it can run every time the pack loads. A pair whose new key is not
+     * in the loaded catalogue is skipped (nothing would show it) and retried next time.
+     *
+     * @return number of dex entries that were migrated.
+     */
+    suspend fun mergeSpeciesKeys(merged: Map<String, String>): Int {
+        var migrated = 0
+        for ((oldKey, newKey) in merged) {
+            val target = catalog.byKey(newKey) ?: continue
+            val old = speciesDexDao.getByKey(oldKey)
+            val oldName = old?.scientificName ?: catalog.byKey(oldKey)?.scientificName
+            if (oldName != null && oldName != target.scientificName) {
+                speciesObservationDao.renameSpecies(oldName, target.scientificName, target.aphiaId)
+            }
+            if (old == null) continue
+            val existing = speciesDexDao.getByKey(newKey)
+            speciesDexDao.upsert(mergeEntries(old, existing, newKey, target.scientificName))
+            speciesDexDao.deleteByKey(oldKey)
+            migrated++
+        }
+        if (migrated > 0) {
+            Log.i(TAG, "Merged $migrated BioDex entries into their new species key")
+            achievementChecker?.checkSpeciesAchievements()
+        }
+        return migrated
+    }
+
+    private fun mergeEntries(old: SpeciesDexEntry, existing: SpeciesDexEntry?, key: String, name: String): SpeciesDexEntry {
+        if (existing == null) return old.copy(speciesKey = key, scientificName = name)
+        val first = if (old.firstSeenAt < existing.firstSeenAt) old else existing
+        return existing.copy(
+            scientificName = name,
+            firstSeenAt = first.firstSeenAt,
+            firstSeenObservationId = first.firstSeenObservationId,
+            timesObserved = existing.timesObserved + old.timesObserved,
+            lastSeenAt = maxOf(existing.lastSeenAt, old.lastSeenAt),
+            isFavorite = existing.isFavorite || old.isFavorite,
+        )
+    }
+
     /** Toggle the favourite flag for a dex entry. No-op if key not found. */
     suspend fun setFavorite(speciesKey: String, favorite: Boolean) {
         speciesDexDao.setFavorite(speciesKey, favorite)

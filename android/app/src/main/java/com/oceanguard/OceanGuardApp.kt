@@ -345,6 +345,13 @@ class OceanGuardApp : Application(), ContributionHost {
             // not loaded the locator falls back to a centre crop and the candidate
             // choice is skipped.
             vlmEngine = com.oceanguard.ai.inference.species.LiteRTImageEngine(sharedLiteRTEngine),
+            // Pack v3 `merged`: BioDex entries of a merged species move under the new key.
+            onMergedKeys = { merged ->
+                applicationScope.launch(Dispatchers.IO) {
+                    runCatching { speciesCollectionRepository.mergeSpeciesKeys(merged) }
+                        .onFailure { android.util.Log.w("OceanGuardApp", "Species key merge failed", it) }
+                }
+            },
         )
     }
 

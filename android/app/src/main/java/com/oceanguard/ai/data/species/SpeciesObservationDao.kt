@@ -60,6 +60,10 @@ interface SpeciesObservationDao {
     @Query("DELETE FROM species_observations WHERE id = :id")
     suspend fun deleteById(id: Long)
 
+    /** Re-label the observations of a merged species under its new name and AphiaID. */
+    @Query("UPDATE species_observations SET scientificName = :newName, aphiaId = :newAphiaId WHERE scientificName = :oldName")
+    suspend fun renameSpecies(oldName: String, newName: String, newAphiaId: Long?)
+
     @Query("SELECT * FROM species_observations ORDER BY timestamp ASC")
     suspend fun getAllAscending(): List<SpeciesObservation>
 }
