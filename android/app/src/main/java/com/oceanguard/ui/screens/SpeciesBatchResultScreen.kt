@@ -54,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +66,7 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.species.SpeciesCatalog
+import com.oceanguard.ai.data.species.SpeciesIdSource
 import com.oceanguard.ai.data.species.SpeciesNames
 import com.oceanguard.ai.inference.species.IdentificationResult
 import com.oceanguard.ai.ui.components.sonar.SonarCard
@@ -487,6 +489,7 @@ private fun speciesBatchNormBoxes(
     done: SpeciesBatchItemState.Done,
     catalog: SpeciesCatalog,
     unidentifiedLabel: String,
+    possibleFormat: (String) -> String = { it },
 ): List<NormBox> {
     if (done.imageWidth <= 0 || done.imageHeight <= 0) return emptyList()
     val lang = SpeciesNames.currentLanguage()
@@ -495,7 +498,7 @@ private fun speciesBatchNormBoxes(
         val label = SpeciesNames.resultName(
             result.speciesKey, result.scientificName, result.isUnidentified,
             catalog, unidentifiedLabel, lang,
-        )
+        ).let { if (result.idSource == SpeciesIdSource.RAG_TENTATIVE) possibleFormat(it) else it }
         bboxToNormBox(
             x = bbox.x, y = bbox.y, width = bbox.width, height = bbox.height,
             imgWidth = done.imageWidth, imgHeight = done.imageHeight,
@@ -519,7 +522,11 @@ private fun SpeciesBatchThumbnailCard(item: SpeciesBatchItem, catalog: SpeciesCa
     // Empty when no bbox (whole-frame fallback) or the size is unknown — the cell
     // then shows the plain cropped thumbnail.
     val unidentifiedLabel = stringResource(R.string.species_unidentified)
-    val boxes = (state as? SpeciesBatchItemState.Done)?.let { speciesBatchNormBoxes(it, catalog, unidentifiedLabel) }
+    val resources = LocalContext.current.resources
+    val possibleFormat: (String) -> String = { resources.getString(R.string.species_possible_name, it) }
+    val boxes = (state as? SpeciesBatchItemState.Done)?.let {
+        speciesBatchNormBoxes(it, catalog, unidentifiedLabel, possibleFormat)
+    }
         ?: emptyList()
 
     Card(
@@ -592,7 +599,7 @@ private fun SpeciesBatchThumbnailCard(item: SpeciesBatchItem, catalog: SpeciesCa
                     val name = SpeciesNames.resultName(
                         top.speciesKey, top.scientificName, top.isUnidentified,
                         catalog, unidentifiedLabel, lang,
-                    )
+                    ).let { if (top.idSource == SpeciesIdSource.RAG_TENTATIVE) possibleFormat(it) else it }
 
                     Box(
                         modifier = Modifier

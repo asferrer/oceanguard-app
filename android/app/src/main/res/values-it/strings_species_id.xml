@@ -5,4 +5,7 @@
     <string name="species_unidentified_hint">Candidate più vicine: %1$s</string>
     <string name="species_badge_unidentified">Non identificata</string>
     <string name="species_badge_gemma">Scelta da Gemma</string>
+    <string name="species_badge_confident">Identificata</string>
+    <string name="species_badge_possible">Possibile</string>
+    <string name="species_possible_name">Possibile: %1$s</string>
 </resources>

@@ -369,9 +369,9 @@ private fun CompactSpeciesResultCard(result: IdentificationResult, catalog: Spec
 private fun IdSourceBadgeRow(result: IdentificationResult) {
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         val sourceLabel = when (result.idSource) {
-            SpeciesIdSource.RAG_CORE      -> "RAG Core"
+            SpeciesIdSource.RAG_CORE      -> stringResource(R.string.species_badge_confident)
             SpeciesIdSource.RAG_TENTATIVE ->
-                if (result.vlmChosen) stringResource(R.string.species_badge_gemma) else "RAG Tentative"
+                if (result.vlmChosen) stringResource(R.string.species_badge_gemma) else stringResource(R.string.species_badge_possible)
             SpeciesIdSource.VLM_OPENVOCAB -> "Open Vocab"
             SpeciesIdSource.UNIDENTIFIED  -> stringResource(R.string.species_badge_unidentified)
         }
