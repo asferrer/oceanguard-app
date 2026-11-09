@@ -24,6 +24,10 @@ import com.oceanguard.ai.data.species.SpeciesIdSource
  * @param candidates      Best catalogue candidates of the visual search (top-k),
  *                        also kept for unidentified results as "possible" hints.
  * @param vlmChosen       True when Gemma chose this species among [candidates].
+ * @param groupKey        Catalogue group (e.g. "sharks_rays") whose summed probability reached the
+ *                        pack's `groupFallback` threshold; only on unidentified results. It is a hint:
+ *                        the result stays not confident and is never saved to the BioDex.
+ * @param groupConfidence Summed probability of [groupKey], 0 without a group.
  */
 data class IdentificationResult(
     val speciesKey: String,
@@ -39,6 +43,8 @@ data class IdentificationResult(
     val freeLabel: String? = null,
     val candidates: List<SpeciesMatch> = emptyList(),
     val vlmChosen: Boolean = false,
+    val groupKey: String? = null,
+    val groupConfidence: Float = 0f,
 ) {
     /** True when the pipeline gave no species (honest "not identified" answer). */
     val isUnidentified: Boolean get() = idSource == SpeciesIdSource.UNIDENTIFIED
@@ -76,6 +82,7 @@ data class IdentificationResult(
  *
  * @param vlmChoiceTopK Candidates offered to Gemma in the tentative band (0 = off).
  * @param vlmCropper    Builds the (larger) crop shown to Gemma from the full frame.
+ * @param groupFallbackThreshold Pack `groupFallback.threshold`; null = no group hint.
  */
 class SpeciesIdentifier(
     private val embedder: SpeciesEmbedder,
@@ -87,6 +94,7 @@ class SpeciesIdentifier(
     private val isBlankFrame: (Bitmap) -> Boolean = ImageContentCheck::isBlank,
     private val vlmChoiceTopK: Int = DEFAULT_CHOICE_TOP_K,
     private val vlmCropper: (Bitmap, OrganismCrop) -> Bitmap = ::defaultVlmCrop,
+    private val groupFallbackThreshold: Float? = null,
 ) {
     companion object {
         private const val TAG = "SpeciesIdentifier"
@@ -157,7 +165,7 @@ class SpeciesIdentifier(
         val emb = embedder.embed(crop.crop)
         latency.record("encode", System.currentTimeMillis() - encodeStart)
         val searchStart = System.currentTimeMillis()
-        val matches = index.search(
+        val outcome = index.searchDetailed(
             emb = emb,
             region = region,
             topK = maxOf(TOP_K, vlmChoiceTopK),
@@ -165,7 +173,9 @@ class SpeciesIdentifier(
             hierarchy = hierarchyFn(),
         )
         latency.record("search", System.currentTimeMillis() - searchStart)
+        val matches = outcome.matches
         if (matches.isEmpty()) return unidentified(crop, null, emptyList())
+        val group = GroupFallback.best(outcome.groupProbabilities, groupFallbackThreshold)
 
         val top1 = matches[0]
         // Margin in the ranking order (cosine units with the geo prior), so it is never negative.
@@ -174,8 +184,8 @@ class SpeciesIdentifier(
         val shown = matches.take(TOP_K)
         return when (confidence.idSource(top1.confidence, margin)) {
             "RAG_CORE" -> matchResult(top1, crop, SpeciesIdSource.RAG_CORE, outOfRange, shown)
-            "RAG_TENTATIVE" -> tentative(full, crop, matches, region, language, outOfRange)
-            else -> unidentified(crop, top1, shown)
+            "RAG_TENTATIVE" -> tentative(full, crop, matches, region, language, outOfRange, group)
+            else -> unidentified(crop, top1, shown, group)
         }
     }
 
@@ -187,6 +197,7 @@ class SpeciesIdentifier(
         region: MarineRegion?,
         language: String,
         outOfRange: Boolean,
+        group: GroupGuess?,
     ): IdentificationResult {
         val shown = matches.take(TOP_K)
         val offered = matches.take(vlmChoiceTopK)
@@ -198,7 +209,7 @@ class SpeciesIdentifier(
         }
         return when (choice) {
             null -> matchResult(matches[0], crop, SpeciesIdSource.RAG_TENTATIVE, outOfRange, shown)
-            is VlmChoice.NoneOfThem -> unidentified(crop, matches[0], shown)
+            is VlmChoice.NoneOfThem -> unidentified(crop, matches[0], shown, group)
             is VlmChoice.Picked -> {
                 val pick = offered[choice.index]
                 matchResult(pick, crop, SpeciesIdSource.RAG_TENTATIVE,
@@ -227,7 +238,12 @@ class SpeciesIdentifier(
         vlmChosen = vlmChosen,
     )
 
-    private fun unidentified(crop: OrganismCrop, top1: SpeciesMatch?, candidates: List<SpeciesMatch>) =
+    private fun unidentified(
+        crop: OrganismCrop,
+        top1: SpeciesMatch?,
+        candidates: List<SpeciesMatch>,
+        group: GroupGuess? = null,
+    ) =
         IdentificationResult(
             speciesKey = IdentificationResult.UNIDENTIFIED_KEY,
             scientificName = "",
@@ -237,6 +253,8 @@ class SpeciesIdentifier(
             bbox = crop.bbox,
             uncatalogued = true,
             candidates = candidates,
+            groupKey = group?.key,
+            groupConfidence = group?.confidence ?: 0f,
         )
 
     private fun resolveRegion(location: Location?): MarineRegion? {

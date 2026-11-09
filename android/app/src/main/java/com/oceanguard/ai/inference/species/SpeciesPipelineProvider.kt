@@ -95,6 +95,7 @@ class SpeciesPipelineProvider(
             describer = SpeciesDescriber(vlmEngine),
             locator = OrganismLocator(vlmEngine, detector, fullFrameSize = config.encoder.size.takeIf { config.fullCrop }),
             vlmChoiceTopK = config.vlmChoiceTopK,
+            groupFallbackThreshold = config.groupThreshold,
         )
     }
 

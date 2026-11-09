@@ -21,3 +21,14 @@ data class SpeciesMatch(
     /** Ranking score in cosine units: cosine + T * ln g(level) (the cosine without a region). */
     val rankScore: Float = cosineScore,
 )
+
+/**
+ * Result of [SpeciesReferenceIndex.searchDetailed].
+ *
+ * @param matches             Top-k candidates, as returned by `search`.
+ * @param groupProbabilities  Catalogue group key -> summed species probability, in [0, 1].
+ */
+data class SpeciesSearchOutcome(
+    val matches: List<SpeciesMatch>,
+    val groupProbabilities: Map<String, Float>,
+)
