@@ -26,7 +26,7 @@ phone --HTTPS--> Cloudflare Worker (workers.dev, free) + D1 buffer --(outbound p
 are public:
 
 ```
-CONTRIBUTION_API_URL=https://oceanguard-contrib.<account>.workers.dev
+CONTRIBUTION_API_URL=https://oceanguard-contrib.oceanguard-ai.workers.dev
 CONTRIBUTION_RECIPIENT_KEY=<NAS public key from contribution-api/deploy/generate_keys.py>
 ```
 
