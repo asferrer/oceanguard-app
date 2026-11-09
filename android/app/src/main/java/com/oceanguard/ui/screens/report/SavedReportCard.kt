@@ -130,6 +130,7 @@ private fun ReportSummary(report: GeneratedReport, modifier: Modifier) {
                 color = MaterialTheme.colorScheme.onSurface,
             )
             report.audience?.let { AudienceBadge(audienceText(it)) }
+            ReportTypeBadge(report)
         }
         report.locationName?.let { PlaceLine(it) }
         Text(meta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

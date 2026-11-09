@@ -13,4 +13,19 @@
     <string name="species_analysis_title">Species identification</string>
     <string name="species_analysis_confidence">Confidence: %1$d%%</string>
     <string name="species_analysis_open_biodex">View in BioDex</string>
+    <string name="report_type_title">Type of report</string>
+    <string name="report_type_debris">Debris</string>
+    <string name="report_type_species">Species</string>
+    <string name="report_type_combined">Debris and species</string>
+    <string name="report_no_species_data">No species were identified in this area and period. Choose another area or period, or identify an animal first.</string>
+    <string name="report_no_debris_data">There are no debris analyses in this area and period, so a combined report cannot be written. Choose another period or the Species type.</string>
+    <string name="report_no_species_yet">No species identified yet. Identify an animal from the BioDex to write species reports.</string>
+    <string name="report_species_no_gps">None of your species identifications has a location, so there is no area to write about. Identify animals with the location on.</string>
+    <string name="report_area_species">Species: %1$d observations, %2$d species</string>
+    <string name="report_area_debris">Debris: %1$d photos, %2$d objects</string>
+    <string name="report_figure_observations">Observations</string>
+    <string name="report_figure_species">Species</string>
+    <string name="report_figure_threatened">Threatened</string>
+    <string name="report_species_photos_title">Photos of the identifications</string>
+    <string name="report_species_map_title">Where they were seen</string>
 </resources>

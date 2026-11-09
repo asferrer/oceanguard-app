@@ -81,6 +81,27 @@ fun exportBlock(format: ReportExportFormat, sessions: List<DetectionSession>): E
     else -> null
 }
 
+/**
+ * The reason [format] cannot be produced for a report of [type], or null when it can. A species
+ * report exports its observations; a combined one its sessions and, in the GeoJSON, its observations.
+ */
+fun reportExportBlock(
+    type: com.oceanguard.ai.inference.ReportType,
+    format: ReportExportFormat,
+    sessions: List<DetectionSession>,
+    observations: List<com.oceanguard.ai.data.species.SpeciesObservation>,
+): ExportBlock? = when {
+    type == com.oceanguard.ai.inference.ReportType.DEBRIS -> exportBlock(format, sessions)
+    format == ReportExportFormat.CSV ->
+        if ((if (type.hasDebris) sessions else observations).isEmpty()) ExportBlock.NO_SESSIONS else null
+    format == ReportExportFormat.GEOJSON -> when {
+        sessions.isEmpty() && observations.isEmpty() -> ExportBlock.NO_SESSIONS
+        sessions.none { it.location != null } && observations.none { it.location != null } -> ExportBlock.NO_LOCATION
+        else -> null
+    }
+    else -> null
+}
+
 /** What the report screen needs to know about a generation without reading every streamed token. */
 data class GenerationInfo(
     val generating: Boolean,

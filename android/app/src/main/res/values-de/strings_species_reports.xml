@@ -13,4 +13,19 @@
     <string name="species_analysis_title">Artbestimmung</string>
     <string name="species_analysis_confidence">Konfidenz: %1$d%%</string>
     <string name="species_analysis_open_biodex">Im BioDex ansehen</string>
+    <string name="report_type_title">Berichtsart</string>
+    <string name="report_type_debris">Abfall</string>
+    <string name="report_type_species">Arten</string>
+    <string name="report_type_combined">Abfall und Arten</string>
+    <string name="report_no_species_data">In diesem Gebiet und Zeitraum wurden keine Arten bestimmt. Wähle ein anderes Gebiet oder einen anderen Zeitraum oder bestimme zuerst ein Tier.</string>
+    <string name="report_no_debris_data">In diesem Gebiet und Zeitraum gibt es keine Abfallanalysen, daher kann kein kombinierter Bericht erstellt werden. Wähle einen anderen Zeitraum oder die Art Arten.</string>
+    <string name="report_no_species_yet">Noch keine Arten bestimmt. Bestimme ein Tier im BioDex, um Artenberichte zu schreiben.</string>
+    <string name="report_species_no_gps">Keine deiner Artbestimmungen hat einen Standort, daher gibt es kein Gebiet für den Bericht. Bestimme Tiere mit aktiviertem Standort.</string>
+    <string name="report_area_species">Arten: %1$d Beobachtungen, %2$d Arten</string>
+    <string name="report_area_debris">Abfall: %1$d Fotos, %2$d Objekte</string>
+    <string name="report_figure_observations">Beobachtungen</string>
+    <string name="report_figure_species">Arten</string>
+    <string name="report_figure_threatened">Gefährdet</string>
+    <string name="report_species_photos_title">Fotos der Bestimmungen</string>
+    <string name="report_species_map_title">Wo sie gesehen wurden</string>
 </resources>

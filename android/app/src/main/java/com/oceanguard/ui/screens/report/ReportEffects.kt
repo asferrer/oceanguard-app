@@ -16,6 +16,7 @@ import com.oceanguard.ai.R
 import com.oceanguard.ai.ReportGenerationState
 import com.oceanguard.ai.data.GeneratedReport
 import com.oceanguard.ai.data.SettingsRepository
+import com.oceanguard.ai.inference.ReportType
 import com.oceanguard.ai.inference.TextModelTier
 import com.oceanguard.ai.inference.VlmDownloadState
 import com.oceanguard.ai.ui.screens.results.ReportModelStatus
@@ -119,9 +120,15 @@ private fun requestGeneration(
     selection: ReportSelection,
     status: ReportModelStatus,
 ) {
-    if (zones.selectedZone == null || selection.sessions.isEmpty()) return
+    if (zones.selectedZone == null || !selection.ready) return
     ui.screen = ReportScreenState.Idle
-    val start = { app.launchZoneReportGeneration(selection.toInput(zones), choices.language) }
+    val start = {
+        if (selection.type == ReportType.DEBRIS) {
+            app.launchZoneReportGeneration(selection.toInput(zones), choices.language)
+        } else {
+            app.launchSpeciesReportGeneration(selection.toSpeciesInput(zones), choices.language)
+        }
+    }
     when (status) {
         ReportModelStatus.READY -> start()
         ReportModelStatus.NEEDS_DOWNLOAD -> {

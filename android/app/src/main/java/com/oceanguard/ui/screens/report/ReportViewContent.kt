@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -47,6 +48,9 @@ import coil3.compose.AsyncImage
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.data.GeneratedReport
+import com.oceanguard.ai.data.species.SpeciesCatalog
+import com.oceanguard.ai.data.species.SpeciesObservation
+import com.oceanguard.ai.inference.ReportType
 import com.oceanguard.ai.ui.components.MarkdownText
 import com.oceanguard.ai.ui.components.sonar.SonarCard
 import com.oceanguard.ai.ui.components.sonar.SonarSection
@@ -54,6 +58,7 @@ import com.oceanguard.ai.data.savedFigures
 import com.oceanguard.ai.ui.screens.results.BatchStats
 import com.oceanguard.ai.ui.screens.results.ReportExportFormat
 import com.oceanguard.ai.ui.screens.results.StatTile
+import com.oceanguard.ai.ui.screens.results.reportExportBlock
 import com.oceanguard.ai.ui.screens.results.reportFigures
 import com.oceanguard.ai.ui.theme.SonarTheme
 import java.text.SimpleDateFormat
@@ -67,7 +72,11 @@ internal data class ReportViewActions(
     val onExport: (ReportExportFormat) -> Unit,
     val onSessionClick: (Long) -> Unit,
     val onAddLocation: () -> Unit,
+    val onObservationClick: (Long) -> Unit = {},
 )
+
+/** The species a species or combined report was written from, and the catalogue that names them. */
+internal class ReportSpecies(val observations: List<SpeciesObservation>, val catalog: SpeciesCatalog)
 
 /**
  * A report in full: figures, the photos it analysed (each opens its detail), the text and the
@@ -78,6 +87,7 @@ internal data class ReportViewActions(
 internal fun ReportFullScreenView(
     report: GeneratedReport,
     sessions: List<DetectionSession>,
+    species: ReportSpecies,
     exporting: Boolean,
     actions: ReportViewActions,
 ) {
@@ -91,11 +101,13 @@ internal fun ReportFullScreenView(
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
-            ReportBody(report, sessions, actions.onSessionClick, Modifier.padding(padding))
+            ReportBody(report, sessions, species, actions, Modifier.padding(padding))
         }
         if (showExport) {
+            val type = ReportType.fromKey(report.reportType)
             ReportExportSheet(
-                sessions = sessions,
+                blockOf = { format -> reportExportBlock(type, format, sessions, species.observations) },
+                canAddLocation = type != ReportType.SPECIES,
                 onExport = {
                     showExport = false
                     actions.onExport(it)
@@ -137,9 +149,11 @@ private fun ReportViewTopBar(report: GeneratedReport, exporting: Boolean, onClos
 private fun ReportBody(
     report: GeneratedReport,
     sessions: List<DetectionSession>,
-    onSessionClick: (Long) -> Unit,
+    species: ReportSpecies,
+    actions: ReportViewActions,
     modifier: Modifier,
 ) {
+    val type = ReportType.fromKey(report.reportType)
     val figures = remember(report, sessions) { reportFigures(report, sessions) }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -148,8 +162,11 @@ private fun ReportBody(
     ) {
         if (!report.usedAi) item { TemplateBanner() }
         item { ReportHeader(report) }
-        if (sessions.isNotEmpty() || report.savedFigures() != null) item { FiguresRow(figures) }
-        if (sessions.isNotEmpty()) item { AnalysedPhotos(sessions, onSessionClick) }
+        if (type.hasDebris && (sessions.isNotEmpty() || report.savedFigures() != null)) item { FiguresRow(figures) }
+        if (type.hasSpecies && species.observations.isNotEmpty()) {
+            speciesItems(species, actions.onObservationClick)
+        }
+        if (type.hasDebris && sessions.isNotEmpty()) item { AnalysedPhotos(sessions, actions.onSessionClick) }
         item { SonarCard { MarkdownText(text = report.text, modifier = Modifier.fillMaxWidth()) } }
     }
 }
@@ -191,6 +208,7 @@ internal fun ReportHeader(report: GeneratedReport) {
                         Text(it, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                     }
                     report.audience?.let { AudienceBadge(audienceText(it)) }
+                    ReportTypeBadge(report)
                 }
                 Text(meta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(

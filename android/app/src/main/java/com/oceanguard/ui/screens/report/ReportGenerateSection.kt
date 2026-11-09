@@ -32,7 +32,10 @@ internal data class GenerateUi(
     val downloadProgress: ButtonProgress,
     val generating: Boolean,
     val hasZone: Boolean,
-    val sessionCount: Int,
+    /** Whether the area and period hold the data this kind of report needs. */
+    val hasData: Boolean,
+    /** Said under the button when [hasData] is false, so the person knows what is missing. */
+    val missingData: Int? = null,
 )
 
 /** Model status first, so the person knows before pressing what Generate will do. */
@@ -56,10 +59,17 @@ internal fun ReportGenerateSection(
             text = generateLabel(ui),
             progress = progress,
             onClick = onGenerate,
-            enabled = ui.hasZone && ui.sessionCount > 0,
+            enabled = ui.hasZone && ui.hasData,
             onCancel = if (downloading) onCancelDownload else null,
             modifier = Modifier.spotlightTarget("reports_generate", boundsMap),
         )
+        if (ui.hasZone && !ui.hasData && ui.missingData != null) {
+            Text(
+                text = stringResource(ui.missingData),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         if (ui.modelStatus != ReportModelStatus.READY) {
             Text(
                 text = stringResource(R.string.results_report_auto_start),

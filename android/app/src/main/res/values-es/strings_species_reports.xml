@@ -13,4 +13,19 @@
     <string name="species_analysis_title">Identificación de especies</string>
     <string name="species_analysis_confidence">Confianza: %1$d%%</string>
     <string name="species_analysis_open_biodex">Ver en el BioDex</string>
+    <string name="report_type_title">Tipo de informe</string>
+    <string name="report_type_debris">Residuos</string>
+    <string name="report_type_species">Especies</string>
+    <string name="report_type_combined">Residuos y especies</string>
+    <string name="report_no_species_data">No hay especies identificadas en esta zona y periodo. Elige otra zona u otro periodo, o identifica antes un animal.</string>
+    <string name="report_no_debris_data">No hay análisis de residuos en esta zona y periodo, así que no se puede escribir un informe combinado. Elige otro periodo o el tipo Especies.</string>
+    <string name="report_no_species_yet">Aún no hay especies identificadas. Identifica un animal desde el BioDex para escribir informes de especies.</string>
+    <string name="report_species_no_gps">Ninguna de tus identificaciones de especies tiene ubicación, así que no hay zona sobre la que escribir. Identifica animales con la ubicación activada.</string>
+    <string name="report_area_species">Especies: %1$d observaciones, %2$d especies</string>
+    <string name="report_area_debris">Residuos: %1$d fotos, %2$d objetos</string>
+    <string name="report_figure_observations">Observaciones</string>
+    <string name="report_figure_species">Especies</string>
+    <string name="report_figure_threatened">Amenazadas</string>
+    <string name="report_species_photos_title">Fotos de las identificaciones</string>
+    <string name="report_species_map_title">Dónde se vieron</string>
 </resources>

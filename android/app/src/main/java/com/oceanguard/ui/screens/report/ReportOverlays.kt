@@ -28,6 +28,7 @@ import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.data.GeneratedReport
 import com.oceanguard.ai.data.SessionDatesHelper
 import com.oceanguard.ai.data.SettingsRepository
+import com.oceanguard.ai.data.species.SpeciesObservation
 import com.oceanguard.ai.inference.TextModelTier
 import com.oceanguard.ai.inference.TextModelVariant
 import com.oceanguard.ai.ui.screens.models.CatalogModel
@@ -129,6 +130,8 @@ internal fun ReportViewOverlay(
     val scope = rememberCoroutineScope()
     val reduced = LocalReducedMotion.current
     val reportSessions = rememberViewedSessions(app, ui, selection)
+    val reportObservations = rememberViewedObservations(app, ui)
+    val species = remember(reportObservations, app) { ReportSpecies(reportObservations, app.speciesCatalog) }
 
     AnimatedVisibility(
         visible = ui.viewing != null,
@@ -139,10 +142,15 @@ internal fun ReportViewOverlay(
             ReportFullScreenView(
                 report = report,
                 sessions = reportSessions,
+                species = species,
                 exporting = ui.exporting,
                 actions = ReportViewActions(
                     onClose = ui::close,
-                    onExport = { format -> scope.launch { runExport(context, ui, snackbar, format, report, reportSessions) } },
+                    onExport = { format -> scope.launch { runExport(context, ui, snackbar, format, report, reportSessions, species) } },
+                    onObservationClick = { id ->
+                        ui.close()
+                        navController.navigate("species_observation/$id")
+                    },
                     onSessionClick = { id ->
                         ui.close()
                         navController.navigate("session/$id")
@@ -164,9 +172,10 @@ private suspend fun runExport(
     format: ReportExportFormat,
     report: GeneratedReport,
     sessions: List<DetectionSession>,
+    species: ReportSpecies,
 ) {
     ui.exporting = true
-    val ok = exportReport(context, format, report, sessions)
+    val ok = exportReport(context, format, report, sessions, SpeciesExportData(species.observations, species.catalog))
     ui.exporting = false
     if (!ok) snackbar.showSnackbar(context.getString(R.string.results_export_error))
 }
@@ -189,6 +198,25 @@ private fun rememberViewedSessions(app: OceanGuardApp, ui: ReportUiState, select
     }
     return sessions
 }
+
+/** Species observations of the open report: the ones stored with it that still exist. */
+@Composable
+private fun rememberViewedObservations(app: OceanGuardApp, ui: ReportUiState): List<SpeciesObservation> {
+    var observations by remember { mutableStateOf<List<SpeciesObservation>>(emptyList()) }
+    val report = ui.viewing
+    LaunchedEffect(report?.id) {
+        val ids = report?.observationIds?.split(",")?.mapNotNull { it.trim().toLongOrNull() }.orEmpty()
+        observations = if (ids.isEmpty()) {
+            emptyList()
+        } else {
+            ids.chunked(SQL_ID_CHUNK).flatMap { app.database.speciesObservationDao().getByIds(it) }
+        }
+    }
+    return observations
+}
+
+/** Ids per query, well below SQLite's limit of variables. */
+private const val SQL_ID_CHUNK = 500
 
 /** First-use tour of the page and the dialog that continues the guided tour. */
 @Composable

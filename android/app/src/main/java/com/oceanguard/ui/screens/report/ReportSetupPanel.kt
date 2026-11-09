@@ -27,6 +27,7 @@ import com.oceanguard.ai.R
 import com.oceanguard.ai.data.SettingsRepository
 import com.oceanguard.ai.data.settings.ReportPeriod
 import com.oceanguard.ai.data.settings.ReportPeriodSelection
+import com.oceanguard.ai.inference.ReportType
 import com.oceanguard.ai.ui.components.sonar.SonarButton
 import com.oceanguard.ai.ui.components.sonar.SonarButtonStyle
 import com.oceanguard.ai.ui.components.sonar.SonarCard
@@ -58,6 +59,10 @@ internal data class ReportChoiceActions(
 internal fun ReportSetupPanel(
     zones: ReportZones,
     hasSessions: Boolean,
+    hasObservations: Boolean,
+    type: ReportType,
+    onType: (ReportType) -> Unit,
+    selection: ReportSelection,
     choices: ReportChoices,
     actions: ReportChoiceActions,
     enabled: Boolean,
@@ -66,6 +71,7 @@ internal fun ReportSetupPanel(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SonarSection(stringResource(R.string.report_type_title)) { ReportTypeChips(type, onType, enabled) }
         SonarSection(stringResource(R.string.results_setup_scope)) {
             when {
                 zones.clusters.isNotEmpty() -> Box(Modifier.spotlightTarget("reports_zone", boundsMap)) {
@@ -77,17 +83,77 @@ internal fun ReportSetupPanel(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
-                hasSessions -> NoLocationCard(onAddLocation)
+                type != ReportType.DEBRIS && !hasObservations && (type == ReportType.SPECIES || !hasSessions) -> InfoCard(R.string.report_no_species_yet)
+                type == ReportType.SPECIES && hasObservations -> InfoCard(R.string.report_species_no_gps)
+                hasSessions && type != ReportType.SPECIES -> NoLocationCard(onAddLocation)
             }
             val zone = zones.selectedZone
             if (zone != null) {
                 Box(Modifier.spotlightTarget("reports_preview", boundsMap)) {
-                    ZonePreviewCard(zone = zone, zoneName = zones.selectedName, dayCount = zone.dayCount())
+                    if (type == ReportType.DEBRIS) {
+                        ZonePreviewCard(zone = zone, zoneName = zones.selectedName, dayCount = zone.dayCount())
+                    } else {
+                        AreaPreviewCard(zones.selectedName, selection)
+                    }
                 }
             }
             PeriodChips(choices.period, actions, enabled)
         }
         LanguageAndAudience(choices, actions, enabled, boundsMap)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReportTypeChips(type: ReportType, onType: (ReportType) -> Unit, enabled: Boolean) {
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (option in ReportType.entries) {
+            FilterChip(
+                selected = type == option,
+                enabled = enabled,
+                onClick = { onType(option) },
+                label = { Text(stringResource(option.labelRes())) },
+            )
+        }
+    }
+}
+
+private fun ReportType.labelRes(): Int = when (this) {
+    ReportType.DEBRIS -> R.string.report_type_debris
+    ReportType.SPECIES -> R.string.report_type_species
+    ReportType.COMBINED -> R.string.report_type_combined
+}
+
+/** What the chosen area and period hold for a species or combined report. */
+@Composable
+private fun AreaPreviewCard(name: String, selection: ReportSelection) {
+    SonarCard {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (name.isNotEmpty()) Text(name, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+            val species = selection.observations.map { it.scientificName }.distinct().size
+            Text(
+                text = stringResource(R.string.report_area_species, selection.observations.size, species),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (selection.type == ReportType.COMBINED) {
+                Text(
+                    text = stringResource(R.string.report_area_debris, selection.sessions.size, selection.sessions.sumOf { it.totalCount }),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoCard(message: Int) {
+    SonarCard {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(Icons.Filled.LocationOff, null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(message), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+        }
     }
 }
 

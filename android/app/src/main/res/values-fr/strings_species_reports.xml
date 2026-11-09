@@ -13,4 +13,19 @@
     <string name="species_analysis_title">Identification d\'espèces</string>
     <string name="species_analysis_confidence">Confiance : %1$d%%</string>
     <string name="species_analysis_open_biodex">Voir dans le BioDex</string>
+    <string name="report_type_title">Type de rapport</string>
+    <string name="report_type_debris">Déchets</string>
+    <string name="report_type_species">Espèces</string>
+    <string name="report_type_combined">Déchets et espèces</string>
+    <string name="report_no_species_data">Aucune espèce n\'a été identifiée dans cette zone et cette période. Choisissez une autre zone ou période, ou identifiez d\'abord un animal.</string>
+    <string name="report_no_debris_data">Il n\'y a aucune analyse de déchets dans cette zone et cette période : un rapport combiné est impossible. Choisissez une autre période ou le type Espèces.</string>
+    <string name="report_no_species_yet">Aucune espèce identifiée pour l\'instant. Identifiez un animal depuis le BioDex pour rédiger des rapports d\'espèces.</string>
+    <string name="report_species_no_gps">Aucune de vos identifications d\'espèces n\'a de position : il n\'y a pas de zone à décrire. Identifiez des animaux avec la localisation activée.</string>
+    <string name="report_area_species">Espèces : %1$d observations, %2$d espèces</string>
+    <string name="report_area_debris">Déchets : %1$d photos, %2$d objets</string>
+    <string name="report_figure_observations">Observations</string>
+    <string name="report_figure_species">Espèces</string>
+    <string name="report_figure_threatened">Menacées</string>
+    <string name="report_species_photos_title">Photos des identifications</string>
+    <string name="report_species_map_title">Où elles ont été vues</string>
 </resources>
