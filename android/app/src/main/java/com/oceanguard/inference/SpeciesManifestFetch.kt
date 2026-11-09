@@ -1,7 +1,7 @@
 package com.oceanguard.ai.inference
 
 /** Remote names of the species pack manifest, newest first (the app stores it as `species_pack.json`). */
-internal val REMOTE_SPECIES_MANIFESTS = listOf("species_pack_v3.json", "species_pack.json")
+internal val REMOTE_SPECIES_MANIFESTS = listOf("species_pack_v4.json", "species_pack_v3.json", "species_pack.json")
 
 /**
  * Fetch the first manifest of [names] the server has. A name that is not there
