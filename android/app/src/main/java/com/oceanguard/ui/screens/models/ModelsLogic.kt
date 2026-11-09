@@ -41,7 +41,7 @@ enum class CatalogModel(
         R.string.models_item_gemma_tuned, R.string.models_item_gemma_tuned_purpose,
     ),
     SPECIES_PACK(
-        null, TextModelVariant.BASE, 349_000_000L, false, false, // pack v2: BioCLIP fp32 345 MB + index, catalogue, raster
+        null, TextModelVariant.BASE, 615_000_000L, false, false, // pack v3: BioCLIP 2 (fp16 weights) 611.5 MB with index and catalogue, plus raster
         R.string.models_item_species, R.string.models_item_species_purpose,
     ),
     QWEN_FAST(

@@ -82,6 +82,14 @@ class ModelsLogicTest {
         assertFalse(CatalogModel.QWEN_BALANCED in split.downloadable)
     }
 
+    @Test fun speciesPackV3SizeIsCheckedAgainstFreeSpace() {
+        val size = CatalogModel.SPECIES_PACK.approxBytes
+        assertEquals(615_000_000L, size)
+        // 615 MB plus the margin: 900 MB free is not enough, 1 GB is.
+        assertEquals(DownloadPlan.NoSpace(15_000_000L), planDownload(size, 900_000_000L, NetworkKind.UNMETERED))
+        assertEquals(DownloadPlan.Proceed, planDownload(size, 1_000_000_000L, NetworkKind.UNMETERED))
+    }
+
     @Test fun onlyTextModelsCanBeDeleted() {
         assertFalse(CatalogModel.SPECIES_PACK.deletable)
         assertTrue(CatalogModel.entries.filter { it != CatalogModel.SPECIES_PACK }.all { it.deletable })

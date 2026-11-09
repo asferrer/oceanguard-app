@@ -416,8 +416,9 @@ class VlmModelManager(
 
     /**
      * Download the BioDex species pack from Hugging Face into [getSpeciesDirectory].
-     * First `species_pack.json` (encoder contract + calibrated thresholds); when
-     * the repository has none, the published v1 layout. Skips files already
+     * First `species_pack_v3.json`, then `species_pack.json` (encoder contract +
+     * calibrated thresholds; the rc2 app only asks for the latter and keeps the v2
+     * pack); when the repository has none, the published v1 layout. Skips files already
      * present and large enough. Without a pack, species identification is
      * unavailable (there is no demo fallback any more).
      */
@@ -444,7 +445,7 @@ class VlmModelManager(
         val name = SpeciesPackConfig.MANIFEST
         val target = File(dir, name)
         try {
-            downloadFile(url = "$SPECIES_REPO/$name", target = target, minValidBytes = 50L, filename = name)
+            fetchFirstAvailable { remote -> downloadFile("$SPECIES_REPO/$remote", target, 50L, name) }
         } catch (e: VlmDownloadException) {
             // Keep a manifest installed earlier (e.g. offline retry); otherwise v1.
             Log.i(TAG, "No $name downloaded (${e.message}); using the installed one or the v1 layout")
