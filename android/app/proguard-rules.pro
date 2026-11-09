@@ -71,3 +71,10 @@
 
 # Android Keystore (device key and attestation) is a framework API reached through JCA providers,
 # so it needs no rule; keep the signer classes above because they are matched by name in the envelope.
+
+# Gson reads these species pack classes by reflection; outside com.oceanguard.ai.data they were renamed and
+# stripped, so a downloaded pack failed to load in release builds (ClassCastException in
+# MarineRegionResolver.loadHierarchy, empty species_pack.json) and the app asked for the download again.
+-keep class com.oceanguard.ai.inference.species.SpeciesPackConfig { *; }
+-keep class com.oceanguard.ai.inference.species.SpeciesPackConfig$* { *; }
+-keep class com.oceanguard.ai.inference.species.MarineRegionResolver$HierarchyEntry { *; }
