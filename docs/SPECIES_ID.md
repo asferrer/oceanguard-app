@@ -685,3 +685,34 @@ P=C:/rerun_v9/runs/_species_precision/pack_best
 python -I tools/species/build_catalog_v2.py --catalog $P/species_catalog_v1.json --index $P/species_index_v3.bin \
     --hierarchy C:/rerun_v9/runs/_species_2026-11-08/hf_pack/ecoregion_hierarchy_v1.json --out C:/rerun_v9/runs/_species_catalog_v2
 ```
+
+## 13. Group fallback and candidates (rc5)
+
+A photo of a species the catalogue does not have (e.g. a tropical manta when only the Mediterranean one is in) often falls
+below `tauLow` and used to show "Species not identified" with no hint. Measured offline, the probability summed over the
+species of the right catalogue group (`sharks_rays`) was 0.5-0.8 in those cases.
+
+**Manifest field** (optional, `species_pack.json`):
+
+```json
+"groupFallback": { "threshold": 0.62 }
+```
+
+**Rule.** The species decision is unchanged. Only when it is `UNIDENTIFIED` and the pack has `groupFallback`, the app sums, for
+every catalogue `group` (`SpeciesCatalogEntry.group`), the calibrated softmax probabilities of its species (the same ones
+used for `confidence`: all catalogue species, not only the top-k, after the geo prior). If the best group reaches the
+threshold, the result carries `groupKey` and `groupConfidence`. The result is still not confident: it is not saved to the
+BioDex, does not count for achievements and `isUnidentified` is unchanged (no new `SpeciesIdSource` value, so there is no
+database change). Packs without the field, or with the legacy Platt confidence (no softmax to sum), behave as before.
+Code: `SpeciesReferenceIndex.searchDetailed` (sums), `GroupFallback.best` (threshold), `SpeciesIdentifier`.
+
+**UI.** An unidentified result with a group shows "Possible group: Sharks and rays", a "Group" badge and the group
+confidence. Every unidentified result also shows "Similar: A, B, C" with the localised common names of the top-3 candidates
+(language, then English, then scientific name). It applies to the result screen, the batch tiles and the overlay boxes.
+
+**Manifest v4 and update.** The app asks for `species_pack_v4.json`, then `species_pack_v3.json`, then `species_pack.json`.
+If the installed pack has a lower `version` than the remote manifest, the species pack card offers an update. The new
+files are downloaded as `*.new` and verified (size, and SHA-256 when the optional `sha256` map of the manifest lists the
+file); only then they replace the installed ones, the manifest last. A failed or cancelled update leaves the old pack
+untouched. Files whose SHA-256 matches are not downloaded again; without a `sha256` map only the encoder and the geographic
+files are reused.
