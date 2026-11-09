@@ -209,9 +209,9 @@ private fun SpeciesBatchGridContent(
     val completedCount = items.count {
         it.state is SpeciesBatchItemState.Done || it.state is SpeciesBatchItemState.Failed
     }
-    // Only identified results count: "not identified" crops are hints, not species found.
+    // Only confident results count (the ones saved to the BioDex): "possible" and "not identified" crops are hints.
     val identified = items.map { item ->
-        (item.state as? SpeciesBatchItemState.Done)?.results.orEmpty().filterNot { it.isUnidentified }
+        (item.state as? SpeciesBatchItemState.Done)?.results.orEmpty().filter { it.isConfident }
     }
     val identifiedImages = identified.count { it.isNotEmpty() }
     val totalSpeciesFound = identified.flatten().map { it.speciesKey }.distinct().size

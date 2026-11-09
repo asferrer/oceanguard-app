@@ -97,9 +97,9 @@ sealed interface SpeciesBatchUiState {
  * 2. Optional GPS acquisition via [LocationProvider].
  * 3. Inference via the [SpeciesIdentifier] of the installed species pack
  *    ([identifierProvider]; null when no pack is installed -> error state).
- * 4. Persistence of every identified result via
- *    [SpeciesCollectionRepository.saveObservation] (unidentified ones are shown
- *    but not added to the BioDex).
+ * 4. Persistence of every confidently identified result via
+ *    [SpeciesCollectionRepository.saveObservation] (only confident ones; tentative
+ *    and unidentified results are shown but not added to the BioDex).
  *
  * Supports both the camera single-capture path ([identifyFromImage]) and the
  * gallery multi-select batch path ([identifyBatch]).
@@ -120,6 +120,10 @@ class SpeciesViewModel(
          * frame (more detail on the subject, less background noise to embed).
          */
         private const val FULL_RES = Int.MAX_VALUE
+
+        /** Results that enter the BioDex: only the confident ones (not "possible", not unidentified). */
+        internal fun resultsToSave(results: List<IdentificationResult>): List<IdentificationResult> =
+            results.filter { it.isConfident }
     }
 
     private val _uiState = MutableStateFlow<SpeciesUiState>(SpeciesUiState.Idle)
@@ -230,9 +234,9 @@ class SpeciesViewModel(
         withContext(Dispatchers.IO) { identifierProvider() }
             ?: error(appContext.getString(R.string.species_pack_missing))
 
-    /** Persist the identified results; unidentified ones are not added to the BioDex. */
+    /** Persist the confident results; "possible" (tentative) and unidentified ones are not added to the BioDex. */
     private suspend fun saveIdentified(results: List<IdentificationResult>, uri: Uri, loc: Location?) {
-        results.filterNot { it.isUnidentified }.forEach { result ->
+        resultsToSave(results).forEach { result ->
             repo.saveObservation(result = result, imageUri = uri.toString(), thumbnailUri = null, location = loc)
         }
     }

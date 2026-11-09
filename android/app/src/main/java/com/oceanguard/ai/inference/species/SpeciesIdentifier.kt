@@ -43,6 +43,14 @@ data class IdentificationResult(
     /** True when the pipeline gave no species (honest "not identified" answer). */
     val isUnidentified: Boolean get() = idSource == SpeciesIdSource.UNIDENTIFIED
 
+    /**
+     * True when the species was identified with confidence ([SpeciesIdSource.RAG_CORE] or an
+     * open-vocabulary name): only these enter the BioDex and the achievements. The
+     * [SpeciesIdSource.RAG_TENTATIVE] ones are shown as "possible" with their candidates.
+     */
+    val isConfident: Boolean
+        get() = idSource != SpeciesIdSource.UNIDENTIFIED && idSource != SpeciesIdSource.RAG_TENTATIVE
+
     companion object {
         const val UNIDENTIFIED_KEY = "unidentified"
     }
