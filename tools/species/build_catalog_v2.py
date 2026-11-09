@@ -344,7 +344,7 @@ CURATED = {
     ("sphaerechinus_granularis", "es"): "Erizo violáceo", ("hexaplex_trunculus", "es"): "Búsano",
     ("dermochelys_coriacea", "es"): "Tortuga laúd", ("spongia_officinalis", "es"): "Esponja de baño",
     ("sargassum_vulgare", "es"): "Sargazo común", ("dasyatis_pastinaca", "es"): "Pastinaca",
-    ("patella_ferruginea", "es"): "Lapa ferrugínea", ("patella_ferruginea", "en"): "Ribbed Mediterranean limpet",
+    ("patella_ferruginea", "es"): "Lapa ferruginosa", ("patella_ferruginea", "en"): "Ribbed Mediterranean limpet",
     ("patella_ferruginea", "de"): "Fleckige Napfschnecke",
     ("lepidochelys_kempii", "es"): "Tortuga lora", ("thunnus_thynnus", "es"): "Atún rojo",
 }
