@@ -210,6 +210,21 @@ class SpeciesBioDexM5Test {
         assertEquals(location, obs.location)
     }
 
+    /** Catalogue keys are names (`caretta_caretta`): the AphiaID comes from the catalogue entry. */
+    @Test
+    fun `toObservation takes the AphiaID from the catalogue for name keys`() {
+        val repo = buildRepositoryWithStubDaos(listOf(makeEntry("caretta_caretta", 137205L, "Caretta caretta")))
+        val result = IdentificationResult(
+            speciesKey     = "caretta_caretta",
+            scientificName = "Caretta caretta",
+            idSource       = SpeciesIdSource.RAG_CORE,
+            cosineScore    = 0.9f,
+            confidence     = 0.95f,
+        )
+        val obs = repo.toObservation(result, "content://img/3", null, null)
+        assertEquals(137205L, obs.aphiaId)
+    }
+
     /** Uncatalogued results (uncat: prefix) must have aphiaId = null. */
     @Test
     fun `toObservation sets aphiaId null for uncat speciesKey`() {
@@ -256,13 +271,15 @@ class SpeciesBioDexM5Test {
      * Only [toObservation] is exercised here, so the DAOs are never called.
      * Using minimal anonymous implementations avoids a Room dependency in tests.
      */
-    private fun buildRepositoryWithStubDaos(): SpeciesCollectionRepository {
+    private fun buildRepositoryWithStubDaos(entries: List<SpeciesCatalogEntry> = emptyList()): SpeciesCollectionRepository {
         val stubObsDao = object : SpeciesObservationDao {
             override suspend fun insert(observation: SpeciesObservation) = 1L
             override fun getAll() = flowOf<List<SpeciesObservation>>(emptyList())
             override suspend fun getById(id: Long): SpeciesObservation? = null
             override fun getBySessionId(sessionId: Long) = flowOf<List<SpeciesObservation>>(emptyList())
             override fun getByAphiaId(aphiaIdStr: String) = flowOf<List<SpeciesObservation>>(emptyList())
+            override fun getForSpecies(aphiaIdStr: String?, scientificName: String) =
+                flowOf<List<SpeciesObservation>>(emptyList())
             override fun getTotalCount(): Flow<Int> = flowOf(0)
             override suspend fun deleteById(id: Long) {}
             override suspend fun getAllAscending(): List<SpeciesObservation> = emptyList()
@@ -280,6 +297,7 @@ class SpeciesBioDexM5Test {
         }
         // Catalog file path is irrelevant here; load() is never called in these tests.
         val catalog = SpeciesCatalog(File("stub_not_used_catalog.json"))
+        if (entries.isNotEmpty()) catalog.seedInMemory(entries)
         return SpeciesCollectionRepository(stubObsDao, stubDexDao, catalog)
     }
 }

@@ -42,6 +42,18 @@ interface SpeciesObservationDao {
     """)
     fun getByAphiaId(aphiaIdStr: String): Flow<List<SpeciesObservation>>
 
+    /**
+     * Observations of one species: by its AphiaID or, for rows saved before the
+     * AphiaID was stored (it was always null), by its scientific name.
+     */
+    @Query("""
+        SELECT * FROM species_observations
+        WHERE (:aphiaIdStr IS NOT NULL AND CAST(aphiaId AS TEXT) = :aphiaIdStr)
+           OR scientificName = :scientificName
+        ORDER BY timestamp DESC
+    """)
+    fun getForSpecies(aphiaIdStr: String?, scientificName: String): Flow<List<SpeciesObservation>>
+
     @Query("SELECT COUNT(*) FROM species_observations")
     fun getTotalCount(): Flow<Int>
 

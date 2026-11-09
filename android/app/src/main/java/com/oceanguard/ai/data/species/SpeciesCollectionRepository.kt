@@ -37,9 +37,15 @@ class SpeciesCollectionRepository(
     /** Number of distinct species discovered. */
     fun discoveredCount(): Flow<Int> = speciesDexDao.getDiscoveredCount()
 
-    /** All observations for a given species key. */
+    /**
+     * All observations of [speciesKey]. Catalogue keys are names such as
+     * `posidonia_oceanica`, not AphiaIDs, so the old lookup by key found nothing
+     * and the species gallery and map were always empty.
+     */
     fun observationsForSpecies(speciesKey: String): Flow<List<SpeciesObservation>> {
-        return speciesObservationDao.getByAphiaId(speciesKey)
+        val entry = catalog.byKey(speciesKey)
+        val aphia = entry?.aphiaId?.toString() ?: speciesKey.toLongOrNull()?.toString()
+        return speciesObservationDao.getForSpecies(aphia, entry?.scientificName ?: speciesKey)
     }
 
     /** Single observation by id, for the observation detail screen (M6). */
@@ -105,7 +111,7 @@ class SpeciesCollectionRepository(
     ): SpeciesObservation = SpeciesObservation(
         imageUri       = imageUri,
         thumbnailUri   = thumbnailUri,
-        aphiaId        = result.speciesKey.toLongOrNull(),
+        aphiaId        = catalog.byKey(result.speciesKey)?.aphiaId ?: result.speciesKey.toLongOrNull(),
         scientificName = result.scientificName,
         bbox           = result.bbox,
         cosineScore    = result.cosineScore,
@@ -175,8 +181,10 @@ class SpeciesCollectionRepository(
         val observations = speciesObservationDao.getAllAscending()
         val agg = mutableMapOf<String, ObsAgg>()
 
+        // Dex entries are keyed by catalogue key; observations carry the scientific name.
+        val keyByName = catalog.all().associate { it.scientificName to it.speciesKey }
         for (obs in observations) {
-            val key = obs.aphiaId?.toString() ?: continue   // skip uncatalogued
+            val key = keyByName[obs.scientificName] ?: obs.aphiaId?.toString() ?: continue   // skip uncatalogued
             val current = agg[key]
             if (current == null) {
                 agg[key] = ObsAgg(
