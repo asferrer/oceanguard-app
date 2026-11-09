@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="species_pack_missing">Scarica il pacchetto delle specie (schermata Modelli) per identificare le specie.</string>
+    <string name="species_pack_missing">Scarica il pacchetto delle specie per identificare le specie.</string>
+    <string name="species_pack_status_missing">Pacchetto delle specie: non scaricato (%1$s)</string>
+    <string name="species_pack_status_ready">Pacchetto delle specie: pronto</string>
+    <string name="species_pack_status_downloading">Download del pacchetto delle specie…</string>
+    <string name="species_pack_btn_download">Scarica</string>
+    <string name="species_pack_btn_retry">Riprova</string>
     <string name="species_unidentified">Specie non identificata</string>
     <string name="species_unidentified_hint">Candidate più vicine: %1$s</string>
     <string name="species_badge_unidentified">Non identificata</string>

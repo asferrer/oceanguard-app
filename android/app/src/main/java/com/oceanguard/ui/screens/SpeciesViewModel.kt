@@ -39,7 +39,8 @@ sealed interface SpeciesUiState {
         val imageWidth: Int = 0,
         val imageHeight: Int = 0,
     ) : SpeciesUiState
-    data class Error(val message: String) : SpeciesUiState
+    /** [packMissing]: the species pack is not installed, so the screen offers to download it. */
+    data class Error(val message: String, val packMissing: Boolean = false) : SpeciesUiState
 }
 
 // ---------------------------------------------------------------------------
@@ -82,7 +83,7 @@ sealed interface SpeciesBatchUiState {
         val startTimeMs: Long,
         val endTimeMs: Long,
     ) : SpeciesBatchUiState
-    data class Error(val message: String) : SpeciesBatchUiState
+    data class Error(val message: String, val packMissing: Boolean = false) : SpeciesBatchUiState
 }
 
 // ---------------------------------------------------------------------------
@@ -163,7 +164,8 @@ class SpeciesViewModel(
                 )
             }.onFailure { e ->
                 _uiState.value = SpeciesUiState.Error(
-                    e.message ?: "Identification failed"
+                    e.message ?: "Identification failed",
+                    packMissing = e is SpeciesPackMissingException,
                 )
             }
         }
@@ -186,6 +188,14 @@ class SpeciesViewModel(
         )
 
         viewModelScope.launch {
+            // Without the pack no photo can be identified: ask for the download instead of
+            // failing every photo one by one.
+            if (withContext(Dispatchers.IO) { identifierProvider() } == null) {
+                _batchUiState.value = SpeciesBatchUiState.Error(
+                    appContext.getString(R.string.species_pack_missing), packMissing = true,
+                )
+                return@launch
+            }
             for ((index, uri) in uris.withIndex()) {
                 items[index] = items[index].copy(state = SpeciesBatchItemState.Analyzing)
                 _batchUiState.value = SpeciesBatchUiState.Running(
@@ -232,7 +242,7 @@ class SpeciesViewModel(
     /** Identifier of the installed pack (built off the main thread), or an error naming the cause. */
     private suspend fun requireIdentifier(): SpeciesIdentifier =
         withContext(Dispatchers.IO) { identifierProvider() }
-            ?: error(appContext.getString(R.string.species_pack_missing))
+            ?: throw SpeciesPackMissingException(appContext.getString(R.string.species_pack_missing))
 
     /** Persist the confident results; "possible" (tentative) and unidentified ones are not added to the BioDex. */
     private suspend fun saveIdentified(results: List<IdentificationResult>, uri: Uri, loc: Location?) {
@@ -272,3 +282,6 @@ class SpeciesViewModel(
         }
     }
 }
+
+/** The species pack is not installed (or failed to load): nothing can be identified until it is. */
+class SpeciesPackMissingException(message: String) : IllegalStateException(message)

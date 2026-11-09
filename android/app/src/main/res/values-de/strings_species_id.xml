@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="species_pack_missing">Lade das Artenpaket herunter (Bildschirm Modelle), um Arten zu bestimmen.</string>
+    <string name="species_pack_missing">Lade das Artenpaket herunter, um Arten zu bestimmen.</string>
+    <string name="species_pack_status_missing">Artenpaket: nicht heruntergeladen (%1$s)</string>
+    <string name="species_pack_status_ready">Artenpaket: bereit</string>
+    <string name="species_pack_status_downloading">Artenpaket wird heruntergeladen…</string>
+    <string name="species_pack_btn_download">Herunterladen</string>
+    <string name="species_pack_btn_retry">Erneut versuchen</string>
     <string name="species_unidentified">Art nicht bestimmt</string>
     <string name="species_unidentified_hint">Ähnlichste Kandidaten: %1$s</string>
     <string name="species_badge_unidentified">Nicht bestimmt</string>

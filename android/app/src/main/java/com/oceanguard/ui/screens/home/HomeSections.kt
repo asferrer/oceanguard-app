@@ -24,6 +24,7 @@ import com.oceanguard.ai.ui.MainViewModel
 import com.oceanguard.ai.ui.components.TopDebrisTypesCard
 import com.oceanguard.ai.ui.components.TopHotspotsCard
 import com.oceanguard.ai.ui.components.spotlight.spotlightTarget
+import com.oceanguard.ai.ui.screens.models.SpeciesPackPrompt
 
 /** What the Home buttons do. Built once in [HomeScreen] and shared by the sections. */
 class HomeActions(
@@ -74,10 +75,17 @@ fun HomeStatusBlock(
     app: OceanGuardApp,
     model: HomeModelUi,
     bounds: SnapshotStateMap<String, Rect>,
+    target: ScanTarget,
     onDownloadReports: () -> Unit,
 ) {
     Box(Modifier.spotlightTarget("home_model_status", bounds)) {
-        HomeEntry(index = 3) { HomeStatusLine(app, model, onDownloadReports) }
+        HomeEntry(index = 3) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Species mode: the pack is what identifies, so its state and download come first.
+                if (target == ScanTarget.SPECIES) SpeciesPackPrompt(showReady = true)
+                HomeStatusLine(app, model, onDownloadReports)
+            }
+        }
     }
 }
 

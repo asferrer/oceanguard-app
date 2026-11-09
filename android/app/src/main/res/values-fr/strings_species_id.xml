@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="species_pack_missing">Téléchargez le pack d\'espèces (écran Modèles) pour identifier les espèces.</string>
+    <string name="species_pack_missing">Téléchargez le pack d\'espèces pour identifier les espèces.</string>
+    <string name="species_pack_status_missing">Pack d\'espèces : non téléchargé (%1$s)</string>
+    <string name="species_pack_status_ready">Pack d\'espèces : prêt</string>
+    <string name="species_pack_status_downloading">Téléchargement du pack d\'espèces…</string>
+    <string name="species_pack_btn_download">Télécharger</string>
+    <string name="species_pack_btn_retry">Réessayer</string>
     <string name="species_unidentified">Espèce non identifiée</string>
     <string name="species_unidentified_hint">Candidates les plus proches : %1$s</string>
     <string name="species_badge_unidentified">Non identifiée</string>

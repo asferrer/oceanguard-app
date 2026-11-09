@@ -30,13 +30,19 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import com.oceanguard.ai.ui.screens.models.SpeciesPackPlacement
+import com.oceanguard.ai.ui.screens.models.SpeciesPackPrompt
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -77,18 +83,22 @@ fun SpeciesDexScreen(
     catalog: SpeciesCatalog,
     onNavigateToDetail: (speciesKey: String) -> Unit,
     onNavigateBack: () -> Unit,
-    onDownloadPack: () -> Unit = {},
+    onPackInstalled: suspend () -> Unit = {},
 ) {
     val vm: SpeciesDexViewModel = viewModel(factory = SpeciesDexViewModel.Factory(repo, catalog))
 
     val dexItems by vm.dexItems.collectAsStateWithLifecycle()
     val discoveredCount by vm.discoveredCount.collectAsStateWithLifecycle()
-    val catalogTotal = vm.catalogTotal
+    // The catalogue is read from the species pack: when the pack finishes downloading here, load it
+    // and redraw so the grid fills in without leaving the screen.
+    var catalogVersion by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
+    val catalogTotal = remember(catalogVersion) { vm.catalogTotal }
 
     // Build the full grid: discovered items first, then locked placeholders for
     // entries in the catalog that the user has not yet seen.
     val discoveredKeys = dexItems.map { it.key }.toSet()
-    val lockedItems = buildLockedItems(catalog, discoveredKeys)
+    val lockedItems = remember(catalogVersion, discoveredKeys) { buildLockedItems(catalog, discoveredKeys) }
     val allItems = dexItems + lockedItems
 
     // Derive favourites count from the already-collected items.
@@ -144,7 +154,7 @@ fun SpeciesDexScreen(
 
             if (allItems.isEmpty()) {
                 item(span = { GridItemSpan(3) }) {
-                    BioDexEmptyState(onDownloadPack = onDownloadPack)
+                    BioDexEmptyState(onPackInstalled = { scope.launch { onPackInstalled(); catalogVersion++ } })
                 }
             }
 
@@ -212,7 +222,7 @@ private fun buildLockedItems(
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun BioDexEmptyState(onDownloadPack: () -> Unit) {
+private fun BioDexEmptyState(onPackInstalled: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -240,8 +250,6 @@ private fun BioDexEmptyState(onDownloadPack: () -> Unit) {
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(20.dp))
-        Button(onClick = onDownloadPack) {
-            Text(text = stringResource(R.string.biodex_download_pack))
-        }
+        SpeciesPackPrompt(placement = SpeciesPackPlacement.INLINE, onInstalled = onPackInstalled)
     }
 }

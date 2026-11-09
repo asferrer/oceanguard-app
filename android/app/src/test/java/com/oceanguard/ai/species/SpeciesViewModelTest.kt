@@ -192,4 +192,19 @@ class SpeciesViewModelTest {
         val successPct = ((total - failed) * 100) / total
         assertEquals(66, successPct)
     }
+
+    @Test
+    fun `errors do not ask for the species pack unless it is missing`() {
+        assertEquals(false, SpeciesUiState.Error("disk error").packMissing)
+        assertEquals(true, SpeciesUiState.Error("no pack", packMissing = true).packMissing)
+        assertEquals(false, SpeciesBatchUiState.Error("x").packMissing)
+        assertEquals(true, SpeciesBatchUiState.Error("no pack", packMissing = true).packMissing)
+    }
+
+    @Test
+    fun `missing pack is its own exception so the screens can offer the download`() {
+        val e: Throwable = com.oceanguard.ai.ui.screens.SpeciesPackMissingException("no pack")
+        assertTrue(e is IllegalStateException)
+        assertEquals("no pack", e.message)
+    }
 }

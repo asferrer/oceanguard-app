@@ -29,6 +29,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
+import com.oceanguard.ai.ui.screens.models.SpeciesPackPlacement
+import com.oceanguard.ai.ui.screens.models.SpeciesPackPrompt
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -150,6 +152,7 @@ fun SpeciesBatchResultScreen(
                 SpeciesBatchErrorContent(
                     modifier = Modifier.padding(paddingValues),
                     message = (batchState as SpeciesBatchUiState.Error).message,
+                    packMissing = (batchState as SpeciesBatchUiState.Error).packMissing,
                     onRetry = { viewModel.identifyBatch(uriList) },
                     onBack = {
                         viewModel.resetState()
@@ -776,6 +779,7 @@ private fun SpeciesBatchEmptyContent(modifier: Modifier, onBack: () -> Unit) {
 private fun SpeciesBatchErrorContent(
     modifier: Modifier,
     message: String,
+    packMissing: Boolean,
     onRetry: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -806,6 +810,11 @@ private fun SpeciesBatchErrorContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+        if (packMissing) {
+            // Download here; when it finishes the batch starts again by itself.
+            Spacer(modifier = Modifier.height(16.dp))
+            SpeciesPackPrompt(placement = SpeciesPackPlacement.INLINE, onInstalled = onRetry)
+        }
         Spacer(modifier = Modifier.height(32.dp))
         Button(
             onClick = onRetry,

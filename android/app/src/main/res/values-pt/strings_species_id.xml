@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="species_pack_missing">Transfira o pacote de espécies (ecrã Modelos) para identificar espécies.</string>
+    <string name="species_pack_missing">Baixe o pacote de espécies para identificar espécies.</string>
+    <string name="species_pack_status_missing">Pacote de espécies: não baixado (%1$s)</string>
+    <string name="species_pack_status_ready">Pacote de espécies: pronto</string>
+    <string name="species_pack_status_downloading">Baixando o pacote de espécies…</string>
+    <string name="species_pack_btn_download">Baixar</string>
+    <string name="species_pack_btn_retry">Tentar novamente</string>
     <string name="species_unidentified">Espécie não identificada</string>
     <string name="species_unidentified_hint">Candidatas mais próximas: %1$s</string>
     <string name="species_badge_unidentified">Não identificada</string>

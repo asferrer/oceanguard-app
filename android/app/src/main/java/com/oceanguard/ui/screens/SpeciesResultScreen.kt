@@ -65,6 +65,8 @@ import com.oceanguard.ai.ui.components.sonar.SonarButton
 import com.oceanguard.ai.ui.components.sonar.SonarButtonStyle
 import com.oceanguard.ai.ui.components.sonar.SonarCard
 import com.oceanguard.ai.ui.components.sonar.SonarErrorState
+import com.oceanguard.ai.ui.screens.models.SpeciesPackPlacement
+import com.oceanguard.ai.ui.screens.models.SpeciesPackPrompt
 import com.oceanguard.ai.ui.components.InferenceAnimationOverlay
 import com.oceanguard.ai.ui.components.NormBox
 import com.oceanguard.ai.ui.components.SpeciesFitWidthBoxOverlay
@@ -199,6 +201,7 @@ fun SpeciesResultScreen(
         if (errorState != null) {
             SpeciesErrorCard(
                 message = errorState.message,
+                packMissing = errorState.packMissing,
                 onRetry = {
                     capturedUri?.let { viewModel.identifyFromImage(it) }
                 },
@@ -445,6 +448,7 @@ private fun SpeciesActionButtons(onNewScan: () -> Unit, onViewBioDex: () -> Unit
 @Composable
 private fun SpeciesErrorCard(
     message: String,
+    packMissing: Boolean,
     onRetry: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -464,6 +468,11 @@ private fun SpeciesErrorCard(
                 message = message,
                 onRetry = onRetry,
             )
+            if (packMissing) {
+                // Download here; when it finishes the photo is identified again by itself.
+                Spacer(modifier = Modifier.height(8.dp))
+                SpeciesPackPrompt(placement = SpeciesPackPlacement.INLINE, onInstalled = onRetry)
+            }
             Spacer(modifier = Modifier.height(8.dp))
             SonarButton(
                 text = stringResource(R.string.common_back),

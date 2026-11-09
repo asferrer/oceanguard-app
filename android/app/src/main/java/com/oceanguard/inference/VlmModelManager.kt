@@ -105,6 +105,14 @@ class VlmModelManager(
     private val _downloadState = MutableStateFlow<VlmDownloadState>(VlmDownloadState.Idle)
     val downloadState = _downloadState.asStateFlow()
 
+    /**
+     * True while the last download asked for was the species pack, so a screen can tell its
+     * progress and failure apart from those of a report or detector model (they share
+     * [downloadState]).
+     */
+    private val _speciesPackSelected = MutableStateFlow(false)
+    val speciesPackSelected = _speciesPackSelected.asStateFlow()
+
     @Volatile
     private var cancelled = false
 
@@ -292,6 +300,7 @@ class VlmModelManager(
         tier: TextModelTier = TextModelTier.FAST,
         variant: TextModelVariant = TextModelVariant.BASE,
     ) = withContext(Dispatchers.IO) {
+            _speciesPackSelected.value = false
             val effectiveVariant = tier.variantFallback(variant)
             if (isModelAvailable(tier, effectiveVariant)) {
                 _downloadState.value = VlmDownloadState.Complete
@@ -330,6 +339,7 @@ class VlmModelManager(
      * Progress is emitted per file; completes only when both are valid.
      */
     suspend fun downloadVisionModel() = withContext(Dispatchers.IO) {
+        _speciesPackSelected.value = false
         if (isVisionModelAvailable()) {
             _downloadState.value = VlmDownloadState.Complete
             return@withContext
@@ -423,6 +433,7 @@ class VlmModelManager(
      * unavailable (there is no demo fallback any more).
      */
     suspend fun downloadSpeciesPack() = withContext(Dispatchers.IO) {
+        _speciesPackSelected.value = true
         cancelled = false
         try {
             val dir = getSpeciesDirectory()

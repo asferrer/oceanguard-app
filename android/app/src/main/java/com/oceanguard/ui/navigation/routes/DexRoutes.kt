@@ -21,6 +21,8 @@ import com.oceanguard.ai.ui.screens.SpeciesDexScreen
 import com.oceanguard.ai.ui.screens.SpeciesObservationDetailScreen
 import com.oceanguard.ai.ui.screens.SpeciesResultScreen
 import com.oceanguard.ai.ui.theme.AchievementsTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private fun tabArgument() = navArgument("tab") {
     type = NavType.IntType
@@ -84,7 +86,8 @@ private fun NavGraphBuilder.bioDexRoutes(context: OceanNavContext) {
             catalog = app.speciesCatalog,
             onNavigateToDetail = { key -> navController.navigate("biodex/$key") },
             onNavigateBack = { navController.popBackStack() },
-            onDownloadPack = { app.launchSpeciesPackDownload() },
+            // Builds the identifier once the pack is installed, which reloads the species catalogue.
+            onPackInstalled = { withContext(Dispatchers.IO) { app.speciesIdentifierOrNull() } },
         )
     }
     oceanScreen(

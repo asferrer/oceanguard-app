@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Species identification: honest "not identified" answer and pack state. -->
 <resources>
-    <string name="species_pack_missing">Download the species pack (Models screen) to identify species.</string>
+    <string name="species_pack_missing">Download the species pack to identify species.</string>
+    <string name="species_pack_status_missing">Species pack: not downloaded (%1$s)</string>
+    <string name="species_pack_status_ready">Species pack: ready</string>
+    <string name="species_pack_status_downloading">Downloading species pack…</string>
+    <string name="species_pack_btn_download">Download</string>
+    <string name="species_pack_btn_retry">Retry</string>
     <string name="species_unidentified">Species not identified</string>
     <string name="species_unidentified_hint">Closest candidates: %1$s</string>
     <string name="species_badge_unidentified">Not identified</string>
