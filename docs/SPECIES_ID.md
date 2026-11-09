@@ -363,5 +363,6 @@ and run on test photos:
 
 ```bash
 P=C:/rerun_v9/runs/_species_precision/pack_best
-python -I tools/species/build_catalog_v2.py --catalog $P/species_catalog_v1.json --index $P/species_index_v3.bin \n    --hierarchy C:/rerun_v9/runs/_species_2026-11-08/hf_pack/ecoregion_hierarchy_v1.json --out C:/rerun_v9/runs/_species_catalog_v2
+python -I tools/species/build_catalog_v2.py --catalog $P/species_catalog_v1.json --index $P/species_index_v3.bin \
+    --hierarchy C:/rerun_v9/runs/_species_2026-11-08/hf_pack/ecoregion_hierarchy_v1.json --out C:/rerun_v9/runs/_species_catalog_v2
 ```
