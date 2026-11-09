@@ -303,8 +303,29 @@
     <string name="contribute_queued_message">%d Bild(er) für WLAN-Upload eingereiht</string>
     <string name="contribute_channel_name">Forschungsbeitrag</string>
     <string name="contribute_channel_desc">Upload-Fortschritt für Forschungsdaten</string>
-    <string name="contribute_upload_title">Beitrag zur Forschung</string>
-    <string name="contribute_upload_progress">Bild %1$d von %2$d wird hochgeladen…</string>
+    <string name="contribute_upload_title">Fotos für OceanGuard beitragen</string>
+    <plurals name="contribute_upload_progress">
+        <item quantity="one">%1$d von %2$d Foto</item>
+        <item quantity="other">%1$d von %2$d Fotos</item>
+    </plurals>
+    <plurals name="contribute_summary_done">
+        <item quantity="one">%d Foto beigetragen</item>
+        <item quantity="other">%d Fotos beigetragen</item>
+    </plurals>
+    <plurals name="contribute_count_done">
+        <item quantity="one">%d beigetragen</item>
+        <item quantity="other">%d beigetragen</item>
+    </plurals>
+    <plurals name="contribute_count_pending">
+        <item quantity="one">%d ausstehend</item>
+        <item quantity="other">%d ausstehend</item>
+    </plurals>
+    <plurals name="contribute_count_rejected">
+        <item quantity="one">%d nicht gesendet</item>
+        <item quantity="other">%d nicht gesendet</item>
+    </plurals>
+    <string name="contribute_summary_pending">%1$s, %2$s (neuer Versuch folgt)</string>
+    <string name="contribute_summary_rejected">%1$s, %2$s</string>
     <string name="contribute_upload_success">%d Bild(er) beigetragen - vielen Dank!</string>
     <string name="contribute_upload_partial">%d Bild(er) hochgeladen, einige fehlgeschlagen - wird später erneut versucht</string>
     <string name="contribute_upload_failed">Upload fehlgeschlagen - wird bei besserer Verbindung erneut versucht</string>

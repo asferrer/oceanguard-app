@@ -11,7 +11,8 @@ import java.util.UUID
 /** How an upload cycle ended, mapped by the worker to a WorkManager result. */
 enum class RunOutcome { DONE, RETRY, NOT_CONFIGURED }
 
-data class RunReport(val uploaded: Int, val failed: Int, val outcome: RunOutcome)
+/** [pending] = photos still waiting for a retry when the cycle ended. */
+data class RunReport(val uploaded: Int, val failed: Int, val outcome: RunOutcome, val pending: Int = 0)
 
 /**
  * One pass over the contribution queue, one photo at a time (no OOM on long queues).
@@ -52,7 +53,7 @@ class ContributionUploadRunner(
             when (val step = uploadOne(client, item)) {
                 Step.Uploaded -> uploaded++
                 Step.Failed -> failed++
-                Step.Stop -> return RunReport(uploaded, failed, RunOutcome.RETRY)
+                Step.Stop -> return RunReport(uploaded, failed, RunOutcome.RETRY, dao.getPendingCount())
             }
         }
         return RunReport(uploaded, failed, RunOutcome.DONE)
