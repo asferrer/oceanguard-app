@@ -124,13 +124,17 @@ class SpeciesIdentifier(
         latency.record("locate", System.currentTimeMillis() - locateStart)
         Log.d(TAG, "Identifying ${crops.size} crop(s), region=${region?.ecoregionName}")
 
+        val failures = mutableListOf<Throwable>()
         val results = crops.mapNotNull { crop ->
             runCatching { identifyCrop(bitmap, crop, region, sensitivity, language) }
-                .onFailure { e -> Log.w(TAG, "Crop identification failed: ${e.message}") }
+                .onFailure { e -> Log.w(TAG, "Crop identification failed: ${e.message}"); failures += e }
                 .getOrNull()
         }
         latency.record("total", System.currentTimeMillis() - totalStart)
         latency.logSummary()
+        // Every crop failed (e.g. the encoder cannot run on this device): report the error instead of
+        // returning an empty list, which the UI would show as "no species" for every photo.
+        if (results.isEmpty() && failures.isNotEmpty()) throw failures.first()
         return results
     }
 

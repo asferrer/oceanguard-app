@@ -331,6 +331,20 @@ class SpeciesIdentifierTest {
     // -----------------------------------------------------------------------
 
     @Test
+    fun `an encoder that fails on every crop is reported, not shown as no species`() = runBlocking {
+        val broken = object : com.oceanguard.ai.inference.species.SpeciesEmbedder {
+            override val isReady = true
+            override val dimension = SpeciesReferenceIndex.EMBEDDING_DIM
+            override suspend fun embed(bitmap: Bitmap): FloatArray =
+                throw IllegalStateException("Could not find an implementation for ConvInteger(10)")
+            override fun close() {}
+        }
+        val sut = buildIdentifier(broken, locator = FixedEmbeddingCropProvider(FakeSpeciesEmbedder()))
+        val error = runCatching { sut.identify(nullBitmap()) }.exceptionOrNull()
+        assertTrue("Expected the encoder error, got $error", error?.message?.contains("ConvInteger") == true)
+    }
+
+    @Test
     fun `returns empty list when embedder is not ready`() = runBlocking {
         val notReadyEmbedder = FakeSpeciesEmbedder() // isReady = true always
         // Wrap in a not-ready proxy:
