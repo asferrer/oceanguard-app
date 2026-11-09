@@ -292,11 +292,11 @@
     <string name="contribute_all_synced">Tutte le immagini sincronizzate ✓</string>
     <string name="contribute_upload_now_btn">Carica ora</string>
     <string name="contribute_consent_title">Contribuisci alla Ricerca</string>
-    <string name="contribute_consent_body">Ogni foto analizzata verrà inviata a piena risoluzione al server di ricerca di OceanGuard con i suoi metadati EXIF (posizione GPS, data e ora, marca e modello del telefono) e gli oggetti rilevati. Servono a migliorare i modelli di rilevamento e delle specie e per le statistiche. Le posizioni reali non vengono mai pubblicate. In qualsiasi momento, nelle Impostazioni, puoi disattivare «Includi posizione», revocare il consenso o eliminare le foto inviate.</string>
+    <string name="contribute_consent_body">Ogni foto analizzata verrà inviata a piena risoluzione al server di ricerca di OceanGuard con i suoi metadati EXIF (posizione GPS, data e ora, marca e modello del telefono) e ciò che l\'app vi ha rilevato o identificato, con il modello usato. Servono a migliorare i modelli di rilevamento e delle specie e per le statistiche. Le posizioni reali non vengono mai pubblicate. In qualsiasi momento, nelle Impostazioni, puoi disattivare «Includi posizione», revocare il consenso o eliminare le foto inviate.</string>
     <string name="contribute_consent_accept">Acconsento</string>
     <string name="contribute_consent_dismiss">Annulla</string>
     <string name="contribute_prompt_title">Aiuta a Migliorare OceanGuard AI</string>
-    <string name="contribute_prompt_body">Le tue foto analizzate possono aiutare ad addestrare un rilevamento migliore dei rifiuti marini e delle specie. Ogni foto viene inviata con i suoi metadati EXIF (posizione, data e ora, modello del telefono) e gli oggetti rilevati.</string>
+    <string name="contribute_prompt_body">Le tue foto analizzate possono aiutare ad addestrare un rilevamento migliore dei rifiuti marini e delle specie. Ogni foto viene inviata con i suoi metadati EXIF (posizione, data e ora, modello del telefono) e ciò che l\'app vi ha rilevato o identificato, con il modello usato.</string>
     <string name="contribute_prompt_wifi">Carica con WiFi</string>
     <string name="contribute_prompt_now">Carica ora</string>
     <string name="contribute_prompt_skip">Non ora</string>

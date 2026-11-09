@@ -54,10 +54,11 @@ class ContributionUploadRunnerTest {
 
     private fun runner(
         client: ContributionApiClient? = client(),
-        prepare: (File, Boolean) -> ByteArray = { f, _ -> f.readBytes() },
+        prepare: (File, Boolean) -> PreparedPhoto = { f, _ -> PreparedPhoto(f.readBytes(), 16, 12) },
+        seal: ((String, String, ByteArray) -> ByteArray)? = null,
     ) = ContributionUploadRunner(
         dao, client, prefs, "1.2.0", prepare,
-        seal = { id, meta, image -> ContributionEnvelope.seal(testRecipient.public.encoded, id, meta, image) },
+        seal = seal ?: { id, meta, image -> ContributionEnvelope.seal(testRecipient.public.encoded, id, meta, image) },
         pauseBetweenMs = 0,
     )
 
@@ -212,8 +213,67 @@ class ContributionUploadRunnerTest {
         prefs.include = false
         val seen = mutableListOf<Boolean>()
         worker.enqueue(MockResponse().setResponseCode(201).setBody("{}"))
-        runner(prepare = { f, include -> seen += include; f.readBytes() }).run()
+        runner(prepare = { f, include -> seen += include; PreparedPhoto(f.readBytes(), 16, 12) }).run()
         assertEquals(listOf(false), seen)
         assertTrue(server.uploadRequests().first().getHeader("X-OG-Signature")!!.isNotEmpty())
+    }
+
+    private fun captureMeta(item: ContributionQueueItem, prepared: PreparedPhoto): com.google.gson.JsonObject = runBlocking {
+        dao.insert(item)
+        worker.enqueue(MockResponse().setResponseCode(201).setBody("{}"))
+        var meta = ""
+        runner(
+            prepare = { _, _ -> prepared },
+            seal = { _, m, _ -> meta = m; byteArrayOf(1) },
+        ).run()
+        com.google.gson.JsonParser.parseString(meta).asJsonObject
+    }
+
+    private fun item(annotations: String, outputs: String?): ContributionQueueItem {
+        val photo = File(tmp.root, "m.jpg").apply { writeBytes(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 9)) }
+        return ContributionQueueItem(
+            sessionId = 1, imageUri = "file://${photo.path}", annotationsJson = annotations,
+            outputsJson = outputs, status = ContributionStatus.PENDING,
+        )
+    }
+
+    @Test
+    fun metaKeepsV1AndCocoAndAddsOutputsWithTheSentImage() {
+        val outputs = """{"schema":1,"detection":{"model":"RT-DETRv2","items":[{"class":"BOTTLE","score":0.9,"bbox_norm":[0.25,0.5,0.5,0.25]}]}}"""
+        val prepared = PreparedPhoto(byteArrayOf(1, 2, 3), 400, 200, transcoded = true)
+        val meta = captureMeta(item("""{"images":[],"annotations":[]}""", outputs), prepared)
+
+        assertEquals(1, meta.get("v").asInt)
+        assertTrue(meta.get("annotations").isJsonObject)
+        val out = meta.getAsJsonObject("outputs")
+        val image = out.getAsJsonObject("image")
+        assertEquals(400, image.get("width").asInt)
+        assertEquals(true, image.get("transcoded").asBoolean)
+        assertEquals(ContributionUploadRunner.sha256Hex(byteArrayOf(1, 2, 3)), image.get("sha256").asString)
+        val box = out.getAsJsonObject("detection").getAsJsonArray("items")[0].asJsonObject.getAsJsonArray("bbox_px")
+        assertEquals(listOf(100f, 100f, 200f, 50f), box.map { it.asFloat })
+    }
+
+    @Test
+    fun itemsQueuedWithoutOutputsStillGoWithTheImageBlock() {
+        val meta = captureMeta(item("""{"images":[],"annotations":[]}""", null), PreparedPhoto(byteArrayOf(1), 16, 12))
+        val out = meta.getAsJsonObject("outputs")
+        assertEquals(1, out.get("schema").asInt)
+        assertEquals(16, out.getAsJsonObject("image").get("width").asInt)
+    }
+
+    @Test
+    fun shrunkPhotoRescalesTheCocoBoxesAndRecordsIt() {
+        val coco = """{"images":[{"id":1,"width":1000,"height":500}],"annotations":[{"id":1,"bbox":[100,50,200,100],"area":20000}]}"""
+        val prepared = PreparedPhoto(byteArrayOf(1), 500, 250, transcoded = true, sourceWidth = 1000, sourceHeight = 500)
+        val meta = captureMeta(item(coco, null), prepared)
+        val ann = meta.getAsJsonObject("annotations")
+        assertEquals(500, ann.getAsJsonArray("images")[0].asJsonObject.get("width").asInt)
+        val a = ann.getAsJsonArray("annotations")[0].asJsonObject
+        assertEquals(listOf(50.0, 25.0, 100.0, 50.0), a.getAsJsonArray("bbox").map { it.asDouble })
+        assertEquals(5000.0, a.get("area").asDouble, 1e-6)
+        val image = meta.getAsJsonObject("outputs").getAsJsonObject("image")
+        assertEquals(true, image.get("downscaled").asBoolean)
+        assertEquals(1000, image.get("source_width").asInt)
     }
 }

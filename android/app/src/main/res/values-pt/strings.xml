@@ -292,11 +292,11 @@
     <string name="contribute_all_synced">Todas as imagens sincronizadas ✓</string>
     <string name="contribute_upload_now_btn">Enviar agora</string>
     <string name="contribute_consent_title">Contribuir para a Pesquisa</string>
-    <string name="contribute_consent_body">Cada foto analisada será enviada em resolução total ao servidor de pesquisa do OceanGuard com seus metadados EXIF (localização GPS, data e hora, marca e modelo do telefone) e os objetos detectados. Elas são usadas para melhorar os modelos de detecção e de espécies e para estatísticas. Localizações reais nunca são publicadas. A qualquer momento, nas Configurações, você pode desativar “Incluir localização”, retirar o consentimento ou apagar as fotos enviadas.</string>
+    <string name="contribute_consent_body">Cada foto analisada será enviada em resolução total ao servidor de pesquisa do OceanGuard com seus metadados EXIF (localização GPS, data e hora, marca e modelo do telefone) e o que o app detectou ou identificou nela, com o modelo usado. Elas são usadas para melhorar os modelos de detecção e de espécies e para estatísticas. Localizações reais nunca são publicadas. A qualquer momento, nas Configurações, você pode desativar “Incluir localização”, retirar o consentimento ou apagar as fotos enviadas.</string>
     <string name="contribute_consent_accept">Consinto</string>
     <string name="contribute_consent_dismiss">Cancelar</string>
     <string name="contribute_prompt_title">Ajude a Melhorar OceanGuard AI</string>
-    <string name="contribute_prompt_body">Suas fotos analisadas podem ajudar a treinar uma detecção melhor de resíduos marinhos e de espécies. Cada foto é enviada com seus metadados EXIF (localização, data e hora, modelo do telefone) e os objetos detectados.</string>
+    <string name="contribute_prompt_body">Suas fotos analisadas podem ajudar a treinar uma detecção melhor de resíduos marinhos e de espécies. Cada foto é enviada com seus metadados EXIF (localização, data e hora, modelo do telefone) e o que o app detectou ou identificou nela, com o modelo usado.</string>
     <string name="contribute_prompt_wifi">Enviar por WiFi</string>
     <string name="contribute_prompt_now">Enviar agora</string>
     <string name="contribute_prompt_skip">Agora não</string>

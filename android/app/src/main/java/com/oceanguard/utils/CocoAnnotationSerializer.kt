@@ -4,9 +4,11 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import android.util.Log
 import com.google.gson.Gson
+import com.oceanguard.ai.data.Debris
 import com.oceanguard.ai.data.DebrisType
 import com.oceanguard.ai.data.DetectionSession
 import java.io.File
+import java.util.Date
 
 /**
  * Builds a COCO-format JSON string from a [DetectionSession].
@@ -101,20 +103,24 @@ object CocoAnnotationSerializer {
      * Build COCO JSON for the session. Returns null if the image file is missing
      * or has invalid dimensions (caller should skip enqueue).
      */
-    fun build(context: Context, session: DetectionSession): String? {
-        val imageFile = File(session.imageUri.removePrefix("file://"))
+    fun build(context: Context, session: DetectionSession): String? =
+        build(context, session.imageUri, session.timestamp, session.debrisList)
+
+    /** Same for a photo with the given detections (empty for a species photo). */
+    fun build(context: Context, imageUri: String, timestamp: Date, debrisList: List<Debris>): String? {
+        val imageFile = File(imageUri.removePrefix("file://"))
         if (!imageFile.exists()) {
-            Log.w(TAG, "Image file missing, skipping COCO serialization: ${session.imageUri}")
+            Log.w(TAG, "Image file missing, skipping COCO serialization: $imageUri")
             return null
         }
-        val (imgW, imgH) = readDims(session.imageUri)
+        val (imgW, imgH) = readDims(imageUri)
         if (imgW <= 1 || imgH <= 1) {
-            Log.w(TAG, "Invalid image dimensions ${imgW}x${imgH}, skipping: ${session.imageUri}")
+            Log.w(TAG, "Invalid image dimensions ${imgW}x${imgH}, skipping: $imageUri")
             return null
         }
         val fileName = imageFile.name
 
-        val annotations = session.debrisList.mapIndexed { i, debris ->
+        val annotations = debrisList.mapIndexed { i, debris ->
             val catId = CATEGORY_ID_MAP[debris.type] ?: 6 // fallback to Plastic_Debris
             // Clamp bbox to [0,1] before denormalization
             val bx = debris.bbox.x.coerceIn(0f, 1f)
@@ -142,7 +148,7 @@ object CocoAnnotationSerializer {
             "info" to mapOf(
                 "description" to "OceanGuard AI contribution",
                 "version" to "1.0",
-                "date_created" to session.timestamp.toInstant().toString(),
+                "date_created" to timestamp.toInstant().toString(),
             ),
             "images" to listOf(
                 mapOf(
@@ -150,7 +156,7 @@ object CocoAnnotationSerializer {
                     "file_name" to fileName,
                     "width" to imgW,
                     "height" to imgH,
-                    "date_captured" to session.timestamp.toInstant().toString(),
+                    "date_captured" to timestamp.toInstant().toString(),
                 )
             ),
             "annotations" to annotations,

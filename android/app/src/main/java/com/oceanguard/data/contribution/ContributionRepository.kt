@@ -12,6 +12,7 @@ import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.service.DataContributionWorker
 import com.oceanguard.ai.utils.CocoAnnotationSerializer
 import kotlinx.coroutines.flow.Flow
+import java.util.Date
 import java.util.concurrent.TimeUnit
 
 /** Result of "Withdraw my contributions" in Settings. */
@@ -71,14 +72,48 @@ class ContributionRepository(
         val existing = dao.getStatusForUri(session.imageUri)
         if (existing == ContributionStatus.PENDING.name || existing == ContributionStatus.DONE.name) return true
         val json = serializer(context, session) ?: return false
-        dao.insert(
+        return insertAndSchedule(
             ContributionQueueItem(
                 sessionId = session.id,
                 imageUri = session.imageUri,
                 annotationsJson = json,
+                outputsJson = ContributionOutputs.forDetection(session),
                 status = ContributionStatus.PENDING,
             ),
         )
+    }
+
+    /**
+     * Called after a species identification is saved: queued if consent is given and a
+     * destination exists. False if the UI may offer the upload button.
+     */
+    suspend fun maybeEnqueueSpecies(imageUri: String, items: List<SpeciesOutput>, timestamp: Date = Date()): Boolean {
+        if (!isAvailable || !prefs.consentGiven()) return false
+        return enqueueSpecies(imageUri, items, timestamp)
+    }
+
+    /**
+     * Direct enqueue of a species photo (button on the history card). Duplicate-safe. The COCO
+     * `annotations` are empty: the answer travels in `outputs.species`.
+     */
+    suspend fun enqueueSpecies(imageUri: String, items: List<SpeciesOutput>, timestamp: Date = Date()): Boolean {
+        if (!isAvailable) return false
+        val existing = dao.getStatusForUri(imageUri)
+        if (existing == ContributionStatus.PENDING.name || existing == ContributionStatus.DONE.name) return true
+        val json = CocoAnnotationSerializer.build(context, imageUri, timestamp, emptyList()) ?: return false
+        return insertAndSchedule(
+            ContributionQueueItem(
+                sessionId = 0,
+                imageUri = imageUri,
+                annotationsJson = json,
+                outputsJson = ContributionOutputs.forSpecies(items),
+                status = ContributionStatus.PENDING,
+            ),
+        )
+    }
+
+    private suspend fun insertAndSchedule(item: ContributionQueueItem): Boolean {
+        dao.insert(item)
         scheduleWorker()
         return true
     }

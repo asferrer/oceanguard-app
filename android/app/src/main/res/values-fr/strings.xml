@@ -292,11 +292,11 @@
     <string name="contribute_all_synced">Toutes les images synchronisées ✓</string>
     <string name="contribute_upload_now_btn">Envoyer maintenant</string>
     <string name="contribute_consent_title">Contribuer à la Recherche</string>
-    <string name="contribute_consent_body">Chaque photo analysée sera envoyée en pleine résolution au serveur de recherche d\'OceanGuard avec ses métadonnées EXIF (position GPS, date et heure, marque et modèle du téléphone) et les objets détectés. Elles servent à améliorer les modèles de détection et d\'espèces et à établir des statistiques. Les positions réelles ne sont jamais publiées. À tout moment, dans les Paramètres, vous pouvez désactiver « Inclure la position », retirer votre consentement ou supprimer les photos envoyées.</string>
+    <string name="contribute_consent_body">Chaque photo analysée sera envoyée en pleine résolution au serveur de recherche d\'OceanGuard avec ses métadonnées EXIF (position GPS, date et heure, marque et modèle du téléphone) et ce que l\'application y a détecté ou identifié, avec le modèle utilisé. Elles servent à améliorer les modèles de détection et d\'espèces et à établir des statistiques. Les positions réelles ne sont jamais publiées. À tout moment, dans les Paramètres, vous pouvez désactiver « Inclure la position », retirer votre consentement ou supprimer les photos envoyées.</string>
     <string name="contribute_consent_accept">Je consens</string>
     <string name="contribute_consent_dismiss">Annuler</string>
     <string name="contribute_prompt_title">Aider à Améliorer OceanGuard AI</string>
-    <string name="contribute_prompt_body">Vos photos analysées peuvent aider à entraîner une meilleure détection des déchets marins et des espèces. Chaque photo est envoyée avec ses métadonnées EXIF (position, date et heure, modèle du téléphone) et les objets détectés.</string>
+    <string name="contribute_prompt_body">Vos photos analysées peuvent aider à entraîner une meilleure détection des déchets marins et des espèces. Chaque photo est envoyée avec ses métadonnées EXIF (position, date et heure, modèle du téléphone) et ce que l\'application y a détecté ou identifié, avec le modèle utilisé.</string>
     <string name="contribute_prompt_wifi">Envoyer en WiFi</string>
     <string name="contribute_prompt_now">Envoyer maintenant</string>
     <string name="contribute_prompt_skip">Pas maintenant</string>

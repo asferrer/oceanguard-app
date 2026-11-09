@@ -57,7 +57,7 @@ internal class StillCaptureState(
     private val context: Context,
     private val executor: ExecutorService,
 ) {
-    val imageCapture: ImageCapture = ImageCapture.Builder().build()
+    val imageCapture: ImageCapture = CaptureConfig.newImageCapture()
 
     var isCapturing by mutableStateOf(false)
         private set

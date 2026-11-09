@@ -156,4 +156,44 @@ class ContributionRepositoryTest {
     fun withdrawWithoutDestinationIsUnavailable() = runBlocking {
         assertEquals(WithdrawResult.Unavailable, repository(available = false).withdrawAll())
     }
+
+    private fun speciesPhoto(): String = "file://" + syntheticJpeg(java.io.File(context.cacheDir, "sp").apply { mkdirs() }).path
+
+    private val bluefin = listOf(SpeciesOutput("126436", "Thunnus thynnus", "RAG_CORE", 0.9f))
+
+    @Test
+    fun speciesPhotoIsQueuedWithItsOutputsAndEmptyAnnotations() = runBlocking {
+        prefs.consent = true
+        val repo = repository()
+        val uri = speciesPhoto()
+        assertTrue(repo.maybeEnqueueSpecies(uri, bluefin))
+        assertTrue("duplicate-safe", repo.maybeEnqueueSpecies(uri, bluefin))
+        assertEquals(1, dao.getPendingCount())
+        val item = dao.getNextPending()!!
+        assertTrue(item.outputsJson!!.contains("Thunnus thynnus"))
+        assertTrue(item.annotationsJson.contains("\"annotations\":[]"))
+        assertEquals(1, uniqueWork().size)
+    }
+
+    @Test
+    fun speciesPhotoNeedsConsentToBeQueuedAutomatically() = runBlocking {
+        val repo = repository()
+        assertFalse(repo.maybeEnqueueSpecies(speciesPhoto(), bluefin))
+        assertEquals(0, dao.getPendingCount())
+        assertTrue("the explicit button works once consent exists in the UI", repo.enqueueSpecies(speciesPhoto(), bluefin))
+    }
+
+    @Test
+    fun speciesPhotoWithoutDestinationOrFileIsNotQueued() = runBlocking {
+        prefs.consent = true
+        assertFalse(repository(available = false).enqueueSpecies(speciesPhoto(), bluefin))
+        assertFalse(repository().enqueueSpecies("file:///nope/missing.jpg", bluefin))
+    }
+
+    @Test
+    fun debrisSessionQueuesItsOutputs() = runBlocking {
+        prefs.consent = true
+        assertTrue(repository().maybeEnqueue(session()))
+        assertTrue(dao.getNextPending()!!.outputsJson!!.contains("\"detection\""))
+    }
 }
