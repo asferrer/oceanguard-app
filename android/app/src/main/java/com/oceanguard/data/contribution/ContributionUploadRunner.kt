@@ -1,11 +1,13 @@
 package com.oceanguard.ai.data.contribution
 
 import android.util.Log
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import kotlinx.coroutines.delay
 import java.io.File
 import java.io.IOException
+import java.security.MessageDigest
 import java.util.UUID
 
 /** How an upload cycle ended, mapped by the worker to a WorkManager result. */
@@ -32,7 +34,7 @@ class ContributionUploadRunner(
     private val client: ContributionApiClient?,
     private val prefs: ContributionPrefs,
     private val appVersion: String,
-    private val prepare: (photo: File, includeLocation: Boolean) -> ByteArray,
+    private val prepare: (photo: File, includeLocation: Boolean) -> PreparedPhoto,
     private val seal: (contributionId: String, metaJson: String, image: ByteArray) -> ByteArray,
     private val pauseBetweenMs: Long = 300,
     private val nowMs: () -> Long = System::currentTimeMillis,
@@ -67,7 +69,7 @@ class ContributionUploadRunner(
 
     private suspend fun uploadOne(client: ContributionApiClient, item: ContributionQueueItem): Step {
         val photo = File(item.imageUri.removePrefix("file://"))
-        val bytes = try {
+        val prepared = try {
             prepare(photo, prefs.includeLocation())
         } catch (e: IOException) {
             Log.w(TAG, "Photo ${item.id} not sendable: ${e.message}")
@@ -76,7 +78,7 @@ class ContributionUploadRunner(
         }
         val contributionId = contributionIdOf(client.clientId, item)
         val envelope = try {
-            seal(contributionId, metaJson(contributionId, item.annotationsJson), bytes)
+            seal(contributionId, metaJson(contributionId, item, prepared), prepared.bytes)
         } catch (e: RuntimeException) { // bad annotations JSON or recipient key: never sent
             Log.w(TAG, "Photo ${item.id} not sealable: ${e.javaClass.simpleName}")
             dao.updateStatus(item.id, ContributionStatus.FAILED.name)
@@ -108,13 +110,49 @@ class ContributionUploadRunner(
         }
     }
 
-    /** Envelope metadata: what the NAS needs besides the photo (no location, no device data). */
-    private fun metaJson(contributionId: String, annotationsJson: String): String = JsonObject().apply {
-        addProperty("v", 1)
-        addProperty("contribution_id", contributionId)
-        addProperty("app_version", appVersion)
-        add("annotations", JsonParser.parseString(annotationsJson))
-    }.toString()
+    /**
+     * Envelope metadata: what the NAS needs besides the photo (no location, no device data).
+     * `v` stays 1 and `annotations` stays COCO, so older pullers keep working; `outputs` is new.
+     */
+    private fun metaJson(contributionId: String, item: ContributionQueueItem, photo: PreparedPhoto): String =
+        JsonObject().apply {
+            addProperty("v", 1)
+            addProperty("contribution_id", contributionId)
+            addProperty("app_version", appVersion)
+            add("annotations", cocoFor(item.annotationsJson, photo))
+            add("outputs", ContributionOutputs.finish(item.outputsJson, imageBlock(photo)))
+        }.toString()
+
+    private fun imageBlock(photo: PreparedPhoto): JsonObject = JsonObject().apply {
+        addProperty("width", photo.width)
+        addProperty("height", photo.height)
+        addProperty("sha256", sha256Hex(photo.bytes))
+        addProperty("transcoded", photo.transcoded)
+        if (photo.downscaled) {
+            addProperty("downscaled", true)
+            addProperty("source_width", photo.sourceWidth)
+            addProperty("source_height", photo.sourceHeight)
+        }
+    }
+
+    /** The COCO as queued, rescaled to the pixels of the bytes sent when the photo had to be shrunk. */
+    private fun cocoFor(annotationsJson: String, photo: PreparedPhoto): JsonObject {
+        val coco = JsonParser.parseString(annotationsJson).asJsonObject
+        if (!photo.downscaled) return coco
+        val sx = photo.width.toDouble() / photo.sourceWidth
+        val sy = photo.height.toDouble() / photo.sourceHeight
+        coco.getAsJsonArray("images")?.forEach {
+            it.asJsonObject.addProperty("width", photo.width)
+            it.asJsonObject.addProperty("height", photo.height)
+        }
+        coco.getAsJsonArray("annotations")?.forEach { a ->
+            val o = a.asJsonObject
+            val b = o.getAsJsonArray("bbox").map { it.asDouble }
+            o.add("bbox", JsonArray().apply { add(b[0] * sx); add(b[1] * sy); add(b[2] * sx); add(b[3] * sy) })
+            o.addProperty("area", b[2] * sx * b[3] * sy)
+        }
+        return coco
+    }
 
     companion object {
         private const val TAG = "ContribRunner"
@@ -125,6 +163,9 @@ class ContributionUploadRunner(
          */
         fun contributionIdOf(clientId: String, item: ContributionQueueItem): String =
             UUID.nameUUIDFromBytes("$clientId:${item.id}:${item.createdAt}".toByteArray()).toString()
+        fun sha256Hex(bytes: ByteArray): String =
+            MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
         const val MAX_RETRIES = 5
         private const val PURGE_AGE_MS = 30L * 24 * 60 * 60 * 1000
     }

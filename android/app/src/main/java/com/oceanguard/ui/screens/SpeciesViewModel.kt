@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.Location
+import com.oceanguard.ai.data.contribution.ContributionOutputs
+import com.oceanguard.ai.data.contribution.ContributionRepository
 import com.oceanguard.ai.data.species.SpeciesCollectionRepository
 import com.oceanguard.ai.inference.species.IdentificationResult
 import com.oceanguard.ai.inference.species.SpeciesIdentifier
@@ -112,6 +114,9 @@ class SpeciesViewModel(
     private val repo: SpeciesCollectionRepository,
     private val imagePreprocessor: ImagePreprocessor,
     private val locationProvider: LocationProvider,
+    /** Research contribution: with the user's consent, saved photos go up with the app's answer. */
+    private val contribution: ContributionRepository? = null,
+    private val packVersion: () -> Int? = { null },
 ) : ViewModel() {
 
     companion object {
@@ -260,6 +265,10 @@ class SpeciesViewModel(
                 analysisId = analysisId,
             )
         }
+        contribution?.maybeEnqueueSpecies(
+            stored,
+            results.map { ContributionOutputs.speciesOf(it, packVersion()) },
+        )
     }
 
     /** Reset both UI states back to Idle (e.g. before navigating away). */

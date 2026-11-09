@@ -309,13 +309,13 @@
 
     <!-- Consent dialog -->
     <string name="contribute_consent_title">Contribute to Research</string>
-    <string name="contribute_consent_body">Each analysed photo will be sent at full resolution to the OceanGuard research server with its EXIF metadata (GPS location, date and time, phone make and model) and the detected objects. They are used to improve the detection and species models and for statistics. Real locations are never published. At any time in Settings you can turn off “Include location”, withdraw consent or delete the photos you sent.</string>
+    <string name="contribute_consent_body">Each analysed photo will be sent at full resolution to the OceanGuard research server with its EXIF metadata (GPS location, date and time, phone make and model) and what the app detected or identified in it, with the model used. They are used to improve the detection and species models and for statistics. Real locations are never published. At any time in Settings you can turn off “Include location”, withdraw consent or delete the photos you sent.</string>
     <string name="contribute_consent_accept">I Consent</string>
     <string name="contribute_consent_dismiss">Cancel</string>
 
     <!-- Post-analysis prompt (bottom sheet) -->
     <string name="contribute_prompt_title">Help Improve OceanGuard AI</string>
-    <string name="contribute_prompt_body">Your analysed photo(s) can help train better marine debris and species detection. Each photo is sent with its EXIF metadata (location, date and time, phone model) and the detected objects.</string>
+    <string name="contribute_prompt_body">Your analysed photo(s) can help train better marine debris and species detection. Each photo is sent with its EXIF metadata (location, date and time, phone model) and what the app detected or identified in it, with the model used.</string>
     <string name="contribute_prompt_wifi">Upload on WiFi</string>
     <string name="contribute_prompt_now">Upload now</string>
     <string name="contribute_prompt_skip">Not now</string>

@@ -52,3 +52,13 @@ internal val MIGRATION_14_15 = object : Migration(14, 15) {
         db.execSQL("ALTER TABLE generated_reports ADD COLUMN observationIds TEXT")
     }
 }
+
+/**
+ * v15 -> v16: what the app answered for a contributed photo (detections, species) travels with it.
+ * `contribution_queue.outputsJson`: NULL on items queued before, which are sent without it.
+ */
+internal val MIGRATION_15_16 = object : Migration(15, 16) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE contribution_queue ADD COLUMN outputsJson TEXT")
+    }
+}

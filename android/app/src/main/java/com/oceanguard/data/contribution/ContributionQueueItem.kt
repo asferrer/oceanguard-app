@@ -11,6 +11,8 @@ data class ContributionQueueItem(
     val sessionId: Long,
     val imageUri: String,
     val annotationsJson: String,
+    /** What the app answered for the photo (see [ContributionOutputs]); null on items queued before v16. */
+    val outputsJson: String? = null,
     val status: ContributionStatus,
     val retryCount: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),

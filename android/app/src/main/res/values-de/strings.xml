@@ -296,7 +296,7 @@
     <string name="contribute_consent_accept">Ich stimme zu</string>
     <string name="contribute_consent_dismiss">Abbrechen</string>
     <string name="contribute_prompt_title">OceanGuard AI verbessern</string>
-    <string name="contribute_prompt_body">Ihre analysierten Fotos können helfen, die Erkennung von Meeresmüll und Arten zu verbessern. Jedes Foto wird mit seinen EXIF-Metadaten (Standort, Datum und Uhrzeit, Telefonmodell) und den erkannten Objekten gesendet.</string>
+    <string name="contribute_prompt_body">Ihre analysierten Fotos können helfen, die Erkennung von Meeresmüll und Arten zu verbessern. Jedes Foto wird mit seinen EXIF-Metadaten (Standort, Datum und Uhrzeit, Telefonmodell) und dem, was die App darin erkannt oder bestimmt hat, samt verwendetem Modell gesendet.</string>
     <string name="contribute_prompt_wifi">Über WLAN hochladen</string>
     <string name="contribute_prompt_now">Jetzt hochladen</string>
     <string name="contribute_prompt_skip">Nicht jetzt</string>

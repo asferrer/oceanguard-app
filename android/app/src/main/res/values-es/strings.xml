@@ -292,11 +292,11 @@
     <string name="contribute_all_synced">Todas las imágenes sincronizadas ✓</string>
     <string name="contribute_upload_now_btn">Subir ahora</string>
     <string name="contribute_consent_title">Contribuir a la Investigación</string>
-    <string name="contribute_consent_body">Cada foto analizada se enviará a resolución completa al servidor de investigación de OceanGuard con sus metadatos EXIF (ubicación GPS, fecha y hora, marca y modelo del teléfono) y los objetos detectados. Se usan para mejorar los modelos de detección y de especies y para estadísticas. Nunca se publican ubicaciones reales. En Ajustes puedes desactivar «Incluir ubicación», retirar el consentimiento o borrar las fotos enviadas cuando quieras.</string>
+    <string name="contribute_consent_body">Cada foto analizada se enviará a resolución completa al servidor de investigación de OceanGuard con sus metadatos EXIF (ubicación GPS, fecha y hora, marca y modelo del teléfono) y lo que la app detectó o identificó en ella, con el modelo usado. Se usan para mejorar los modelos de detección y de especies y para estadísticas. Nunca se publican ubicaciones reales. En Ajustes puedes desactivar «Incluir ubicación», retirar el consentimiento o borrar las fotos enviadas cuando quieras.</string>
     <string name="contribute_consent_accept">Consiento</string>
     <string name="contribute_consent_dismiss">Cancelar</string>
     <string name="contribute_prompt_title">Ayuda a Mejorar OceanGuard AI</string>
-    <string name="contribute_prompt_body">Tus fotos analizadas pueden ayudar a entrenar una mejor detección de residuos marinos y de especies. Cada foto se envía con sus metadatos EXIF (ubicación, fecha y hora, modelo del teléfono) y los objetos detectados.</string>
+    <string name="contribute_prompt_body">Tus fotos analizadas pueden ayudar a entrenar una mejor detección de residuos marinos y de especies. Cada foto se envía con sus metadatos EXIF (ubicación, fecha y hora, modelo del teléfono) y lo que la app detectó o identificó en ella, con el modelo usado.</string>
     <string name="contribute_prompt_wifi">Subir con WiFi</string>
     <string name="contribute_prompt_now">Subir ahora</string>
     <string name="contribute_prompt_skip">Ahora no</string>

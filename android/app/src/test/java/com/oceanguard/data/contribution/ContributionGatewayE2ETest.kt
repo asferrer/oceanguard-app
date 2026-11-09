@@ -43,8 +43,8 @@ class ContributionGatewayE2ETest {
         val config = configOrSkip()
         val client = ContributionApiClient(config, SoftwareDeviceIdentity())
         val photo = largeSyntheticJpeg(tmp.root, "e2e.jpg") // >= 10 MiB, several parts
-        val withGps = ContributionImage.prepare(photo, includeLocation = true, workDir = tmp.newFolder("a"))
-        val withoutGps = ContributionImage.prepare(photo, includeLocation = false, workDir = tmp.newFolder("b"))
+        val withGps = ContributionImage.prepare(photo, includeLocation = true, workDir = tmp.newFolder("a")).bytes
+        val withoutGps = ContributionImage.prepare(photo, includeLocation = false, workDir = tmp.newFolder("b")).bytes
         val spki = config.recipientSpki!!
 
         val first = UUID.randomUUID().toString()

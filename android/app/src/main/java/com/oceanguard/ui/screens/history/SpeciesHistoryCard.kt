@@ -70,6 +70,7 @@ fun SpeciesHistoryCard(
                 SpeciesCounts(group)
                 SpeciesPlace(group, geocoder)
             }
+            SpeciesUploadButton(group)
         }
     }
 }

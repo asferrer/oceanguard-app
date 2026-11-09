@@ -14,6 +14,7 @@ import com.oceanguard.ai.data.contribution.testRecipient
 import com.oceanguard.ai.data.contribution.ContributionQueueItem
 import com.oceanguard.ai.data.contribution.ContributionStatus
 import com.oceanguard.ai.data.contribution.ContributionUploadRunner
+import com.oceanguard.ai.data.contribution.PreparedPhoto
 import com.oceanguard.ai.data.contribution.FakeContributionPrefs
 import com.oceanguard.ai.data.contribution.RunOutcome
 import com.oceanguard.ai.data.contribution.RunReport
@@ -73,7 +74,7 @@ class DataContributionWorkerTest {
         }
         app.runnerFactory = {
             ContributionUploadRunner(
-                db.contributionQueueDao(), client, prefs, "1.2.0", { f, _ -> f.readBytes() },
+                db.contributionQueueDao(), client, prefs, "1.2.0", { f, _ -> PreparedPhoto(f.readBytes(), 16, 12) },
                 seal = { id, meta, image -> ContributionEnvelope.seal(testRecipient.public.encoded, id, meta, image) },
                 pauseBetweenMs = 0,
             )
