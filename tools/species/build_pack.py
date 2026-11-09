@@ -37,7 +37,7 @@ from biodex_common import fit_temperature, softmax_max  # noqa: E402
 from eval_rag import kmeans, open_set, score  # noqa: E402
 
 MODEL_LICENSES = {
-    "bioclip": "MIT (imageomics/bioclip)", "openclip_b32": "MIT (OpenCLIP, LAION-2B)",
+    "bioclip": "MIT (imageomics/bioclip)", "bioclip2": "MIT (imageomics/bioclip-2)", "openclip_b32": "MIT (OpenCLIP, LAION-2B)",
     "dinov2_small": "Apache-2.0 (facebook/dinov2-small)", "dinov2_base": "Apache-2.0 (facebook/dinov2-base)",
     "siglip2_base": "Apache-2.0 (google/siglip2-base-patch16-224)",
     "mnv3_large": "Apache-2.0 (timm mobilenetv3_large_100)", "effnet_lite0": "Apache-2.0 (timm tf_efficientnet_lite0)",
