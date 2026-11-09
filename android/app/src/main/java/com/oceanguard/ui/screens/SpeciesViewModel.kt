@@ -155,7 +155,7 @@ class SpeciesViewModel(
                 val imageWidth = bitmap.width
                 val imageHeight = bitmap.height
                 val results = identifier.identify(bitmap, loc, language = lang)
-                saveIdentified(results, uri, loc)
+                saveIdentified(results, uri, loc, analysisId = System.currentTimeMillis())
                 _uiState.value = SpeciesUiState.Complete(
                     results = results,
                     imageWidth = imageWidth,
@@ -179,6 +179,8 @@ class SpeciesViewModel(
         if (uris.isEmpty()) return
         val items = uris.map { SpeciesBatchItem(it) }.toMutableList()
         val startTime = System.currentTimeMillis()
+        // One id for the whole batch: the history shows it as a single analysis.
+        val analysisId = startTime
         _batchUiState.value = SpeciesBatchUiState.Running(
             items = items.toList(),
             currentIndex = 0,
@@ -202,7 +204,7 @@ class SpeciesViewModel(
                     val loc = locationProvider.getLastKnownLocation()
                     val lang = Locale.getDefault().language
                     val results = identifier.identify(bitmap, loc, language = lang)
-                    saveIdentified(results, uri, loc)
+                    saveIdentified(results, uri, loc, analysisId)
                     items[index] = items[index].copy(
                         state = SpeciesBatchItemState.Done(
                             results = results,
@@ -235,9 +237,12 @@ class SpeciesViewModel(
             ?: error(appContext.getString(R.string.species_pack_missing))
 
     /** Persist the confident results; "possible" (tentative) and unidentified ones are not added to the BioDex. */
-    private suspend fun saveIdentified(results: List<IdentificationResult>, uri: Uri, loc: Location?) {
+    private suspend fun saveIdentified(results: List<IdentificationResult>, uri: Uri, loc: Location?, analysisId: Long) {
         resultsToSave(results).forEach { result ->
-            repo.saveObservation(result = result, imageUri = uri.toString(), thumbnailUri = null, location = loc)
+            repo.saveObservation(
+                result = result, imageUri = uri.toString(), thumbnailUri = null, location = loc,
+                analysisId = analysisId,
+            )
         }
     }
 

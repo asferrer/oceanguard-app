@@ -1,0 +1,673 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 15,
+    "identityHash": "dade8546f152ea1d68a1521dc5c2c878",
+    "entities": [
+      {
+        "tableName": "detection_sessions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `imageUri` TEXT NOT NULL, `thumbnailUri` TEXT, `debrisList` TEXT NOT NULL, `totalCount` INTEGER NOT NULL, `healthScore` INTEGER NOT NULL, `location` TEXT, `timestamp` INTEGER NOT NULL, `imageQuality` TEXT NOT NULL, `processingTimeMs` INTEGER NOT NULL, `notes` TEXT, `tags` TEXT, `modelName` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "imageUri",
+            "columnName": "imageUri",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "thumbnailUri",
+            "columnName": "thumbnailUri",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "debrisList",
+            "columnName": "debrisList",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalCount",
+            "columnName": "totalCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "healthScore",
+            "columnName": "healthScore",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "imageQuality",
+            "columnName": "imageQuality",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "processingTimeMs",
+            "columnName": "processingTimeMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tags",
+            "columnName": "tags",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "modelName",
+            "columnName": "modelName",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_detection_sessions_imageUri",
+            "unique": true,
+            "columnNames": [
+              "imageUri"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_detection_sessions_imageUri` ON `${TABLE_NAME}` (`imageUri`)"
+          }
+        ]
+      },
+      {
+        "tableName": "generated_reports",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `text` TEXT NOT NULL, `language` TEXT NOT NULL, `sessionCount` INTEGER NOT NULL, `usedAi` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `locationName` TEXT, `centroidLat` REAL, `centroidLon` REAL, `dateRangeStartMs` INTEGER, `dateRangeEndMs` INTEGER, `audience` TEXT, `validationScore` INTEGER, `validationDetails` TEXT, `sessionIds` TEXT, `modelName` TEXT, `figPhotos` INTEGER, `figObjects` INTEGER, `figHealth` INTEGER, `reportType` TEXT, `observationIds` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "language",
+            "columnName": "language",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionCount",
+            "columnName": "sessionCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "usedAi",
+            "columnName": "usedAi",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "locationName",
+            "columnName": "locationName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "centroidLat",
+            "columnName": "centroidLat",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "centroidLon",
+            "columnName": "centroidLon",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "dateRangeStartMs",
+            "columnName": "dateRangeStartMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "dateRangeEndMs",
+            "columnName": "dateRangeEndMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "audience",
+            "columnName": "audience",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "validationScore",
+            "columnName": "validationScore",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "validationDetails",
+            "columnName": "validationDetails",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sessionIds",
+            "columnName": "sessionIds",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "modelName",
+            "columnName": "modelName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "figPhotos",
+            "columnName": "figPhotos",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "figObjects",
+            "columnName": "figObjects",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "figHealth",
+            "columnName": "figHealth",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "reportType",
+            "columnName": "reportType",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "observationIds",
+            "columnName": "observationIds",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "marine_dex_entries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`debrisType` TEXT NOT NULL, `firstSeenAt` INTEGER NOT NULL, `firstSeenSessionId` INTEGER NOT NULL, `timesDetected` INTEGER NOT NULL, `lastSeenAt` INTEGER NOT NULL, `isFavorite` INTEGER NOT NULL, PRIMARY KEY(`debrisType`))",
+        "fields": [
+          {
+            "fieldPath": "debrisType",
+            "columnName": "debrisType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "firstSeenAt",
+            "columnName": "firstSeenAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "firstSeenSessionId",
+            "columnName": "firstSeenSessionId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timesDetected",
+            "columnName": "timesDetected",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastSeenAt",
+            "columnName": "lastSeenAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isFavorite",
+            "columnName": "isFavorite",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "debrisType"
+          ]
+        }
+      },
+      {
+        "tableName": "achievements",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `unlockedAt` INTEGER NOT NULL, `progress` INTEGER NOT NULL, `target` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "unlockedAt",
+            "columnName": "unlockedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "progress",
+            "columnName": "progress",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "target",
+            "columnName": "target",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "video_analyses",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceVideoUri` TEXT NOT NULL, `outputVideoUri` TEXT, `thumbnailUri` TEXT, `durationMs` INTEGER NOT NULL, `totalFrameCount` INTEGER NOT NULL, `processedFrameCount` INTEGER NOT NULL, `uniqueDebrisCount` INTEGER NOT NULL, `classCounts` TEXT NOT NULL, `totalProcessingTimeMs` INTEGER NOT NULL, `avgInferenceTimeMs` REAL NOT NULL, `healthScore` INTEGER NOT NULL, `location` TEXT, `timestamp` INTEGER NOT NULL, `status` TEXT NOT NULL, `tags` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceVideoUri",
+            "columnName": "sourceVideoUri",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "outputVideoUri",
+            "columnName": "outputVideoUri",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "thumbnailUri",
+            "columnName": "thumbnailUri",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "durationMs",
+            "columnName": "durationMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalFrameCount",
+            "columnName": "totalFrameCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "processedFrameCount",
+            "columnName": "processedFrameCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "uniqueDebrisCount",
+            "columnName": "uniqueDebrisCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "classCounts",
+            "columnName": "classCounts",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalProcessingTimeMs",
+            "columnName": "totalProcessingTimeMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "avgInferenceTimeMs",
+            "columnName": "avgInferenceTimeMs",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "healthScore",
+            "columnName": "healthScore",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tags",
+            "columnName": "tags",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "contribution_queue",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sessionId` INTEGER NOT NULL, `imageUri` TEXT NOT NULL, `annotationsJson` TEXT NOT NULL, `status` TEXT NOT NULL, `retryCount` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionId",
+            "columnName": "sessionId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "imageUri",
+            "columnName": "imageUri",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "annotationsJson",
+            "columnName": "annotationsJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "retryCount",
+            "columnName": "retryCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "species_observations",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `imageUri` TEXT NOT NULL, `thumbnailUri` TEXT, `sessionId` INTEGER, `analysisId` INTEGER, `aphiaId` INTEGER, `scientificName` TEXT NOT NULL, `commonNameKey` TEXT, `bbox` TEXT, `cosineScore` REAL NOT NULL, `confidence` REAL NOT NULL, `idSource` TEXT NOT NULL, `vlmDescription` TEXT, `uncatalogued` INTEGER NOT NULL, `ecoregionId` INTEGER, `geoMatchLevel` TEXT, `outOfRange` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `location` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "imageUri",
+            "columnName": "imageUri",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "thumbnailUri",
+            "columnName": "thumbnailUri",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sessionId",
+            "columnName": "sessionId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "analysisId",
+            "columnName": "analysisId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "aphiaId",
+            "columnName": "aphiaId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "scientificName",
+            "columnName": "scientificName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "commonNameKey",
+            "columnName": "commonNameKey",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "bbox",
+            "columnName": "bbox",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cosineScore",
+            "columnName": "cosineScore",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "confidence",
+            "columnName": "confidence",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "idSource",
+            "columnName": "idSource",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "vlmDescription",
+            "columnName": "vlmDescription",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "uncatalogued",
+            "columnName": "uncatalogued",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ecoregionId",
+            "columnName": "ecoregionId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "geoMatchLevel",
+            "columnName": "geoMatchLevel",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "outOfRange",
+            "columnName": "outOfRange",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_species_observations_sessionId",
+            "unique": false,
+            "columnNames": [
+              "sessionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_species_observations_sessionId` ON `${TABLE_NAME}` (`sessionId`)"
+          },
+          {
+            "name": "index_species_observations_aphiaId",
+            "unique": false,
+            "columnNames": [
+              "aphiaId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_species_observations_aphiaId` ON `${TABLE_NAME}` (`aphiaId`)"
+          },
+          {
+            "name": "index_species_observations_analysisId",
+            "unique": false,
+            "columnNames": [
+              "analysisId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_species_observations_analysisId` ON `${TABLE_NAME}` (`analysisId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "species_dex_entries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`speciesKey` TEXT NOT NULL, `scientificName` TEXT NOT NULL, `firstSeenAt` INTEGER NOT NULL, `firstSeenObservationId` INTEGER NOT NULL, `timesObserved` INTEGER NOT NULL, `lastSeenAt` INTEGER NOT NULL, `isFavorite` INTEGER NOT NULL, PRIMARY KEY(`speciesKey`))",
+        "fields": [
+          {
+            "fieldPath": "speciesKey",
+            "columnName": "speciesKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scientificName",
+            "columnName": "scientificName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "firstSeenAt",
+            "columnName": "firstSeenAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "firstSeenObservationId",
+            "columnName": "firstSeenObservationId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timesObserved",
+            "columnName": "timesObserved",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastSeenAt",
+            "columnName": "lastSeenAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isFavorite",
+            "columnName": "isFavorite",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "speciesKey"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'dade8546f152ea1d68a1521dc5c2c878')"
+    ]
+  }
+}

@@ -93,8 +93,9 @@ class SpeciesCollectionRepository(
         imageUri: String,
         thumbnailUri: String?,
         location: Location?,
+        analysisId: Long? = null,
     ): Long {
-        val observation = toObservation(result, imageUri, thumbnailUri, location)
+        val observation = toObservation(result, imageUri, thumbnailUri, location, analysisId)
         val obsId = speciesObservationDao.insert(observation)
         discoverOrUpdate(result.speciesKey, result.scientificName, obsId)
         achievementChecker?.checkSpeciesAchievements()
@@ -112,8 +113,10 @@ class SpeciesCollectionRepository(
         imageUri: String,
         thumbnailUri: String?,
         location: Location?,
+        analysisId: Long? = null,
     ): SpeciesObservation = SpeciesObservation(
         imageUri       = imageUri,
+        analysisId     = analysisId,
         thumbnailUri   = thumbnailUri,
         aphiaId        = catalog.byKey(result.speciesKey)?.aphiaId ?: result.speciesKey.toLongOrNull(),
         scientificName = result.scientificName,

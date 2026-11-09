@@ -22,7 +22,7 @@ import java.util.Date
  */
 @Entity(
     tableName = "species_observations",
-    indices = [Index("sessionId"), Index("aphiaId")],
+    indices = [Index("sessionId"), Index("aphiaId"), Index("analysisId")],
 )
 data class SpeciesObservation(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -30,6 +30,12 @@ data class SpeciesObservation(
     val thumbnailUri: String? = null,
     /** Soft link to DetectionSession.id — null for standalone BioDex captures. */
     val sessionId: Long? = null,
+    /**
+     * Identification run that produced this row: one photo or one gallery batch (the start time in
+     * milliseconds, shared by every row of the run). Null on rows saved before v15: the history
+     * groups those by day.
+     */
+    val analysisId: Long? = null,
     /** WoRMS AphiaID — null for uncatalogued (open-vocab VLM) identifications. */
     val aphiaId: Long? = null,
     val scientificName: String,
