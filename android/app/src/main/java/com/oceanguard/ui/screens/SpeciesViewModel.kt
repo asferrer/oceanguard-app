@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.oceanguard.ai.utils.ImagePersistence
+import com.oceanguard.ai.utils.ExifLocationExtractor
 import java.util.Locale
 
 // ---------------------------------------------------------------------------
@@ -133,6 +134,18 @@ class SpeciesViewModel(
             results.filter { it.isConfident }
     }
 
+    /**
+     * Where the photo was taken: the GPS in its EXIF first, the phone's position only when the photo has none
+     * (camera captures, or photos without location). The geographic prior and the saved observation must refer to
+     * the place of the photo, not to where the user is when analysing it (a trip photo analysed at home).
+     */
+    private suspend fun photoLocation(uri: Uri): Location? {
+        val exif = withContext(Dispatchers.IO) {
+            runCatching { ExifLocationExtractor.extract(appContext, uri) }.getOrNull()
+        }
+        return exif ?: runCatching { locationProvider.getLastKnownLocation() }.getOrNull()
+    }
+
     private val _uiState = MutableStateFlow<SpeciesUiState>(SpeciesUiState.Idle)
     val uiState: StateFlow<SpeciesUiState> = _uiState.asStateFlow()
 
@@ -157,7 +170,7 @@ class SpeciesViewModel(
                 // bbox from this frame, so down-scaling here would lose detail.
                 val identifier = requireIdentifier()
                 val bitmap = imagePreprocessor.loadAndPreprocess(uri, FULL_RES)
-                val loc = locationProvider.getLastKnownLocation()
+                val loc = photoLocation(uri)
                 val lang = Locale.getDefault().language
                 val imageWidth = bitmap.width
                 val imageHeight = bitmap.height
@@ -217,7 +230,7 @@ class SpeciesViewModel(
                     val bitmap = imagePreprocessor.loadAndPreprocess(uri, FULL_RES)
                     val imageWidth = bitmap.width
                     val imageHeight = bitmap.height
-                    val loc = locationProvider.getLastKnownLocation()
+                    val loc = photoLocation(uri)
                     val lang = Locale.getDefault().language
                     val results = identifier.identify(bitmap, loc, language = lang)
                     saveIdentified(results, uri, loc, analysisId)
