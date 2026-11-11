@@ -465,14 +465,23 @@ class VlmModelManager(
      * Version of the species pack published in the repository (first manifest of
      * [REMOTE_SPECIES_MANIFESTS] that exists); null when it cannot be read (offline, error).
      */
-    suspend fun remoteSpeciesPackVersion(): Int? = withContext(Dispatchers.IO) {
+    suspend fun remoteSpeciesPackVersion(): Int? = remoteSpeciesPackConfig()?.version
+
+    /** Installed species pack manifest, null when none is installed. */
+    fun installedSpeciesPackConfig(): SpeciesPackConfig? = SpeciesPackConfig.load(getSpeciesDirectory())
+
+    /** Size of the installed species pack file [name] (0 when missing). */
+    fun installedSpeciesFileLength(name: String): Long = File(getSpeciesDirectory(), name).length()
+
+    /** Manifest of the species pack published in the repository; null when it cannot be read (offline, error). */
+    suspend fun remoteSpeciesPackConfig(): SpeciesPackConfig? = withContext(Dispatchers.IO) {
         for (name in REMOTE_SPECIES_MANIFESTS) {
             val conn = openConnection("$SPECIES_REPO/$name")
             try {
                 if (conn.responseCode == HttpURLConnection.HTTP_NOT_FOUND) continue
                 if (conn.responseCode != HttpURLConnection.HTTP_OK) return@withContext null
                 val text = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-                return@withContext SpeciesPackConfig.parse(text)?.version
+                return@withContext SpeciesPackConfig.parse(text)
             } catch (e: IOException) {
                 Log.i(TAG, "Remote species manifest check failed: ${e.message}")
                 return@withContext null

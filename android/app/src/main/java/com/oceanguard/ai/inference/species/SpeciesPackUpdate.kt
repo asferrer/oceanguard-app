@@ -53,6 +53,24 @@ object SpeciesPackUpdate {
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
+    /**
+     * Approximate bytes an update from [installed] to [remote] downloads: the full pack size minus the installed files
+     * it keeps (the encoder when its file name does not change, and the geographic files). [localLength] gives the size
+     * of an installed file (0 when missing). Used for the size shown before updating, not for any check.
+     */
+    fun approxUpdateBytes(
+        installed: SpeciesPackConfig,
+        remote: SpeciesPackConfig,
+        fullBytes: Long,
+        localLength: (String) -> Long,
+    ): Long {
+        val kept = buildSet {
+            if (remote.encoderFile == installed.encoderFile) add(remote.encoderFile)
+            addAll(SpeciesPackAssets.GEO.map { it.first })
+        }
+        return (fullBytes - kept.sumOf(localLength)).coerceAtLeast(0L)
+    }
+
     /** Files of the [old] pack that the [new] one no longer uses (safe to delete after the swap). */
     fun orphans(old: SpeciesPackConfig, new: SpeciesPackConfig): List<String> =
         old.requiredFiles().filter { it !in new.requiredFiles() }

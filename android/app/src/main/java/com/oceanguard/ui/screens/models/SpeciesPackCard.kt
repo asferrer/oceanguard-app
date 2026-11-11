@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oceanguard.ai.OceanGuardApp
+import com.oceanguard.ai.inference.species.SpeciesPackConfig
 import com.oceanguard.ai.inference.species.SpeciesPackUpdate
 import com.oceanguard.ai.R
 import com.oceanguard.ai.ui.components.sonar.SonarButton
@@ -47,7 +48,8 @@ fun SpeciesPackPrompt(
 ) {
     val app = LocalContext.current.applicationContext as OceanGuardApp
     val downloader = rememberModelDownloader()
-    val status = rememberSpeciesPackStatus(app)
+    val packState = rememberSpeciesPackState(app)
+    val status = packState.status
     var previous by remember { mutableStateOf<SpeciesPackStatus?>(null) }
     LaunchedEffect(status) {
         if (SpeciesPackLogic.justInstalled(previous, status)) onInstalled()
@@ -56,39 +58,55 @@ fun SpeciesPackPrompt(
     downloader.PreflightDialog()
     if (status == SpeciesPackStatus.Ready && !showReady) return
     val content: @Composable () -> Unit = {
-        SpeciesPackContent(status, app, onDownload = { downloader.request(CatalogModel.SPECIES_PACK) })
+        SpeciesPackContent(status, app, packState.updateBytes, onDownload = { downloader.request(CatalogModel.SPECIES_PACK) })
     }
     if (placement == SpeciesPackPlacement.CARD) SonarCard(modifier = modifier) { content() }
     else Column(modifier = modifier) { content() }
 }
 
+/** Status of the pack and, when an update is offered, about how many bytes it downloads (null when unknown). */
+private data class SpeciesPackCardState(val status: SpeciesPackStatus, val updateBytes: Long?)
+
 @Composable
-private fun rememberSpeciesPackStatus(app: OceanGuardApp): SpeciesPackStatus {
+private fun rememberSpeciesPackState(app: OceanGuardApp): SpeciesPackCardState {
     val manager = app.vlmModelManager
     val state by manager.downloadState.collectAsStateWithLifecycle()
     val selected by manager.speciesPackSelected.collectAsStateWithLifecycle()
     var installedVersion by remember { mutableStateOf(manager.installedSpeciesPackVersion()) }
-    var remoteVersion by remember { mutableStateOf<Int?>(null) }
+    var remote by remember { mutableStateOf<SpeciesPackConfig?>(null) }
     // Re-read the disk when the download ends (completed, failed or cancelled), not on each byte.
     LaunchedEffect(state.javaClass) {
         installedVersion = withContext(Dispatchers.IO) { manager.installedSpeciesPackVersion() }
     }
     // Once per installed version: is a newer pack published? (null offline: no offer)
     LaunchedEffect(installedVersion) {
-        if (installedVersion != null) remoteVersion = manager.remoteSpeciesPackVersion()
+        if (installedVersion != null) remote = manager.remoteSpeciesPackConfig()
     }
-    val updateAvailable = SpeciesPackUpdate.isNewer(installedVersion, remoteVersion)
-    return SpeciesPackLogic.status(installedVersion != null, selected, state, updateAvailable)
+    val updateAvailable = SpeciesPackUpdate.isNewer(installedVersion, remote?.version)
+    // Only the files that change are downloaded (the encoder is usually kept): show that size, not the whole pack's.
+    var updateBytes by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(updateAvailable, remote) {
+        val newer = remote
+        updateBytes = if (!updateAvailable || newer == null) null else withContext(Dispatchers.IO) {
+            manager.installedSpeciesPackConfig()?.let { installed ->
+                SpeciesPackUpdate.approxUpdateBytes(
+                    installed, newer, CatalogModel.SPECIES_PACK.approxBytes, manager::installedSpeciesFileLength,
+                )
+            }
+        }
+    }
+    return SpeciesPackCardState(SpeciesPackLogic.status(installedVersion != null, selected, state, updateAvailable), updateBytes)
 }
 
 @Composable
-private fun SpeciesPackContent(status: SpeciesPackStatus, app: OceanGuardApp, onDownload: () -> Unit) {
+private fun SpeciesPackContent(status: SpeciesPackStatus, app: OceanGuardApp, updateBytes: Long?, onDownload: () -> Unit) {
     val size = formatBytes(CatalogModel.SPECIES_PACK.approxBytes)
+    val updateSize = updateBytes?.let { formatBytes(it) } ?: size
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         when (status) {
             SpeciesPackStatus.Ready -> PackLine(stringResource(R.string.species_pack_status_ready))
             SpeciesPackStatus.UpdateAvailable -> PackRow(
-                text = stringResource(R.string.species_pack_status_update, size),
+                text = stringResource(R.string.species_pack_status_update, updateSize),
                 button = stringResource(R.string.species_pack_btn_update),
                 onClick = onDownload,
             )

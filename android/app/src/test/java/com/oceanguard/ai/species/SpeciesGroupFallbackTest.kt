@@ -204,4 +204,22 @@ class SpeciesGroupFallbackTest {
         // Without sha the index is downloaded again.
         assertFalse(SpeciesPackUpdate.canReuse("idx.bin", cfg.copy(sha256 = null), true, 10, 1) { sha })
     }
+
+    @Test
+    fun `update size counts only the files that change`() {
+        fun cfg(encoder: String) = SpeciesPackConfig.parse(
+            """{"version":4,"encoderFile":"$encoder","indexFile":"idx.bin","catalogFile":"cat.json",
+               "encoder":{"mean":[0,0,0],"std":[1,1,1]},
+               "calibration":{"plattA":1,"plattB":0,"tauHigh":0.9,"tauLow":0.5,"delta":0}}""",
+        )!!
+        val geo = com.oceanguard.ai.inference.species.SpeciesPackAssets.GEO.map { it.first }.toSet()
+        val local = { name: String -> if (name == "enc.onnx") 600L else if (name in geo) 5L else 0L }
+        val geoBytes = 5L * geo.size
+        // Same encoder file: it and the geographic files are kept.
+        assertEquals(615L - 600L - geoBytes, SpeciesPackUpdate.approxUpdateBytes(cfg("enc.onnx"), cfg("enc.onnx"), 615L, local))
+        // New encoder: only the geographic files are kept.
+        assertEquals(615L - geoBytes, SpeciesPackUpdate.approxUpdateBytes(cfg("enc.onnx"), cfg("enc2.onnx"), 615L, local))
+        // Never negative.
+        assertEquals(0L, SpeciesPackUpdate.approxUpdateBytes(cfg("enc.onnx"), cfg("enc.onnx"), 10L, local))
+    }
 }
