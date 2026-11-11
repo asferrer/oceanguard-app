@@ -332,6 +332,27 @@
     <string name="contribute_stats_uploaded">%d imagen(es) subida(s) ✓</string>
     <string name="contribute_stats_pending">%d imagen(es) pendiente(s)</string>
     <string name="contribute_stats_failed">%d imagen(es) fallida(s)</string>
+    <string name="contribute_panel_title">Estado de la subida</string>
+    <string name="contribute_panel_uploading">Subiendo foto %1$d de %2$d…</string>
+    <string name="contribute_panel_starting">Empezando la subida…</string>
+    <plurals name="contribute_panel_waiting_wifi">
+        <item quantity="one">%d foto esperando WiFi</item>
+        <item quantity="other">%d fotos esperando WiFi</item>
+    </plurals>
+    <plurals name="contribute_panel_waiting">
+        <item quantity="one">%d foto pendiente de subir</item>
+        <item quantity="other">%d fotos pendientes de subir</item>
+    </plurals>
+    <string name="contribute_panel_waiting_wifi_hint">Se suben solas cuando te conectes a una WiFi. Con «Subir ahora» se envían también con datos móviles.</string>
+    <string name="contribute_panel_waiting_hint">Se suben solas en cuanto haya conexión.</string>
+    <plurals name="contribute_panel_failed">
+        <item quantity="one">%d foto no se pudo subir</item>
+        <item quantity="other">%d fotos no se pudieron subir</item>
+    </plurals>
+    <string name="contribute_panel_failed_hint">Vuelve a intentarlo. Si sigue fallando, la línea de abajo dice por qué.</string>
+    <string name="contribute_panel_all_sent">Todas las fotos enviadas</string>
+    <string name="contribute_panel_nothing_yet">Aún no se ha enviado ninguna foto. Aquí aparecerán las que analices.</string>
+    <string name="contribute_panel_totals">Enviadas %1$d · Pendientes %2$d · Fallidas %3$d</string>
     <string name="contribute_upload_btn">Subir a la Investigación</string>
     <string name="contribute_status_pending">En cola para subir</string>
     <string name="contribute_status_done">Contribuido ✓</string>

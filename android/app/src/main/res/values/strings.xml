@@ -358,6 +358,27 @@
     <string name="contribute_stats_uploaded">%d image(s) uploaded ✓</string>
     <string name="contribute_stats_pending">%d image(s) pending upload</string>
     <string name="contribute_stats_failed">%d image(s) failed</string>
+    <string name="contribute_panel_title">Upload status</string>
+    <string name="contribute_panel_uploading">Uploading photo %1$d of %2$d…</string>
+    <string name="contribute_panel_starting">Starting the upload…</string>
+    <plurals name="contribute_panel_waiting_wifi">
+        <item quantity="one">%d photo waiting for WiFi</item>
+        <item quantity="other">%d photos waiting for WiFi</item>
+    </plurals>
+    <plurals name="contribute_panel_waiting">
+        <item quantity="one">%d photo waiting to upload</item>
+        <item quantity="other">%d photos waiting to upload</item>
+    </plurals>
+    <string name="contribute_panel_waiting_wifi_hint">They upload by themselves when you connect to WiFi. “Upload now” sends them with mobile data too.</string>
+    <string name="contribute_panel_waiting_hint">They upload by themselves as soon as there is a connection.</string>
+    <plurals name="contribute_panel_failed">
+        <item quantity="one">%d photo could not be uploaded</item>
+        <item quantity="other">%d photos could not be uploaded</item>
+    </plurals>
+    <string name="contribute_panel_failed_hint">Try again. If it keeps failing, the line below says why.</string>
+    <string name="contribute_panel_all_sent">All photos sent</string>
+    <string name="contribute_panel_nothing_yet">No photos sent yet. The ones you analyse will appear here.</string>
+    <string name="contribute_panel_totals">Sent %1$d · Waiting %2$d · Failed %3$d</string>
 
     <!-- SessionDetailScreen button states -->
     <string name="contribute_upload_btn">Upload to Research</string>

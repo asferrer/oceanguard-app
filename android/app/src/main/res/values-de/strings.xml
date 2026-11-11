@@ -332,6 +332,27 @@
     <string name="contribute_stats_uploaded">%d Bild(er) hochgeladen ✓</string>
     <string name="contribute_stats_pending">%d Bild(er) ausstehend</string>
     <string name="contribute_stats_failed">%d Bild(er) fehlgeschlagen</string>
+    <string name="contribute_panel_title">Upload-Status</string>
+    <string name="contribute_panel_uploading">Foto %1$d von %2$d wird hochgeladen…</string>
+    <string name="contribute_panel_starting">Upload startet…</string>
+    <plurals name="contribute_panel_waiting_wifi">
+        <item quantity="one">%d Foto wartet auf WLAN</item>
+        <item quantity="other">%d Fotos warten auf WLAN</item>
+    </plurals>
+    <plurals name="contribute_panel_waiting">
+        <item quantity="one">%d Foto wartet auf den Upload</item>
+        <item quantity="other">%d Fotos warten auf den Upload</item>
+    </plurals>
+    <string name="contribute_panel_waiting_wifi_hint">Sie werden automatisch hochgeladen, sobald du im WLAN bist. Mit „Jetzt hochladen“ gehen sie auch über mobile Daten.</string>
+    <string name="contribute_panel_waiting_hint">Sie werden automatisch hochgeladen, sobald eine Verbindung besteht.</string>
+    <plurals name="contribute_panel_failed">
+        <item quantity="one">%d Foto konnte nicht hochgeladen werden</item>
+        <item quantity="other">%d Fotos konnten nicht hochgeladen werden</item>
+    </plurals>
+    <string name="contribute_panel_failed_hint">Versuche es erneut. Wenn es weiter fehlschlägt, steht unten der Grund.</string>
+    <string name="contribute_panel_all_sent">Alle Fotos gesendet</string>
+    <string name="contribute_panel_nothing_yet">Noch keine Fotos gesendet. Analysierte Fotos erscheinen hier.</string>
+    <string name="contribute_panel_totals">Gesendet %1$d · Wartend %2$d · Fehlgeschlagen %3$d</string>
     <string name="contribute_upload_btn">Zur Forschung hochladen</string>
     <string name="contribute_status_pending">In der Upload-Warteschlange</string>
     <string name="contribute_status_done">Beigetragen ✓</string>

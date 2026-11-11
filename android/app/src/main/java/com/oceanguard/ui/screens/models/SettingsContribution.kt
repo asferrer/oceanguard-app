@@ -7,15 +7,19 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -34,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oceanguard.ai.OceanGuardApp
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.contribution.ContributionSyncStatus
+import com.oceanguard.ai.data.contribution.UploadPanelState
 import com.oceanguard.ai.data.contribution.WithdrawResult
 import com.oceanguard.ai.data.settings.ContributionSyncState
 import com.oceanguard.ai.data.settings.contributeIncludeLocation
@@ -43,6 +48,8 @@ import com.oceanguard.ai.data.settings.contributionSyncState
 import com.oceanguard.ai.data.settings.resetContributePrompts
 import com.oceanguard.ai.data.settings.setContributeIncludeLocation
 import com.oceanguard.ai.ui.components.ContributionPrivacyLink
+import com.oceanguard.ai.ui.components.sonar.SonarButton
+import com.oceanguard.ai.ui.components.sonar.SonarButtonStyle
 import com.oceanguard.ai.ui.motion.LocalReducedMotion
 import com.oceanguard.ai.ui.motion.OceanMotion
 import kotlinx.coroutines.CoroutineScope
@@ -134,51 +141,111 @@ private fun ContributionDetails(app: OceanGuardApp, scope: CoroutineScope, conse
                 checked = includeLocation,
                 onCheckedChange = { scope.launch { settings.setContributeIncludeLocation(it) } },
             )
-            UploadStatus(app, scope)
+            UploadStatus(app, scope, wifiOnly)
         }
     }
     WithdrawBlock(app, scope)
 }
 
+/**
+ * State of the uploads, said first and in plain words: uploading (with progress), waiting (and for what), failed or all
+ * sent, with the one action that applies right under it. The totals and the last contact with the gateway go below.
+ */
 @Composable
-private fun UploadStatus(app: OceanGuardApp, scope: CoroutineScope) {
+private fun UploadStatus(app: OceanGuardApp, scope: CoroutineScope, wifiOnly: Boolean) {
     val repository = app.contributionRepository
-    val pending by repository.getPendingCountFlow().collectAsStateWithLifecycle(initialValue = 0)
-    val done by repository.getDoneCountFlow().collectAsStateWithLifecycle(initialValue = 0)
-    val failed by repository.getFailedCountFlow().collectAsStateWithLifecycle(initialValue = 0)
+    val pendingFlow = remember(repository) { repository.getPendingCountFlow() }
+    val doneFlow = remember(repository) { repository.getDoneCountFlow() }
+    val failedFlow = remember(repository) { repository.getFailedCountFlow() }
+    val progressFlow = remember(repository) { repository.uploadProgressFlow() }
+    val pending by pendingFlow.collectAsStateWithLifecycle(initialValue = 0)
+    val done by doneFlow.collectAsStateWithLifecycle(initialValue = 0)
+    val failed by failedFlow.collectAsStateWithLifecycle(initialValue = 0)
+    val running by progressFlow.collectAsStateWithLifecycle(initialValue = null)
     val sync by app.settingsRepository.contributionSyncState
         .collectAsStateWithLifecycle(initialValue = ContributionSyncState(ContributionSyncStatus.NEVER, null))
-    Row(
+    val state = UploadPanelState.of(pending, done, failed, running, wifiOnly)
+    val accent = when (state) {
+        is UploadPanelState.Uploading, is UploadPanelState.AllSent -> MaterialTheme.colorScheme.primary
+        is UploadPanelState.Waiting -> MaterialTheme.colorScheme.tertiary
+        is UploadPanelState.Failed -> MaterialTheme.colorScheme.error
+    }
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        shape = MaterialTheme.shapes.medium,
+        color = accent.copy(alpha = 0.08f),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.45f)),
     ) {
-        Column(Modifier.weight(1f)) {
-            if (done > 0 || pending > 0 || failed > 0) {
-                StatusLine(stringResource(R.string.contribute_stats_uploaded, done), MaterialTheme.colorScheme.primary)
-                if (pending > 0) {
-                    StatusLine(
-                        stringResource(R.string.contribute_stats_pending, pending),
-                        MaterialTheme.colorScheme.onSurfaceVariant,
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = stringResource(R.string.contribute_panel_title),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(text = panelHeadline(state), style = MaterialTheme.typography.titleMedium, color = accent)
+            panelHint(state)?.let { StatusLine(it, MaterialTheme.colorScheme.onSurfaceVariant) }
+            if (state is UploadPanelState.Uploading) {
+                if (state.total > 0) {
+                    LinearProgressIndicator(
+                        progress = { (state.current - 1).coerceAtLeast(0) / state.total.toFloat() },
+                        modifier = Modifier.fillMaxWidth(),
                     )
+                } else {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
-                if (failed > 0) {
-                    StatusLine(stringResource(R.string.contribute_stats_failed, failed), MaterialTheme.colorScheme.error)
-                }
-            } else {
-                StatusLine(stringResource(R.string.contribute_all_synced), MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            when (state) {
+                is UploadPanelState.Waiting -> SonarButton(
+                    text = stringResource(R.string.contribute_upload_now_btn),
+                    onClick = { repository.scheduleImmediateUpload() },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                is UploadPanelState.Failed -> SonarButton(
+                    text = stringResource(R.string.contribute_retry_failed_btn),
+                    onClick = { scope.launch { repository.retryFailed() } },
+                    modifier = Modifier.fillMaxWidth(),
+                    style = SonarButtonStyle.Secondary,
+                )
+                else -> Unit
+            }
+            if (done + pending + failed > 0) {
+                StatusLine(
+                    stringResource(R.string.contribute_panel_totals, done, pending, failed),
+                    MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             SyncLine(sync)
         }
-        when {
-            pending > 0 -> TextButton(onClick = { repository.scheduleImmediateUpload() }) {
-                Text(stringResource(R.string.contribute_upload_now_btn))
-            }
-            failed > 0 -> TextButton(onClick = { scope.launch { repository.retryFailed() } }) {
-                Text(stringResource(R.string.contribute_retry_failed_btn))
-            }
-        }
     }
+}
+
+@Composable
+private fun panelHeadline(state: UploadPanelState): String {
+    val res = LocalResources.current
+    return when (state) {
+        is UploadPanelState.Uploading -> if (state.total > 0) {
+            stringResource(R.string.contribute_panel_uploading, state.current, state.total)
+        } else {
+            stringResource(R.string.contribute_panel_starting)
+        }
+        is UploadPanelState.Waiting -> res.getQuantityString(
+            if (state.wifiOnly) R.plurals.contribute_panel_waiting_wifi else R.plurals.contribute_panel_waiting,
+            state.count, state.count,
+        )
+        is UploadPanelState.Failed -> res.getQuantityString(R.plurals.contribute_panel_failed, state.count, state.count)
+        is UploadPanelState.AllSent -> stringResource(
+            if (state.sent > 0) R.string.contribute_panel_all_sent else R.string.contribute_panel_nothing_yet,
+        )
+    }
+}
+
+@Composable
+private fun panelHint(state: UploadPanelState): String? = when (state) {
+    is UploadPanelState.Waiting -> stringResource(
+        if (state.wifiOnly) R.string.contribute_panel_waiting_wifi_hint else R.string.contribute_panel_waiting_hint,
+    )
+    is UploadPanelState.Failed -> stringResource(R.string.contribute_panel_failed_hint)
+    else -> null
 }
 
 /** Last contact with the gateway, so a stuck queue always says why. */

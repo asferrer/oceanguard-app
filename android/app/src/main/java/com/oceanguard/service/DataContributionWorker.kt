@@ -12,6 +12,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.contribution.ContributionUploadRunner
 import com.oceanguard.ai.data.contribution.RunOutcome
@@ -53,6 +54,8 @@ class DataContributionWorker(
 
     /** Best effort: Android may refuse a foreground service from the background (API 31+). */
     private suspend fun showProgress(done: Int, total: Int) {
+        // For the Settings block (ContributionRepository.uploadProgressFlow); independent of the notification.
+        setProgress(workDataOf(PROGRESS_DONE to done, PROGRESS_TOTAL to total))
         try {
             ensureNotificationChannel()
             setForeground(buildForegroundInfo(done, total))
@@ -155,13 +158,16 @@ class DataContributionWorker(
         nm.deleteNotificationChannel(LEGACY_CHANNEL_ID)
     }
 
-    private companion object {
-        const val TAG = "ContribWorker"
-        const val CHANNEL_ID = "oceanguard_contribution_upload"
-        const val LEGACY_CHANNEL_ID = "oceanguard_contribution"
-        const val GROUP_KEY = "oceanguard_contribution_group"
-        const val NOTIFICATION_ID = 9001
-        const val SUMMARY_ID = 9002
+    companion object {
+        /** Keys of the progress data read by the Settings block. */
+        const val PROGRESS_DONE = "done"
+        const val PROGRESS_TOTAL = "total"
+        private const val TAG = "ContribWorker"
+        private const val CHANNEL_ID = "oceanguard_contribution_upload"
+        private const val LEGACY_CHANNEL_ID = "oceanguard_contribution"
+        private const val GROUP_KEY = "oceanguard_contribution_group"
+        private const val NOTIFICATION_ID = 9001
+        private const val SUMMARY_ID = 9002
     }
 }
 

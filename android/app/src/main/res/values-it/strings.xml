@@ -332,6 +332,27 @@
     <string name="contribute_stats_uploaded">%d immagine/i caricata/e ✓</string>
     <string name="contribute_stats_pending">%d immagine/i in attesa</string>
     <string name="contribute_stats_failed">%d immagine/i non riuscita/e</string>
+    <string name="contribute_panel_title">Stato del caricamento</string>
+    <string name="contribute_panel_uploading">Caricamento della foto %1$d di %2$d…</string>
+    <string name="contribute_panel_starting">Avvio del caricamento…</string>
+    <plurals name="contribute_panel_waiting_wifi">
+        <item quantity="one">%d foto in attesa del WiFi</item>
+        <item quantity="other">%d foto in attesa del WiFi</item>
+    </plurals>
+    <plurals name="contribute_panel_waiting">
+        <item quantity="one">%d foto da caricare</item>
+        <item quantity="other">%d foto da caricare</item>
+    </plurals>
+    <string name="contribute_panel_waiting_wifi_hint">Si caricano da sole quando ti connetti a una rete WiFi. Con «Carica ora» partono anche con i dati mobili.</string>
+    <string name="contribute_panel_waiting_hint">Si caricano da sole appena c\'è connessione.</string>
+    <plurals name="contribute_panel_failed">
+        <item quantity="one">%d foto non è stata caricata</item>
+        <item quantity="other">%d foto non sono state caricate</item>
+    </plurals>
+    <string name="contribute_panel_failed_hint">Riprova. Se continua a non riuscire, la riga qui sotto spiega perché.</string>
+    <string name="contribute_panel_all_sent">Tutte le foto inviate</string>
+    <string name="contribute_panel_nothing_yet">Nessuna foto inviata finora. Qui compariranno quelle che analizzi.</string>
+    <string name="contribute_panel_totals">Inviate %1$d · In attesa %2$d · Non riuscite %3$d</string>
     <string name="contribute_upload_btn">Carica per la Ricerca</string>
     <string name="contribute_status_pending">In coda per il caricamento</string>
     <string name="contribute_status_done">Contribuito ✓</string>

@@ -7,11 +7,13 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.service.DataContributionWorker
 import com.oceanguard.ai.utils.CocoAnnotationSerializer
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import java.util.Date
 import java.util.concurrent.TimeUnit
 
@@ -159,6 +161,17 @@ class ContributionRepository(
     fun getFailedCountFlow(): Flow<Int> = dao.getFailedCountFlow()
 
     fun getStatusFlowForUri(uri: String): Flow<String?> = dao.getStatusFlowForUri(uri)
+
+    /** Progress of the upload pass running now, null when none is running. */
+    fun uploadProgressFlow(): Flow<UploadProgress?> =
+        WorkManager.getInstance(context).getWorkInfosForUniqueWorkFlow(WORK_NAME).map { infos ->
+            infos.firstOrNull { it.state == WorkInfo.State.RUNNING }?.let {
+                UploadProgress(
+                    done = it.progress.getInt(DataContributionWorker.PROGRESS_DONE, 0),
+                    total = it.progress.getInt(DataContributionWorker.PROGRESS_TOTAL, 0),
+                )
+            }
+        }
 
     /**
      * Upload now on any network. Replaces a pass waiting for Wi-Fi: appending would chain it

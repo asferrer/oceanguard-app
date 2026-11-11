@@ -332,6 +332,27 @@
     <string name="contribute_stats_uploaded">%d image(s) envoyée(s) ✓</string>
     <string name="contribute_stats_pending">%d image(s) en attente</string>
     <string name="contribute_stats_failed">%d image(s) échouée(s)</string>
+    <string name="contribute_panel_title">État de l\'envoi</string>
+    <string name="contribute_panel_uploading">Envoi de la photo %1$d sur %2$d…</string>
+    <string name="contribute_panel_starting">Démarrage de l\'envoi…</string>
+    <plurals name="contribute_panel_waiting_wifi">
+        <item quantity="one">%d photo en attente du WiFi</item>
+        <item quantity="other">%d photos en attente du WiFi</item>
+    </plurals>
+    <plurals name="contribute_panel_waiting">
+        <item quantity="one">%d photo en attente d\'envoi</item>
+        <item quantity="other">%d photos en attente d\'envoi</item>
+    </plurals>
+    <string name="contribute_panel_waiting_wifi_hint">Elles partent toutes seules dès que vous êtes en WiFi. Avec « Envoyer maintenant », elles partent aussi avec les données mobiles.</string>
+    <string name="contribute_panel_waiting_hint">Elles partent toutes seules dès qu\'il y a une connexion.</string>
+    <plurals name="contribute_panel_failed">
+        <item quantity="one">%d photo n\'a pas pu être envoyée</item>
+        <item quantity="other">%d photos n\'ont pas pu être envoyées</item>
+    </plurals>
+    <string name="contribute_panel_failed_hint">Réessayez. Si l\'échec persiste, la ligne ci-dessous en donne la raison.</string>
+    <string name="contribute_panel_all_sent">Toutes les photos sont envoyées</string>
+    <string name="contribute_panel_nothing_yet">Aucune photo envoyée pour l\'instant. Celles que vous analysez apparaîtront ici.</string>
+    <string name="contribute_panel_totals">Envoyées %1$d · En attente %2$d · Échecs %3$d</string>
     <string name="contribute_upload_btn">Envoyer à la Recherche</string>
     <string name="contribute_status_pending">En file d\'attente</string>
     <string name="contribute_status_done">Contribué ✓</string>
