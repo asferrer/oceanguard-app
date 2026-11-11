@@ -335,6 +335,13 @@ and run on test photos:
 
 ## 9. Geographic prior: what the app did and what it should do (2026-11-09)
 
+**Which position is used** (since 1.2.0-rc6): the GPS stored in the photo's EXIF first, for gallery photos as well as
+for camera captures; the phone's last known position only when the photo has no GPS. The same position is saved with
+the observation. Up to rc5 the species path always used the phone's position, so a trip photo analysed at home was
+ranked with the home ecoregion (found on the S22 on 2026-11-11: the same manta photo gave "Possible group: Sharks and
+rays" with the phone's position in Spain and "Possible: Reef manta ray 67 %" with Maldives GPS in its EXIF). The
+debris path already worked this way.
+
 Everything above was measured **without** a location. The app also reorders the candidates with the position of the
 photo, so this section replays that code on the PC (`tools/species/geo_prior_eval.py`: port of `MarineRegionResolver`
 with the MEOW raster and the ring search, `GeoPrior.matchLevel` / `g`, `SpeciesReferenceIndex.search` with the
