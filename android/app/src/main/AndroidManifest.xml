@@ -79,6 +79,11 @@
             android:foregroundServiceType="dataSync" />
 
         <service
+            android:name=".service.SpeciesBatchService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <service
             android:name=".service.ReportGenerationService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />

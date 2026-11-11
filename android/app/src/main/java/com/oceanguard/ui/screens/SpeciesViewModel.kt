@@ -14,6 +14,7 @@ import com.oceanguard.ai.inference.species.IdentificationResult
 import com.oceanguard.ai.inference.species.SpeciesIdentifier
 import com.oceanguard.ai.utils.ImagePreprocessor
 import com.oceanguard.ai.utils.LocationProvider
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -117,6 +118,8 @@ class SpeciesViewModel(
     private val locationProvider: LocationProvider,
     /** Research contribution: with the user's consent, saved photos go up with the app's answer. */
     private val contribution: ContributionRepository? = null,
+    /** Where the batch runs and keeps its state: the app's host in the app, a private one in tests. */
+    private val batch: SpeciesBatchHost = SpeciesBatchHost(),
     private val packVersion: () -> Int? = { null },
 ) : ViewModel() {
 
@@ -153,7 +156,7 @@ class SpeciesViewModel(
     private val _capturedImageUri = MutableStateFlow<Uri?>(null)
     val capturedImageUri: StateFlow<Uri?> = _capturedImageUri.asStateFlow()
 
-    private val _batchUiState = MutableStateFlow<SpeciesBatchUiState>(SpeciesBatchUiState.Idle)
+    private val _batchUiState = batch.state
     val batchUiState: StateFlow<SpeciesBatchUiState> = _batchUiState.asStateFlow()
 
     /**
@@ -197,7 +200,8 @@ class SpeciesViewModel(
      * Each item moves through Pending → Analyzing → Done | Failed independently.
      */
     fun identifyBatch(uris: List<Uri>) {
-        if (uris.isEmpty()) return
+        // One batch at a time: a second pick while one runs just shows the running one.
+        if (uris.isEmpty() || batch.isRunning) return
         val items = uris.map { SpeciesBatchItem(it) }.toMutableList()
         val startTime = System.currentTimeMillis()
         // One id for the whole batch: the history shows it as a single analysis.
@@ -208,14 +212,43 @@ class SpeciesViewModel(
             startTimeMs = startTime,
         )
 
-        viewModelScope.launch {
+        batch.job = (batch.scope ?: viewModelScope).launch {
+            try {
+                runBatch(uris, items, startTime, analysisId)
+            } catch (e: CancellationException) {
+                // Cancelled from the notification: what was done stays, the rest is marked as cancelled.
+                val cancelled = appContext.getString(R.string.species_batch_cancelled)
+                _batchUiState.value = SpeciesBatchUiState.Complete(
+                    items = items.map {
+                        if (it.state is SpeciesBatchItemState.Pending || it.state is SpeciesBatchItemState.Analyzing) {
+                            it.copy(state = SpeciesBatchItemState.Failed(cancelled))
+                        } else it
+                    },
+                    startTimeMs = startTime,
+                    endTimeMs = System.currentTimeMillis(),
+                )
+                throw e
+            } finally {
+                batch.job = null
+            }
+        }
+        batch.onStarted()
+    }
+
+    private suspend fun runBatch(
+        uris: List<Uri>,
+        items: MutableList<SpeciesBatchItem>,
+        startTime: Long,
+        analysisId: Long,
+    ) {
+        run {
             // Without the pack no photo can be identified: ask for the download instead of
             // failing every photo one by one.
             if (withContext(Dispatchers.IO) { identifierProvider() } == null) {
                 _batchUiState.value = SpeciesBatchUiState.Error(
                     appContext.getString(R.string.species_pack_missing), packMissing = true,
                 )
-                return@launch
+                return
             }
             for ((index, uri) in uris.withIndex()) {
                 items[index] = items[index].copy(state = SpeciesBatchItemState.Analyzing)
@@ -242,6 +275,7 @@ class SpeciesViewModel(
                         ),
                     )
                 }.onFailure { e ->
+                    if (e is CancellationException) throw e  // a cancel must stop the batch, not fail one photo
                     items[index] = items[index].copy(
                         state = SpeciesBatchItemState.Failed(e.message ?: "Failed"),
                     )
@@ -284,11 +318,36 @@ class SpeciesViewModel(
         )
     }
 
-    /** Reset both UI states back to Idle (e.g. before navigating away). */
+    /**
+     * Reset both UI states back to Idle (e.g. before navigating away). A running batch is left alone: it goes on in
+     * the background and its screen can be opened again from the notification.
+     */
     fun resetState() {
+        leaveSingleResult()
+        if (!batch.isRunning) _batchUiState.value = SpeciesBatchUiState.Idle
+    }
+
+    /** Leave the single-result screen without touching the batch (it may have been opened from a batch photo). */
+    fun leaveSingleResult() {
         _uiState.value = SpeciesUiState.Idle
-        _batchUiState.value = SpeciesBatchUiState.Idle
         _capturedImageUri.value = null
+    }
+
+    /**
+     * Show the result of batch photo [index] on the single-result screen, while the rest of the batch goes on.
+     * @return false when that photo has no result yet.
+     */
+    fun openBatchItem(index: Int): Boolean {
+        val items = when (val s = _batchUiState.value) {
+            is SpeciesBatchUiState.Running -> s.items
+            is SpeciesBatchUiState.Complete -> s.items
+            else -> return false
+        }
+        val item = items.getOrNull(index) ?: return false
+        val done = item.state as? SpeciesBatchItemState.Done ?: return false
+        _capturedImageUri.value = item.uri
+        _uiState.value = SpeciesUiState.Complete(done.results, done.imageWidth, done.imageHeight)
+        return true
     }
 
     // ---------------------------------------------------------------------------

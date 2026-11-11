@@ -283,11 +283,9 @@ class InferenceService : LifecycleService() {
             // starts. No pipelining, no concurrent post-process. Keeps memory
             // pressure predictable (only one bitmap + one inference in flight)
             // and makes the per-image progress bar match what the user sees.
+            BatchNotifications.clearFinished(this@InferenceService)
             for ((index, uri) in job.uris.withIndex()) {
-                updateNotification(
-                    "Image ${index + 1}/${job.uris.size}: analyzing...",
-                    job.deepLinkRoute,
-                )
+                notifyBatchProgress(job, done = index, startMs = batchStartTimeMs)
                 app.inferenceServiceState.value = InferenceServiceState.BatchRunning(
                     job.uris, index, results.toList(), buildQueueInfo(job),
                     startTimeMs = batchStartTimeMs,
@@ -341,9 +339,10 @@ class InferenceService : LifecycleService() {
                     startTimeMs = batchStartTimeMs,
                     endTimeMs = System.currentTimeMillis(),
                 )
-            updateNotification(
-                "Batch done! $successCount/${job.uris.size} processed.",
-                job.deepLinkRoute,
+            // The ongoing notification goes away with the service: leave a quiet one that opens the results.
+            BatchNotifications.postFinished(
+                this@InferenceService, getString(R.string.notif_batch_done_title_debris), successCount, job.uris.size,
+                BatchNotifications.openIntent(this@InferenceService, job.deepLinkRoute, NOTIFICATION_ID + 100),
             )
             Log.i(TAG, "Batch complete: $successCount/${job.uris.size}")
 
@@ -564,6 +563,28 @@ class InferenceService : LifecycleService() {
         notification.flags = notification.flags or
             Notification.FLAG_ONGOING_EVENT or Notification.FLAG_NO_CLEAR
         return notification
+    }
+
+    /** Progress bar, photo count, time left and Cancel for a debris batch ([done] photos finished). */
+    private fun notifyBatchProgress(job: InferenceJob.ImageBatch, done: Int, startMs: Long) {
+        val cancel = PendingIntent.getService(
+            this, 1, Intent(this, InferenceService::class.java).apply { action = ACTION_CANCEL },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = BatchNotifications.progress(
+            context = this,
+            title = getString(R.string.notif_batch_title_debris),
+            done = done,
+            total = job.uris.size,
+            startMs = startMs,
+            open = BatchNotifications.openIntent(this, job.deepLinkRoute, 0),
+            cancel = cancel,
+        )
+        try {
+            notificationManager.notify(NOTIFICATION_ID, notification)
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Cannot update notification: permission denied", e)
+        }
     }
 
     private fun updateNotification(text: String, deepLinkRoute: String = "home") {

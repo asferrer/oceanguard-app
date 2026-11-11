@@ -165,7 +165,7 @@ fun SpeciesResultScreen(
         ) {
             IconButton(
                 onClick = {
-                    viewModel.resetState()
+                    viewModel.leaveSingleResult()  // keeps a batch this photo may come from
                     navController.popBackStack()
                 },
                 modifier = Modifier
@@ -210,7 +210,7 @@ fun SpeciesResultScreen(
                     capturedUri?.let { viewModel.identifyFromImage(it) }
                 },
                 onBack = {
-                    viewModel.resetState()
+                    viewModel.leaveSingleResult()
                     navController.popBackStack()
                 },
                 modifier = Modifier

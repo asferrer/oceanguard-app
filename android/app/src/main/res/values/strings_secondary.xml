@@ -776,6 +776,16 @@
     <string name="date_range_prev_month">Previous month</string>
     <string name="date_range_next_month">Next month</string>
     <string name="notif_video_progress">Frame %1$d/%2$d - ~%3$dm %4$ds</string>
+    <string name="notif_batch_title_debris">Analysing debris photos</string>
+    <string name="notif_batch_title_species">Identifying species</string>
+    <string name="notif_batch_progress">Photo %1$d of %2$d</string>
+    <string name="notif_batch_progress_eta">Photo %1$d of %2$d · about %3$s left</string>
+    <string name="notif_batch_done_title_debris">Debris analysis finished</string>
+    <string name="notif_batch_done_title_species">Species identification finished</string>
+    <string name="notif_batch_done_text">%1$d of %2$d photos analysed. Tap to see the results.</string>
+    <string name="notif_batch_cancel">Cancel</string>
+    <string name="species_batch_cancelled">Cancelled</string>
+    <string name="species_batch_tap_hint">Tap a finished photo to see its full result. The rest keep going.</string>
     <plurals name="trend_analyses_count">
         <item quantity="one">%d analysis</item>
         <item quantity="other">%d analyses</item>

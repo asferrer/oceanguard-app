@@ -5,6 +5,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.oceanguard.ai.service.InferenceServiceState
 import com.oceanguard.ai.ui.navigation.OceanNavContext
 import com.oceanguard.ai.ui.navigation.OceanRoutes
 import com.oceanguard.ai.ui.navigation.oceanScreen
@@ -44,7 +45,16 @@ fun NavGraphBuilder.resultsRoutes(context: OceanNavContext) {
     }
     oceanScreen("batch") {
         val batchUris by viewModel.batchUris.collectAsStateWithLifecycle()
-        BatchResultsScreen(navController = navController, viewModel = viewModel, uriList = batchUris)
+        val service by context.app.inferenceServiceState.collectAsStateWithLifecycle()
+        // Opened from the notification after the activity was recreated: the photos come from the running batch.
+        val uris = batchUris.ifEmpty {
+            when (val s = service) {
+                is InferenceServiceState.BatchRunning -> s.allUris
+                is InferenceServiceState.BatchComplete -> s.allUris
+                else -> emptyList()
+            }
+        }
+        BatchResultsScreen(navController = navController, viewModel = viewModel, uriList = uris)
     }
     sessionRoutes(context)
     videoRoutes(context)

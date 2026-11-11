@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -53,6 +55,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -67,6 +70,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.oceanguard.ai.R
+import com.oceanguard.ai.ui.navigation.OceanRoutes
 import com.oceanguard.ai.data.species.SpeciesCatalog
 import com.oceanguard.ai.data.species.SpeciesGroups
 import com.oceanguard.ai.data.species.SpeciesIdSource
@@ -190,6 +194,10 @@ fun SpeciesBatchResultScreen(
                     onViewBioDex = {
                         navController.navigate("biodex")
                     },
+                    // A finished photo opens its full result while the rest of the batch goes on.
+                    onItemClick = { index ->
+                        if (viewModel.openBatchItem(index)) navController.navigate(OceanRoutes.SPECIES_RESULT)
+                    },
                 )
             }
         }
@@ -210,6 +218,7 @@ private fun SpeciesBatchGridContent(
     catalog: SpeciesCatalog,
     onNewBatch: () -> Unit,
     onViewBioDex: () -> Unit,
+    onItemClick: (Int) -> Unit,
 ) {
     val totalCount = items.size
     val completedCount = items.count {
@@ -241,6 +250,16 @@ private fun SpeciesBatchGridContent(
             )
         }
 
+        if (items.any { it.state is SpeciesBatchItemState.Done }) {
+            item(span = { GridItemSpan(2) }) {
+                Text(
+                    text = stringResource(R.string.species_batch_tap_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
         if (allComplete) {
             item(span = { GridItemSpan(2) }) {
                 AnimatedVisibility(visible = true, enter = fadeIn(), exit = fadeOut()) {
@@ -254,8 +273,8 @@ private fun SpeciesBatchGridContent(
             }
         }
 
-        items(items = items, key = { it.uri.toString() }) { item ->
-            SpeciesBatchThumbnailCard(item = item, catalog = catalog)
+        itemsIndexed(items = items, key = { _, it -> it.uri.toString() }) { index, item ->
+            SpeciesBatchThumbnailCard(item = item, catalog = catalog, onClick = { onItemClick(index) })
         }
 
         if (allComplete) {
@@ -514,7 +533,7 @@ private fun speciesBatchNormBoxes(
 }
 
 @Composable
-private fun SpeciesBatchThumbnailCard(item: SpeciesBatchItem, catalog: SpeciesCatalog) {
+private fun SpeciesBatchThumbnailCard(item: SpeciesBatchItem, catalog: SpeciesCatalog, onClick: () -> Unit) {
     val state = item.state
     val borderColor: Color = when (state) {
         is SpeciesBatchItemState.Done   -> SonarTheme.colors.trace
@@ -539,7 +558,12 @@ private fun SpeciesBatchThumbnailCard(item: SpeciesBatchItem, catalog: SpeciesCa
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .border(width = borderWidth, color = borderColor, shape = RoundedCornerShape(14.dp)),
+            .border(width = borderWidth, color = borderColor, shape = RoundedCornerShape(14.dp))
+            .then(
+                if (state is SpeciesBatchItemState.Done) {
+                    Modifier.clip(RoundedCornerShape(14.dp)).clickable(role = Role.Button, onClick = onClick)
+                } else Modifier,
+            ),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,

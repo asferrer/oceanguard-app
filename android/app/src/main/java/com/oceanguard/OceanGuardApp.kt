@@ -62,6 +62,8 @@ import com.oceanguard.ai.utils.LocationProvider
 import com.oceanguard.ai.utils.PhotonGeocoderClient
 import com.oceanguard.ai.utils.ModelUpdateChecker
 import com.oceanguard.ai.utils.UpdateChecker
+import com.oceanguard.ai.service.SpeciesBatchService
+import com.oceanguard.ai.ui.screens.SpeciesBatchHost
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -494,6 +496,17 @@ class OceanGuardApp : Application(), ContributionHost {
     val inferenceServiceState = MutableStateFlow<InferenceServiceState>(InferenceServiceState.Idle)
 
     val currentVideoProcessor = MutableStateFlow<VideoProcessor?>(null)
+
+    /**
+     * Species batch: lives here, not in the screen's ViewModel, so it goes on in the background (with its progress in
+     * the notification shade, [SpeciesBatchService]) and survives the activity being recreated.
+     */
+    val speciesBatchHost: SpeciesBatchHost by lazy {
+        SpeciesBatchHost(
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+            onStarted = { SpeciesBatchService.start(this) },
+        )
+    }
 
     // -----------------------------------------------------------------------
     // Volume-key shutter trigger

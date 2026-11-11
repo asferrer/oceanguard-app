@@ -690,6 +690,10 @@ class MainViewModel(
         _uiState.value = UiState.Idle
         _capturedImageUri.value = null
         _annotatedThumbnailUri.value = null
+        // A batch or video still running goes on in the background (the notification shows it and opens its screen
+        // again): leaving its screen must not clear its state nor reset the detector in the middle of a photo.
+        val service = app.inferenceServiceState.value
+        if (service is InferenceServiceState.BatchRunning || service is InferenceServiceState.VideoRunning) return
         // Clear service state so the init collector doesn't re-emit a stale result
         app.inferenceServiceState.value = InferenceServiceState.Idle
         orchestrator.reset()
