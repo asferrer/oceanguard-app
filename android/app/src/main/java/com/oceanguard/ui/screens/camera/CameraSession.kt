@@ -46,6 +46,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val TAG = "CameraSession"
@@ -61,6 +62,13 @@ internal class StillCaptureState(
 
     var isCapturing by mutableStateOf(false)
         private set
+
+    /**
+     * Phone position written into the photo's EXIF (GPS tags), refreshed while the camera is open. CameraX only writes
+     * GPS when it is given a location; without it the app's own photos had no position in their EXIF, so the
+     * contributed copy arrived without one even with "Include location" on (that switch still strips it on upload).
+     */
+    var location: android.location.Location? = null
 
     /** True after a failed photo, until the next attempt: nobody should fail in silence. */
     var failed by mutableStateOf(false)
@@ -83,7 +91,8 @@ internal class StillCaptureState(
         imageCapture.flashMode = flashMode
         val timestamp = SimpleDateFormat(FILE_TIMESTAMP, Locale.US).format(System.currentTimeMillis())
         val file = File(context.getExternalFilesDir(null), "${filePrefix}_$timestamp.jpg")
-        val options = ImageCapture.OutputFileOptions.Builder(file).build()
+        val metadata = ImageCapture.Metadata().apply { location = this@StillCaptureState.location }
+        val options = ImageCapture.OutputFileOptions.Builder(file).setMetadata(metadata).build()
         val mainExecutor = ContextCompat.getMainExecutor(context)
         imageCapture.takePicture(
             options,
@@ -120,6 +129,13 @@ internal fun rememberStillCapture(): StillCaptureState {
     val context = LocalContext.current
     val executor = remember { Executors.newSingleThreadExecutor() }
     val state = remember { StillCaptureState(context, executor) }
+    val locationProvider = (context.applicationContext as? OceanGuardApp)?.locationProvider
+    LaunchedEffect(locationProvider) {
+        while (locationProvider != null) {
+            state.location = runCatching { locationProvider.getLastKnownLocation() }.getOrNull()?.toAndroidLocation()
+            delay(LOCATION_REFRESH_MS)
+        }
+    }
     DisposableEffect(Unit) {
         val listener = object : OrientationEventListener(context) {
             override fun onOrientationChanged(orientation: Int) {
@@ -135,6 +151,16 @@ internal fun rememberStillCapture(): StillCaptureState {
     }
     return state
 }
+
+private const val LOCATION_REFRESH_MS = 30_000L
+
+private fun com.oceanguard.ai.data.Location.toAndroidLocation(): android.location.Location =
+    android.location.Location("oceanguard").also {
+        it.latitude = latitude
+        it.longitude = longitude
+        accuracy?.let { a -> it.accuracy = a }
+        it.time = System.currentTimeMillis()
+    }
 
 private fun surfaceRotationFor(degrees: Int): Int = when (degrees) {
     in 45..134 -> Surface.ROTATION_270
