@@ -126,15 +126,38 @@ internal fun DrawScope.drawSpeciesBox(
     drawSpeciesLabel(box, left, top, color)
 }
 
-/** Draw the pill-shaped label chip above the box (clamped to canvas top). */
+/**
+ * Text of the label chip so that it fits in [maxWidth]: the percentage is always kept and, when the whole text does not
+ * fit, the name is shortened with an ellipsis ("Possible group: Sharks… 74%"). [measure] gives the drawn width of a text.
+ * Android-free so it can be unit-tested.
+ */
+internal fun fitSpeciesLabel(name: String, confidence: Float, maxWidth: Float, measure: (String) -> Float): String {
+    val conf = if (confidence > 0f) " ${(confidence * 100).toInt()}%" else ""
+    val full = "$name$conf"
+    if (measure(full) <= maxWidth) return full
+    var n = name.length
+    while (n > 1) {
+        n--
+        val candidate = name.take(n).trimEnd() + "…" + conf
+        if (measure(candidate) <= maxWidth) return candidate
+    }
+    return "…$conf".trimStart()
+}
+
+/**
+ * Horizontal start of a chip of [chipWidth] that wants to start at [left] on a canvas of [canvasWidth]: moved left when
+ * it would run past the right edge, never before 0.
+ */
+internal fun speciesChipLeft(left: Float, chipWidth: Float, canvasWidth: Float): Float =
+    left.coerceAtMost(canvasWidth - chipWidth).coerceAtLeast(0f)
+
+/** Draw the pill-shaped label chip above the box, kept inside the canvas and with the percentage always visible. */
 private fun DrawScope.drawSpeciesLabel(
     box: NormBox,
     left: Float,
     top: Float,
     color: Color,
 ) {
-    val confLabel = if (box.confidence > 0f) " ${(box.confidence * 100).toInt()}%" else ""
-    val label     = "${box.label}$confLabel"
     val textSizePx = 12.dp.toPx()
     val paddingH   = 6.dp.toPx()
     val paddingV   = 3.dp.toPx()
@@ -143,17 +166,20 @@ private fun DrawScope.drawSpeciesLabel(
         cachedTextPaint.textSize = textSizePx
         cachedBgPaint.color      = color.copy(alpha = 0.85f).toArgb()
 
-        val textWidth  = cachedTextPaint.measureText(label)
+        val label      = fitSpeciesLabel(box.label, box.confidence, size.width - paddingH * 2) {
+            cachedTextPaint.measureText(it)
+        }
+        val chipWidth  = cachedTextPaint.measureText(label) + paddingH * 2
         val chipHeight = textSizePx + paddingV * 2
         val chipRadius = chipHeight / 2f
         val chipTop    = (top - chipHeight - 4.dp.toPx()).coerceAtLeast(0f)
         val chipBottom = chipTop + chipHeight
-        val chipRight  = (left + textWidth + paddingH * 2).coerceAtMost(size.width)
-        val chipRect   = android.graphics.RectF(left, chipTop, chipRight, chipBottom)
+        val chipLeft   = speciesChipLeft(left, chipWidth, size.width)
+        val chipRect   = android.graphics.RectF(chipLeft, chipTop, chipLeft + chipWidth, chipBottom)
 
         canvas.nativeCanvas.drawRoundRect(chipRect, chipRadius, chipRadius, cachedBgPaint)
         canvas.nativeCanvas.drawRoundRect(chipRect, chipRadius, chipRadius, cachedBorderPaint)
-        canvas.nativeCanvas.drawText(label, left + paddingH, chipBottom - paddingV, cachedTextPaint)
+        canvas.nativeCanvas.drawText(label, chipLeft + paddingH, chipBottom - paddingV, cachedTextPaint)
     }
 }
 

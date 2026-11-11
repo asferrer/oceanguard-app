@@ -1,9 +1,12 @@
 package com.oceanguard.ai.species
 
 import com.oceanguard.ai.ui.components.bboxToNormBox
+import com.oceanguard.ai.ui.components.fitSpeciesLabel
+import com.oceanguard.ai.ui.components.speciesChipLeft
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -100,5 +103,29 @@ class SpeciesBoxOverlayTest {
         assertNull(
             bboxToNormBox(10f, 10f, 50f, 0f, 100, 100, "x", 1f),
         )
+    }
+
+    /** One unit of width per character: enough to check the fitting logic. */
+    private val chars = { t: String -> t.length.toFloat() }
+
+    @Test
+    fun `label that fits is shown whole with its percentage`() {
+        assertEquals("Blacktip reef shark 98%", fitSpeciesLabel("Blacktip reef shark", 0.98f, 40f, chars))
+        assertEquals("Damselfish", fitSpeciesLabel("Damselfish", 0f, 40f, chars))
+    }
+
+    @Test
+    fun `long label is shortened but keeps the percentage`() {
+        val label = fitSpeciesLabel("Possible group: Sharks and rays", 0.74f, 20f, chars)
+        assertTrue(label.endsWith("… 74%"))
+        assertTrue(label.length <= 20)
+        assertTrue(label.startsWith("Possible group"))
+    }
+
+    @Test
+    fun `chip moves left to stay inside the canvas`() {
+        assertEquals(10f, speciesChipLeft(10f, 50f, 100f), delta)
+        assertEquals(50f, speciesChipLeft(80f, 50f, 100f), delta)
+        assertEquals(0f, speciesChipLeft(30f, 150f, 100f), delta)
     }
 }
