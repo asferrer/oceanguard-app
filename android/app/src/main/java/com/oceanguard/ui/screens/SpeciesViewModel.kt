@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.oceanguard.ai.service.BatchNotifications
 import com.oceanguard.ai.utils.ImagePersistence
 import com.oceanguard.ai.utils.ExifLocationExtractor
 import java.util.Locale
@@ -324,7 +325,12 @@ class SpeciesViewModel(
      */
     fun resetState() {
         leaveSingleResult()
-        if (!batch.isRunning) _batchUiState.value = SpeciesBatchUiState.Idle
+        if (batch.isRunning) return
+        if (_batchUiState.value !is SpeciesBatchUiState.Idle) {
+            // The results were seen and are cleared: a "batch finished" notice would now open an empty screen.
+            BatchNotifications.clearFinished(appContext)
+        }
+        _batchUiState.value = SpeciesBatchUiState.Idle
     }
 
     /** Leave the single-result screen without touching the batch (it may have been opened from a batch photo). */

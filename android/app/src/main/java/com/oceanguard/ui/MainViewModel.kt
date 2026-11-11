@@ -26,6 +26,7 @@ import com.oceanguard.ai.service.InferenceService
 import com.oceanguard.ai.service.InferenceServiceState
 import com.oceanguard.ai.data.AnalysisModels
 import com.oceanguard.ai.utils.BitmapAnnotator
+import com.oceanguard.ai.service.BatchNotifications
 import com.oceanguard.ai.utils.ExifLocationExtractor
 import com.oceanguard.ai.utils.ImagePersistence
 import com.oceanguard.ai.utils.LocationProvider
@@ -694,6 +695,8 @@ class MainViewModel(
         // again): leaving its screen must not clear its state nor reset the detector in the middle of a photo.
         val service = app.inferenceServiceState.value
         if (service is InferenceServiceState.BatchRunning || service is InferenceServiceState.VideoRunning) return
+        // Results seen and cleared: a "batch finished" notice would now open an empty screen.
+        if (service is InferenceServiceState.BatchComplete) BatchNotifications.clearFinished(appContext)
         // Clear service state so the init collector doesn't re-emit a stale result
         app.inferenceServiceState.value = InferenceServiceState.Idle
         orchestrator.reset()
