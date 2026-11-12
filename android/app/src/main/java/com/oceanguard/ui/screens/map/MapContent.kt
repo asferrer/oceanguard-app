@@ -54,6 +54,7 @@ suspend fun CameraState.flyTo(target: Position, zoom: Double, reducedMotion: Boo
  * @param fitAllTrigger Incremented to frame every zone again.
  * @param focusPosition Optional single coordinate to fly to (from a deep link).
  * @param focusTrigger Incremented alongside [focusPosition] to retrigger on re-navigation.
+ * @param speciesPoints Species spots, framed together with the zones.
  * @param flightsEnabled False while the globe is in front: the camera does not fly then, since
  * nobody sees it. The flights that were waiting run when [flightsEpoch] changes.
  * @param flightsEpoch Changes when the globe hands over to the map, to run the opening flights.
@@ -73,10 +74,11 @@ fun OceanGuardMap(
     focusTrigger: Int = 0,
     flightsEnabled: Boolean = true,
     flightsEpoch: Int = 0,
+    speciesPoints: List<Pair<Double, Double>> = emptyList(),
     onLoadFailed: () -> Unit = {},
     onLoadFinished: () -> Unit = {},
 ) {
-    AnimateCameraToFit(cameraState, zoneClusters, fitAllTrigger, flightsEnabled, flightsEpoch)
+    AnimateCameraToFit(cameraState, zoneClusters, speciesPoints, fitAllTrigger, flightsEnabled, flightsEpoch)
     AnimateCameraToFocus(cameraState, focusPosition, focusTrigger, flightsEnabled, flightsEpoch)
 
     MaplibreMap(
@@ -125,14 +127,15 @@ private fun AnimateCameraToFocus(
 private fun AnimateCameraToFit(
     cameraState: CameraState,
     zoneClusters: List<ZoneCluster>,
+    speciesPoints: List<Pair<Double, Double>>,
     fitAllTrigger: Int,
     enabled: Boolean,
     epoch: Int,
 ) {
     val reduced = LocalReducedMotion.current
-    LaunchedEffect(zoneClusters, fitAllTrigger, epoch) {
+    LaunchedEffect(zoneClusters, speciesPoints, fitAllTrigger, epoch) {
         if (!enabled) return@LaunchedEffect
-        val target = MapMarkerPlanner.fitTarget(zoneClusters) ?: return@LaunchedEffect
+        val target = MapMarkerPlanner.fitTarget(zoneClusters, speciesPoints) ?: return@LaunchedEffect
         cameraState.flyTo(Position(longitude = target.longitude, latitude = target.latitude), target.zoom, reduced)
     }
 }

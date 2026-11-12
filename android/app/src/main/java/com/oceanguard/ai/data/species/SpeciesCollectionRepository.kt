@@ -51,6 +51,10 @@ class SpeciesCollectionRepository(
         return speciesObservationDao.getForSpecies(aphia, entry?.scientificName ?: speciesKey)
     }
 
+    /** Every observation that has a position, newest first: what the main map shows of the BioDex. */
+    val observationsWithLocation: Flow<List<SpeciesObservation>> =
+        speciesObservationDao.getAll().map { rows -> rows.filter { it.location != null } }
+
     /** Single observation by id, for the observation detail screen (M6). */
     suspend fun getObservationById(id: Long): SpeciesObservation? =
         speciesObservationDao.getById(id)

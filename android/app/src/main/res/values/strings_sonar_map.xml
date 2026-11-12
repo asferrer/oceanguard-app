@@ -52,4 +52,30 @@
         <item quantity="one">%1$d observation point here. Tap to zoom in.</item>
         <item quantity="other">%1$d observation points here. Tap to zoom in.</item>
     </plurals>
+    <string name="map_mode_debris">Debris</string>
+    <string name="map_mode_species">Species</string>
+    <string name="map_mode_both">Both</string>
+    <string name="map_mode_cd">Data shown on the map</string>
+    <string name="map_species_last_seen">Last seen %1$s</string>
+    <string name="map_species_open">Open in BioDex</string>
+    <plurals name="map_species_cluster_cd">
+        <item quantity="one">Observations in this zone: %1$d, species: %2$d. Tap to zoom in.</item>
+        <item quantity="other">Observations in this zone: %1$d, species: %2$d. Tap to zoom in.</item>
+    </plurals>
+    <plurals name="map_species_pin_cd">
+        <item quantity="one">%1$s, %2$d observation. Tap for details.</item>
+        <item quantity="other">%1$s, %2$d observations. Tap for details.</item>
+    </plurals>
+    <plurals name="map_species_card_count">
+        <item quantity="one">%1$d observation here</item>
+        <item quantity="other">%1$d observations here</item>
+    </plurals>
+    <plurals name="map_subtitle_observations">
+        <item quantity="one">%1$d observation</item>
+        <item quantity="other">%1$d observations</item>
+    </plurals>
+    <plurals name="map_subtitle_species">
+        <item quantity="one">%1$d species</item>
+        <item quantity="other">%1$d species</item>
+    </plurals>
 </resources>

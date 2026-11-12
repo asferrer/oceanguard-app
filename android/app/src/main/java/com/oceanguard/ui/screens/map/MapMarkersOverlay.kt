@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.ZoneCluster
+import com.oceanguard.ai.data.species.SpeciesCatalog
+import com.oceanguard.ai.ui.screens.map.species.SpeciesSpot
 import com.oceanguard.ai.ui.motion.LocalReducedMotion
 import com.oceanguard.ai.ui.motion.OceanMotion
 import com.oceanguard.ai.ui.theme.SonarTheme
@@ -50,7 +52,12 @@ private const val STAGGER_STEPS = 8
  * cluster; close up (see [MapMarkerPlanner.EXPAND_ZOOM]) it opens into one pin per photo, and each
  * pin pops in with a spring. Tapping a cluster reports its zone so the caller can fly to it.
  *
+ * Species observations come in the same way, as [SpeciesClusterMarker] and [SpeciesPinMarker],
+ * drawn differently so the two kinds are told apart.
+ *
  * @param selectedSessionId Pin drawn highlighted, the one whose card is open.
+ * @param species Species spots to draw next to the zones.
+ * @param speciesCatalog Where the species pins take their sprite and name from.
  */
 @Composable
 fun MapMarkersOverlay(
@@ -60,11 +67,16 @@ fun MapMarkersOverlay(
     onClusterClick: (zoneIndex: Int) -> Unit,
     onPinClick: (sessionId: Long) -> Unit,
     modifier: Modifier = Modifier,
+    species: List<SpeciesSpot> = emptyList(),
+    speciesCatalog: SpeciesCatalog? = null,
+    selectedSpeciesKey: String? = null,
+    onSpeciesClusterClick: (spotIndex: Int) -> Unit = {},
+    onSpeciesPinClick: (SpeciesPinMarker) -> Unit = {},
 ) {
     val expanded by remember(cameraState) {
         derivedStateOf { MapMarkerPlanner.isExpanded(cameraState.position.zoom) }
     }
-    val markers = remember(zones, expanded) { MapMarkerPlanner.plan(zones, expanded) }
+    val markers = remember(zones, species, expanded) { MapMarkerPlanner.planAll(zones, species, expanded) }
     BoxWithConstraints(modifier) {
         // Read here, not in a child, so every camera frame re-projects the markers.
         cameraState.position
@@ -75,12 +87,23 @@ fun MapMarkersOverlay(
             val at = projection.screenLocationFromPosition(Position(marker.longitude, marker.latitude))
             if (!at.isOnScreen(maxWidth, maxHeight)) continue
             key(marker.key) {
-                PositionedMarker(marker, at.x, at.y, shown, selectedSessionId, onClusterClick, onPinClick)
+                PositionedMarker(
+                    marker, at.x, at.y, shown, selectedSessionId, onClusterClick, onPinClick,
+                    SpeciesMarkerActions(speciesCatalog, selectedSpeciesKey, onSpeciesClusterClick, onSpeciesPinClick),
+                )
             }
             shown++
         }
     }
 }
+
+/** What the species markers need besides their position. */
+private class SpeciesMarkerActions(
+    val catalog: SpeciesCatalog?,
+    val selectedKey: String?,
+    val onCluster: (Int) -> Unit,
+    val onPin: (SpeciesPinMarker) -> Unit,
+)
 
 private fun androidx.compose.ui.unit.DpOffset.isOnScreen(width: Dp, height: Dp): Boolean =
     MapMarkerPlanner.isOnScreen(x.value, y.value, width.value, height.value, OFF_SCREEN_MARGIN.value)
@@ -94,12 +117,26 @@ private fun PositionedMarker(
     selectedSessionId: Long?,
     onClusterClick: (Int) -> Unit,
     onPinClick: (Long) -> Unit,
+    species: SpeciesMarkerActions,
 ) {
     when (marker) {
         is ClusterMarker -> {
             val size = MapMarkerPlanner.clusterDiameterDp(marker.sessionCount).dp
             Box(Modifier.offset(x - size / 2, y - size / 2).size(size)) {
                 ClusterBubble(marker, size, onClick = { onClusterClick(marker.zoneIndex) })
+            }
+        }
+        is SpeciesClusterMarker -> {
+            val size = MapMarkerPlanner.clusterDiameterDp(marker.observationCount).dp
+            Box(Modifier.offset(x - size / 2, y - size / 2).size(size)) {
+                SpeciesClusterBubble(marker, size, onClick = { species.onCluster(marker.spotIndex) })
+            }
+        }
+        is SpeciesPinMarker -> Box(
+            Modifier.offset(x - SPECIES_TOUCH_TARGET / 2, y - SPECIES_TOUCH_TARGET / 2).size(SPECIES_TOUCH_TARGET),
+        ) {
+            SpeciesPinBadge(marker, species.catalog, order, marker.speciesKey != null && marker.speciesKey == species.selectedKey) {
+                species.onPin(marker)
             }
         }
         is PinMarker -> Box(
@@ -160,7 +197,7 @@ private fun PhotoPin(pin: PinMarker, order: Int, selected: Boolean, onClick: () 
  * it only fades in, with no scaling.
  */
 @Composable
-private fun Modifier.popIn(order: Int): Modifier {
+internal fun Modifier.popIn(order: Int): Modifier {
     val reduced = LocalReducedMotion.current
     val scale = remember { Animatable(if (reduced) 1f else 0f) }
     val alpha = remember { Animatable(if (reduced) 0f else 1f) }

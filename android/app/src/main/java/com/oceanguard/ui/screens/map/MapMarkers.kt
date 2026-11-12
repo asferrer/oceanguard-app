@@ -1,6 +1,7 @@
 package com.oceanguard.ai.ui.screens.map
 
 import com.oceanguard.ai.data.ZoneCluster
+import com.oceanguard.ai.ui.screens.map.species.SpeciesSpot
 
 /** Something drawn over the map at a real coordinate. */
 sealed interface MapMarker {
@@ -31,6 +32,30 @@ data class PinMarker(
     val healthScore: Int,
 ) : MapMarker {
     override val key: String get() = "session-$sessionId"
+}
+
+/** A grid cell of species observations that has not been opened yet: shows how many were seen there. */
+data class SpeciesClusterMarker(
+    val spotIndex: Int,
+    override val latitude: Double,
+    override val longitude: Double,
+    val observationCount: Int,
+    val speciesCount: Int,
+) : MapMarker {
+    override val key: String get() = "species-spot-$spotIndex"
+}
+
+/** One species at one place, once its cell is open: the sprite of the species in a badge. */
+data class SpeciesPinMarker(
+    val spotIndex: Int,
+    val speciesKey: String?,
+    val scientificName: String,
+    override val latitude: Double,
+    override val longitude: Double,
+    val observationCount: Int,
+    val lastSeenMs: Long,
+) : MapMarker {
+    override val key: String get() = "species-$spotIndex-${speciesKey ?: scientificName}"
 }
 
 /** "38.12345, -0.50000": signed decimals with a point, so they can be pasted into any map app. */
@@ -64,6 +89,30 @@ object MapMarkerPlanner {
 
     fun plan(zones: List<ZoneCluster>, expanded: Boolean): List<MapMarker> =
         if (expanded) pins(zones) else clusters(zones)
+
+    /** Debris zones and species spots together, each in the form the zoom asks for. */
+    fun planAll(zones: List<ZoneCluster>, spots: List<SpeciesSpot>, expanded: Boolean): List<MapMarker> =
+        plan(zones, expanded) + planSpecies(spots, expanded)
+
+    /** One cluster per species spot, or one pin per species in it once [expanded]. */
+    fun planSpecies(spots: List<SpeciesSpot>, expanded: Boolean): List<MapMarker> =
+        spots.flatMapIndexed { index, spot ->
+            if (expanded) {
+                spot.entries.map { e ->
+                    SpeciesPinMarker(index, e.key, e.scientificName, e.latitude, e.longitude, e.count, e.lastSeenMs)
+                }
+            } else {
+                listOf(
+                    SpeciesClusterMarker(
+                        spotIndex = index,
+                        latitude = spot.latitude,
+                        longitude = spot.longitude,
+                        observationCount = spot.observationCount,
+                        speciesCount = spot.entries.map { it.key ?: it.scientificName }.distinct().size,
+                    ),
+                )
+            }
+        }
 
     private fun clusters(zones: List<ZoneCluster>): List<MapMarker> =
         zones.mapIndexed { index, zone ->
@@ -101,12 +150,15 @@ object MapMarkerPlanner {
     fun isOnScreen(xDp: Float, yDp: Float, widthDp: Float, heightDp: Float, marginDp: Float): Boolean =
         xDp in -marginDp..(widthDp + marginDp) && yDp in -marginDp..(heightDp + marginDp)
 
-    /** Centre and zoom that frame every zone; null when there is nothing to frame. */
-    fun fitTarget(zones: List<ZoneCluster>): FitTarget? {
-        if (zones.isEmpty()) return null
-        val lats = zones.map { it.centroidLat }
-        val lons = zones.map { it.centroidLon }
-        val zoom = if (zones.size == 1) {
+    /**
+     * Centre and zoom that frame every zone and every extra (latitude, longitude) point, such as
+     * species spots; null when there is nothing to frame.
+     */
+    fun fitTarget(zones: List<ZoneCluster>, extra: List<Pair<Double, Double>> = emptyList()): FitTarget? {
+        val lats = zones.map { it.centroidLat } + extra.map { it.first }
+        val lons = zones.map { it.centroidLon } + extra.map { it.second }
+        if (lats.isEmpty()) return null
+        val zoom = if (lats.size == 1) {
             SINGLE_ZONE_ZOOM
         } else {
             zoomForSpan(maxOf(lats.max() - lats.min(), lons.max() - lons.min()))

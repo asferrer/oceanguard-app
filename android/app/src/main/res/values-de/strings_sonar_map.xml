@@ -52,4 +52,30 @@
         <item quantity="one">%1$d Beobachtungspunkt hier. Zum Heranzoomen tippen.</item>
         <item quantity="other">%1$d Beobachtungspunkte hier. Zum Heranzoomen tippen.</item>
     </plurals>
+    <string name="map_mode_debris">Müll</string>
+    <string name="map_mode_species">Arten</string>
+    <string name="map_mode_both">Beides</string>
+    <string name="map_mode_cd">Auf der Karte angezeigte Daten</string>
+    <string name="map_species_last_seen">Zuletzt gesehen am %1$s</string>
+    <string name="map_species_open">Im BioDex öffnen</string>
+    <plurals name="map_species_cluster_cd">
+        <item quantity="one">Beobachtungen in dieser Zone: %1$d, Arten: %2$d. Zum Heranzoomen tippen.</item>
+        <item quantity="other">Beobachtungen in dieser Zone: %1$d, Arten: %2$d. Zum Heranzoomen tippen.</item>
+    </plurals>
+    <plurals name="map_species_pin_cd">
+        <item quantity="one">%1$s, %2$d Beobachtung. Für Details tippen.</item>
+        <item quantity="other">%1$s, %2$d Beobachtungen. Für Details tippen.</item>
+    </plurals>
+    <plurals name="map_species_card_count">
+        <item quantity="one">%1$d Beobachtung hier</item>
+        <item quantity="other">%1$d Beobachtungen hier</item>
+    </plurals>
+    <plurals name="map_subtitle_observations">
+        <item quantity="one">%1$d Beobachtung</item>
+        <item quantity="other">%1$d Beobachtungen</item>
+    </plurals>
+    <plurals name="map_subtitle_species">
+        <item quantity="one">%1$d Art</item>
+        <item quantity="other">%1$d Arten</item>
+    </plurals>
 </resources>

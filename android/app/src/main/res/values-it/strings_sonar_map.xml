@@ -52,4 +52,30 @@
         <item quantity="one">%1$d punto di osservazione qui. Tocca per ingrandire.</item>
         <item quantity="other">%1$d punti di osservazione qui. Tocca per ingrandire.</item>
     </plurals>
+    <string name="map_mode_debris">Rifiuti</string>
+    <string name="map_mode_species">Specie</string>
+    <string name="map_mode_both">Entrambi</string>
+    <string name="map_mode_cd">Dati mostrati sulla mappa</string>
+    <string name="map_species_last_seen">Vista l\'ultima volta il %1$s</string>
+    <string name="map_species_open">Apri nel BioDex</string>
+    <plurals name="map_species_cluster_cd">
+        <item quantity="one">Osservazioni in questa zona: %1$d, specie: %2$d. Tocca per ingrandire.</item>
+        <item quantity="other">Osservazioni in questa zona: %1$d, specie: %2$d. Tocca per ingrandire.</item>
+    </plurals>
+    <plurals name="map_species_pin_cd">
+        <item quantity="one">%1$s, %2$d osservazione. Tocca per i dettagli.</item>
+        <item quantity="other">%1$s, %2$d osservazioni. Tocca per i dettagli.</item>
+    </plurals>
+    <plurals name="map_species_card_count">
+        <item quantity="one">%1$d osservazione qui</item>
+        <item quantity="other">%1$d osservazioni qui</item>
+    </plurals>
+    <plurals name="map_subtitle_observations">
+        <item quantity="one">%1$d osservazione</item>
+        <item quantity="other">%1$d osservazioni</item>
+    </plurals>
+    <plurals name="map_subtitle_species">
+        <item quantity="one">%1$d specie</item>
+        <item quantity="other">%1$d specie</item>
+    </plurals>
 </resources>

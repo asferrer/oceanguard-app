@@ -49,17 +49,21 @@ fun MapFabControls(
     onStyleSelected: (MapStyle) -> Unit,
     modifier: Modifier = Modifier,
     boundsMap: MutableMap<String, Rect> = mutableMapOf(),
+    showHeatmapButton: Boolean = true,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        MapControlButton(
-            icon = if (showHeatmap) Icons.Filled.PushPin else Icons.Filled.Whatshot,
-            description = stringResource(
-                if (showHeatmap) R.string.map_fab_cd_show_pins else R.string.map_fab_cd_show_heatmap,
-            ),
-            active = showHeatmap,
-            onClick = onToggleHeatmap,
-            modifier = Modifier.spotlightTarget("map_heatmap", boundsMap),
-        )
+        // The heat view counts debris only, so it has no button while only species are shown.
+        if (showHeatmapButton) {
+            MapControlButton(
+                icon = if (showHeatmap) Icons.Filled.PushPin else Icons.Filled.Whatshot,
+                description = stringResource(
+                    if (showHeatmap) R.string.map_fab_cd_show_pins else R.string.map_fab_cd_show_heatmap,
+                ),
+                active = showHeatmap,
+                onClick = onToggleHeatmap,
+                modifier = Modifier.spotlightTarget("map_heatmap", boundsMap),
+            )
+        }
         MapControlButton(
             icon = Icons.Filled.FitScreen,
             description = stringResource(R.string.map_fab_cd_fit_all),
