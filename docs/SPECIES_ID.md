@@ -828,3 +828,14 @@ sprite_credits.json       718d23fee448ec4f8fd17c401a3a4e03c34882552177f4721122bf
 
 **Publishing (author).** Upload `species_pack.json` as `species_pack_v5.json`, `sprite_credits.json` and the `sprites/`
 folder to `asferrer/oceanguard-biodex`, next to the v4 files.
+
+**Manifest version 6 (2026-11-12).** 14 sprites were redrawn because their source photo cut part of the animal (tail,
+fluke, wing, arms or rear flippers): the new source images show the whole animal inside the frame (`enteros.py` in the
+sprite pipeline masks each candidate and keeps it only when the organism does not touch the photo edge and is alone).
+Published under the same name `species_pack_v5.json` with `version: 6`, so v5 installs update and download only those 14
+sprites and the credits.
+
+```
+species_pack_v5.json (version 6)  5156673d66b75768d7e3184f21d3dc14c62fb84d26440e7797095e2715ccaed3
+sprite_credits.json               87326a1b172d710b901a2281fe5af50e93f6d00d235b847f06c25f14855f9acf
+```
