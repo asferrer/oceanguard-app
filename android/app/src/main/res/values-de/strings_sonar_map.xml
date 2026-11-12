@@ -78,4 +78,12 @@
         <item quantity="one">%1$d Art</item>
         <item quantity="other">%1$d Arten</item>
     </plurals>
+    <plurals name="map_group_cd">
+        <item quantity="one">%1$d Fotos in diesem Studiengebiet, mittlerer Zustand %2$d. Zum Ansehen tippen.</item>
+        <item quantity="other">%1$d Fotos in diesem Studiengebiet, mittlerer Zustand %2$d. Zum Ansehen tippen.</item>
+    </plurals>
+    <plurals name="map_species_group_cd">
+        <item quantity="one">%1$d Beobachtungen von %2$d Arten hier. Für die Liste tippen.</item>
+        <item quantity="other">%1$d Beobachtungen von %2$d Arten hier. Für die Liste tippen.</item>
+    </plurals>
 </resources>

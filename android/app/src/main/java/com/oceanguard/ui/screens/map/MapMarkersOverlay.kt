@@ -52,6 +52,9 @@ private const val STAGGER_STEPS = 8
  * cluster; close up (see [MapMarkerPlanner.EXPAND_ZOOM]) it opens into one pin per photo, and each
  * pin pops in with a spring. Tapping a cluster reports its zone so the caller can fly to it.
  *
+ * Once expanded, pins that would stack at the current zoom merge into one study-zone marker
+ * ([PinGroupMarker]) or species group ([SpeciesGroupMarker]); zooming in splits them again.
+ *
  * Species observations come in the same way, as [SpeciesClusterMarker] and [SpeciesPinMarker],
  * drawn differently so the two kinds are told apart.
  *
@@ -72,11 +75,19 @@ fun MapMarkersOverlay(
     selectedSpeciesKey: String? = null,
     onSpeciesClusterClick: (spotIndex: Int) -> Unit = {},
     onSpeciesPinClick: (SpeciesPinMarker) -> Unit = {},
+    onGroupClick: (PinGroupMarker) -> Unit = {},
+    onSpeciesGroupClick: (SpeciesGroupMarker) -> Unit = {},
 ) {
     val expanded by remember(cameraState) {
         derivedStateOf { MapMarkerPlanner.isExpanded(cameraState.position.zoom) }
     }
-    val markers = remember(zones, species, expanded) { MapMarkerPlanner.planAll(zones, species, expanded) }
+    val zoomStep by remember(cameraState) {
+        derivedStateOf { MapMarkerPlanner.quantizeZoom(cameraState.position.zoom) }
+    }
+    val markers = remember(zones, species, expanded, zoomStep) {
+        val all = MapMarkerPlanner.planAll(zones, species, expanded)
+        if (expanded) MapMarkerPlanner.groupStacked(all, zoomStep) else all
+    }
     BoxWithConstraints(modifier) {
         // Read here, not in a child, so every camera frame re-projects the markers.
         cameraState.position
@@ -89,7 +100,10 @@ fun MapMarkersOverlay(
             key(marker.key) {
                 PositionedMarker(
                     marker, at.x, at.y, shown, selectedSessionId, onClusterClick, onPinClick,
-                    SpeciesMarkerActions(speciesCatalog, selectedSpeciesKey, onSpeciesClusterClick, onSpeciesPinClick),
+                    SpeciesMarkerActions(
+                        speciesCatalog, selectedSpeciesKey, onSpeciesClusterClick, onSpeciesPinClick,
+                        onGroupClick, onSpeciesGroupClick,
+                    ),
                 )
             }
             shown++
@@ -103,6 +117,8 @@ private class SpeciesMarkerActions(
     val selectedKey: String?,
     val onCluster: (Int) -> Unit,
     val onPin: (SpeciesPinMarker) -> Unit,
+    val onGroup: (PinGroupMarker) -> Unit,
+    val onSpeciesGroup: (SpeciesGroupMarker) -> Unit,
 )
 
 private fun androidx.compose.ui.unit.DpOffset.isOnScreen(width: Dp, height: Dp): Boolean =
@@ -125,6 +141,12 @@ private fun PositionedMarker(
             Box(Modifier.offset(x - size / 2, y - size / 2).size(size)) {
                 ClusterBubble(marker, size, onClick = { onClusterClick(marker.zoneIndex) })
             }
+        }
+        is PinGroupMarker -> Box(Modifier.offset(x - GROUP_MARKER / 2, y - GROUP_MARKER / 2).size(GROUP_MARKER)) {
+            StudyZoneMarker(marker, order) { species.onGroup(marker) }
+        }
+        is SpeciesGroupMarker -> Box(Modifier.offset(x - GROUP_MARKER / 2, y - GROUP_MARKER / 2).size(GROUP_MARKER)) {
+            SpeciesGroupBadge(marker, species.catalog, order) { species.onSpeciesGroup(marker) }
         }
         is SpeciesClusterMarker -> {
             val size = MapMarkerPlanner.clusterDiameterDp(marker.observationCount).dp

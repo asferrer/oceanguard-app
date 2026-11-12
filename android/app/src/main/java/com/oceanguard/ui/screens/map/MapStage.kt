@@ -113,7 +113,15 @@ private fun FlatMarkers(
             val spot = spots.getOrNull(index) ?: return@MapMarkersOverlay
             scope.launch { camera.flyTo(Position(spot.longitude, spot.latitude), MapMarkerPlanner.FLY_ZOOM, reduced) }
         },
-        onSpeciesPinClick = { state.selectedSpecies = it },
+        onSpeciesPinClick = {
+            state.selectedSpeciesGroup = null
+            state.selectedSpecies = it
+        },
+        onGroupClick = { group -> MapMarkerPlanner.zoneFor(group, zones)?.let { state.selectedZone = it } },
+        onSpeciesGroupClick = {
+            state.selectedSpecies = null
+            state.selectedSpeciesGroup = it
+        },
     )
 }
 

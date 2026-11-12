@@ -54,6 +54,7 @@ import com.oceanguard.ai.ui.navigation.OceanRoutes
 import com.oceanguard.ai.ui.screens.map.MapData
 import com.oceanguard.ai.ui.screens.map.MapDataModeSelector
 import com.oceanguard.ai.ui.screens.map.MapSpeciesCard
+import com.oceanguard.ai.ui.screens.map.MapSpeciesListCard
 import com.oceanguard.ai.ui.screens.map.MapStage
 import com.oceanguard.ai.ui.screens.map.SpeciesSummaryCard
 import com.oceanguard.ai.ui.screens.map.species.MapDataMode
@@ -143,6 +144,7 @@ fun MapScreen(
                 onModeChange = { picked ->
                     state.selectedPinId = null
                     state.selectedSpecies = null
+                    state.selectedSpeciesGroup = null
                     scope.launch { viewModel.settingsRepository.setMapDataMode(picked.key) }
                 },
                 modifier = Modifier.padding(padding),
@@ -295,6 +297,15 @@ private fun MapHud(
 
 @Composable
 private fun SelectedPinCard(navController: NavController, state: MapScreenState, data: MapData) {
+    state.selectedSpeciesGroup?.let { group ->
+        MapSpeciesListCard(
+            group = group,
+            catalog = state.species.catalog,
+            onOpenSpecies = { key -> navController.navigate("biodex/$key") },
+            onClose = { state.selectedSpeciesGroup = null },
+        )
+        return
+    }
     state.selectedSpecies?.let { pin ->
         MapSpeciesCard(
             pin = pin,

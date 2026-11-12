@@ -50,6 +50,7 @@ class MapScreenState {
     var dataMode by mutableStateOf(MapDataMode.DEFAULT)
     var species by mutableStateOf(SpeciesMapData.EMPTY)
     var selectedSpecies by mutableStateOf<SpeciesPinMarker?>(null)
+    var selectedSpeciesGroup by mutableStateOf<SpeciesGroupMarker?>(null)
 
     /** The 3D globe shown when zoomed far out, and which of it and the flat map is in charge. */
     val globe = GlobeController()

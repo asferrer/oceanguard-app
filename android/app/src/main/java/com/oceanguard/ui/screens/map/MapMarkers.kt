@@ -1,5 +1,6 @@
 package com.oceanguard.ai.ui.screens.map
 
+import com.oceanguard.ai.data.ZoneAggregator
 import com.oceanguard.ai.data.ZoneCluster
 import com.oceanguard.ai.ui.screens.map.species.SpeciesSpot
 
@@ -58,6 +59,29 @@ data class SpeciesPinMarker(
     override val key: String get() = "species-$spotIndex-${speciesKey ?: scientificName}"
 }
 
+/**
+ * Photos that are so close at this zoom that their pins would stack: drawn as one study zone with
+ * a stack of thumbnails, the count and the average health. Zooming in splits it again.
+ */
+data class PinGroupMarker(
+    val members: List<PinMarker>,
+    override val latitude: Double,
+    override val longitude: Double,
+) : MapMarker {
+    val healthScore: Int get() = members.map { it.healthScore }.average().toInt()
+    override val key: String get() = "group-${members.minOf { it.sessionId }}-${members.size}"
+}
+
+/** Species pins that would stack: one marker with the sprites and a count, opening a list. */
+data class SpeciesGroupMarker(
+    val members: List<SpeciesPinMarker>,
+    override val latitude: Double,
+    override val longitude: Double,
+) : MapMarker {
+    val observationCount: Int get() = members.sumOf { it.observationCount }
+    override val key: String get() = "species-group-${members.first().key}-${members.size}"
+}
+
 /** "38.12345, -0.50000": signed decimals with a point, so they can be pasted into any map app. */
 fun formatCoordinates(latitude: Double, longitude: Double): String =
     java.lang.String.format(java.util.Locale.ROOT, "%.5f, %.5f", latitude, longitude)
@@ -113,6 +137,50 @@ object MapMarkerPlanner {
                 )
             }
         }
+
+    /** Diameter of a pin, the unit the stacking threshold is measured in. */
+    const val PIN_DP = 40.0
+
+    /** Zoom is quantised to this step before grouping, so a pinch does not regroup on every frame. */
+    const val ZOOM_STEP = 0.25
+
+    fun quantizeZoom(zoom: Double): Double = Math.round(zoom / ZOOM_STEP) * ZOOM_STEP
+
+    /**
+     * Merges the pins of [markers] that stack at [zoom] into [PinGroupMarker]s and
+     * [SpeciesGroupMarker]s. A pin with no neighbour keeps its own marker, and the other kinds pass
+     * through. Photos and species never merge with each other.
+     */
+    fun groupStacked(markers: List<MapMarker>, zoom: Double): List<MapMarker> {
+        val pins = markers.filterIsInstance<PinMarker>()
+        val speciesPins = markers.filterIsInstance<SpeciesPinMarker>()
+        val rest = markers.filter { it !is PinMarker && it !is SpeciesPinMarker }
+        val photos = ProximityGrouping.group(pins.map { GeoPoint(it.latitude, it.longitude) }, zoom, PIN_DP)
+            .map { g ->
+                if (g.members.size == 1) pins[g.members.first()] else PinGroupMarker(g.members.map { pins[it] }, g.latitude, g.longitude)
+            }
+        val species = ProximityGrouping.group(speciesPins.map { GeoPoint(it.latitude, it.longitude) }, zoom, PIN_DP)
+            .map { g ->
+                if (g.members.size == 1) {
+                    speciesPins[g.members.first()]
+                } else {
+                    SpeciesGroupMarker(g.members.map { speciesPins[it] }, g.latitude, g.longitude)
+                }
+            }
+        return rest + photos + species
+    }
+
+    /**
+     * The zone a tapped study-zone marker opens: the original zone when the group is all of it,
+     * else a zone made of just the grouped photos.
+     */
+    fun zoneFor(group: PinGroupMarker, zones: List<ZoneCluster>): ZoneCluster? {
+        val ids = group.members.map { it.sessionId }.toSet()
+        val inZone = group.members.map { it.zoneIndex }.distinct().singleOrNull()?.let { zones.getOrNull(it) }
+        if (inZone != null && inZone.sessions.size == ids.size) return inZone
+        val sessions = zones.flatMap { it.sessions }.filter { it.id in ids }
+        return if (sessions.isEmpty()) null else ZoneAggregator.zoneOf(sessions)
+    }
 
     private fun clusters(zones: List<ZoneCluster>): List<MapMarker> =
         zones.mapIndexed { index, zone ->

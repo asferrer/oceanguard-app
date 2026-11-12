@@ -6,11 +6,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
@@ -23,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,6 +42,8 @@ import java.text.DateFormat
 import java.util.Date
 
 private val SPRITE_SIZE = 72.dp
+private val LIST_SPRITE = 36.dp
+private val LIST_MAX_HEIGHT = 220.dp
 private val SUMMARY_SHAPE = RoundedCornerShape(12.dp)
 private const val SUMMARY_ALPHA = 0.92f
 
@@ -91,6 +98,52 @@ fun MapSpeciesCard(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+    }
+}
+
+/** The species of a group of nearby observations, one row each, with the way to each BioDex page. */
+@Composable
+fun MapSpeciesListCard(
+    group: SpeciesGroupMarker,
+    catalog: SpeciesCatalog?,
+    onOpenSpecies: (String) -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    SonarCard(modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = pluralStringResource(R.plurals.map_species_card_count, group.observationCount, group.observationCount),
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onClose) {
+                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.common_close))
+            }
+        }
+        Column(Modifier.heightIn(max = LIST_MAX_HEIGHT).verticalScroll(rememberScrollState())) {
+            group.members.forEach { pin -> SpeciesListRow(pin, catalog, onOpenSpecies) }
+        }
+    }
+}
+
+@Composable
+private fun SpeciesListRow(pin: SpeciesPinMarker, catalog: SpeciesCatalog?, onOpenSpecies: (String) -> Unit) {
+    val entry = pin.speciesKey?.let { catalog?.byKey(it) }
+    val key = pin.speciesKey
+    val clickable = if (key != null) Modifier.clickable(role = Role.Button) { onOpenSpecies(key) } else Modifier
+    Row(
+        modifier = Modifier.fillMaxWidth().then(clickable).padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SpeciesSpriteImage(spritePath = entry?.sprite, size = LIST_SPRITE)
+        Text(
+            text = SpeciesNames.commonName(entry, fallback = pin.scientificName),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Text("\u00d7" + pin.observationCount, style = SonarTheme.type.data, color = SonarTheme.colors.trace)
     }
 }
 

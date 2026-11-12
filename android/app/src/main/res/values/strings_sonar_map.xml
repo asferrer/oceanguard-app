@@ -78,4 +78,12 @@
         <item quantity="one">%1$d species</item>
         <item quantity="other">%1$d species</item>
     </plurals>
+    <plurals name="map_group_cd">
+        <item quantity="one">%1$d photos in this study zone, average health %2$d. Tap to see them.</item>
+        <item quantity="other">%1$d photos in this study zone, average health %2$d. Tap to see them.</item>
+    </plurals>
+    <plurals name="map_species_group_cd">
+        <item quantity="one">%1$d observations of %2$d species here. Tap for the list.</item>
+        <item quantity="other">%1$d observations of %2$d species here. Tap for the list.</item>
+    </plurals>
 </resources>
