@@ -106,6 +106,7 @@ fun HomeStatsBlock(viewModel: MainViewModel, bounds: SnapshotStateMap<String, Re
 /** MarineDex and BioDex. MarineDex carries the last stop of the Home tour. */
 @Composable
 fun HomeCollectionsBlock(
+    app: OceanGuardApp,
     dexEntries: List<MarineDexEntry>,
     discoveredCount: Int,
     bounds: SnapshotStateMap<String, Rect>,
@@ -117,7 +118,8 @@ fun HomeCollectionsBlock(
                 MarineDexCard(dexEntries, discoveredCount, onClick = { navController.navigate("marinedex") })
             }
         }
-        HomeEntry(index = 6) { BioDexCard(onClick = { navController.navigate("biodex") }) }
+        val biodex = rememberBioDexHome(app)
+        HomeEntry(index = 6) { BioDexCard(biodex, onClick = { navController.navigate("biodex") }) }
         HomeEntry(index = 7) {
         }
     }

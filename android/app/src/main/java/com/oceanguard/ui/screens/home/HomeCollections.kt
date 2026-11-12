@@ -27,6 +27,7 @@ import com.oceanguard.ai.R
 import com.oceanguard.ai.data.DebrisType
 import com.oceanguard.ai.data.collection.MarineDexEntry
 import com.oceanguard.ai.ui.components.DexSpriteImage
+import com.oceanguard.ai.ui.components.SpeciesSpriteImage
 import com.oceanguard.ai.ui.components.sonar.SonarCard
 import com.oceanguard.ai.ui.theme.SonarTheme
 
@@ -92,9 +93,12 @@ private fun RecentSprites(dexEntries: List<MarineDexEntry>) {
     }
 }
 
-/** BioDex: the species collection, which runs beside MarineDex. */
+/**
+ * BioDex: the species collection, which runs beside MarineDex. Like MarineDex it shows the latest
+ * discoveries as sprites and the progress over the catalogue; with none yet it keeps the subtitle.
+ */
 @Composable
-fun BioDexCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun BioDexCard(state: BioDexHomeState, onClick: () -> Unit, modifier: Modifier = Modifier) {
     SonarCard(modifier = modifier.then(ButtonRole), onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -103,17 +107,44 @@ fun BioDexCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(CARD_ICON),
             )
-            Column(Modifier.weight(1f).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.weight(1f).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(R.string.biodex_title), style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = stringResource(R.string.biodex_home_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                RecentSpecies(state.sprites)
+                if (state.total > 0) BioDexProgress(state.discovered, state.total)
             }
             Chevron(null)
         }
     }
+}
+
+@Composable
+private fun RecentSpecies(sprites: List<String?>) {
+    if (sprites.isEmpty()) {
+        Text(
+            text = stringResource(R.string.biodex_home_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        return
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        sprites.take(RECENT_SPRITES).forEach { path -> SpeciesSpriteImage(spritePath = path, size = SPRITE_SIZE) }
+    }
+}
+
+@Composable
+private fun BioDexProgress(discovered: Int, total: Int) {
+    LinearProgressIndicator(
+        progress = { (discovered / total.toFloat()).coerceIn(0f, 1f) },
+        modifier = Modifier.fillMaxWidth().height(BAR_HEIGHT),
+        color = MaterialTheme.colorScheme.primary,
+        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+    )
+    Text(
+        text = stringResource(R.string.home_biodex_progress, discovered, total),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable
