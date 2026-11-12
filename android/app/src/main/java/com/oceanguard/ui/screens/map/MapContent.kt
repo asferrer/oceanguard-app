@@ -54,6 +54,9 @@ suspend fun CameraState.flyTo(target: Position, zoom: Double, reducedMotion: Boo
  * @param fitAllTrigger Incremented to frame every zone again.
  * @param focusPosition Optional single coordinate to fly to (from a deep link).
  * @param focusTrigger Incremented alongside [focusPosition] to retrigger on re-navigation.
+ * @param flightsEnabled False while the globe is in front: the camera does not fly then, since
+ * nobody sees it. The flights that were waiting run when [flightsEpoch] changes.
+ * @param flightsEpoch Changes when the globe hands over to the map, to run the opening flights.
  * @param onLoadFailed The style could not be loaded, typically for lack of connection.
  * @param onLoadFinished The style loaded.
  */
@@ -68,11 +71,13 @@ fun OceanGuardMap(
     modifier: Modifier = Modifier,
     focusPosition: Position? = null,
     focusTrigger: Int = 0,
+    flightsEnabled: Boolean = true,
+    flightsEpoch: Int = 0,
     onLoadFailed: () -> Unit = {},
     onLoadFinished: () -> Unit = {},
 ) {
-    AnimateCameraToFit(cameraState, zoneClusters, fitAllTrigger)
-    AnimateCameraToFocus(cameraState, focusPosition, focusTrigger)
+    AnimateCameraToFit(cameraState, zoneClusters, fitAllTrigger, flightsEnabled, flightsEpoch)
+    AnimateCameraToFocus(cameraState, focusPosition, focusTrigger, flightsEnabled, flightsEpoch)
 
     MaplibreMap(
         modifier = modifier,
@@ -104,9 +109,12 @@ private fun AnimateCameraToFocus(
     cameraState: CameraState,
     focusPosition: Position?,
     focusTrigger: Int,
+    enabled: Boolean,
+    epoch: Int,
 ) {
     val reduced = LocalReducedMotion.current
-    LaunchedEffect(focusTrigger) {
+    LaunchedEffect(focusTrigger, epoch) {
+        if (!enabled) return@LaunchedEffect
         val pos = focusPosition ?: return@LaunchedEffect
         cameraState.flyTo(pos, MapMarkerPlanner.FLY_ZOOM - 1.0, reduced)
     }
@@ -118,9 +126,12 @@ private fun AnimateCameraToFit(
     cameraState: CameraState,
     zoneClusters: List<ZoneCluster>,
     fitAllTrigger: Int,
+    enabled: Boolean,
+    epoch: Int,
 ) {
     val reduced = LocalReducedMotion.current
-    LaunchedEffect(zoneClusters, fitAllTrigger) {
+    LaunchedEffect(zoneClusters, fitAllTrigger, epoch) {
+        if (!enabled) return@LaunchedEffect
         val target = MapMarkerPlanner.fitTarget(zoneClusters) ?: return@LaunchedEffect
         cameraState.flyTo(Position(longitude = target.longitude, latitude = target.latitude), target.zoom, reduced)
     }

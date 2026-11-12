@@ -44,4 +44,7 @@
     <string name="history_quality_poor">Faible</string>
     <string name="history_state_selected">Sélectionné</string>
     <string name="history_state_not_selected">Non sélectionné</string>
+    <string name="map_globe_cd">Globe interactif. Faites glisser pour le tourner, pincez ou touchez deux fois pour zoomer.</string>
+    <string name="map_globe_zoom_in">Zoom avant</string>
+    <string name="map_globe_zoom_out">Zoom arrière</string>
 </resources>

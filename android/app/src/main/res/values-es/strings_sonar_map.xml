@@ -44,4 +44,7 @@
     <string name="history_quality_poor">Baja</string>
     <string name="history_state_selected">Seleccionado</string>
     <string name="history_state_not_selected">No seleccionado</string>
+    <string name="map_globe_cd">Globo interactivo. Arrastra para girarlo, pellizca o toca dos veces para acercar.</string>
+    <string name="map_globe_zoom_in">Acercar</string>
+    <string name="map_globe_zoom_out">Alejar</string>
 </resources>
