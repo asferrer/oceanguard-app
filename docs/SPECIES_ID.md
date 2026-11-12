@@ -793,3 +793,38 @@ biodex_bioclip2_v3.onnx   aee44cd78984b1ea0f41364f881071040c4b648c124d73803d038d
 species_index_v4.bin      c46c173b462c6c03b0fae46de9f7a7f0f0689239f3f081407cbbe2bc7ea7f0cf   (232 species, 227 with photos, 23 668 references)
 species_catalog_v3.json   d206acdc67c82f35d5b786f2671550049f05c7bb6c967b17be4ff2f86b5a5e46
 ```
+
+## 15. Pack v5: species sprites (2026-11-12)
+
+Pack v5 adds a pixel-art sprite for each of the 232 catalogue species. The encoder, index, catalogue and geographic files
+are those of v4 (same SHA-256), so an update only downloads the manifest, the sprites (733 KiB) and their credits.
+
+**Sprites.** Each sprite is drawn from one image of the live, whole animal: 217 iNaturalist photos (199 CC BY, 18 CC0)
+and 15 Wikimedia Commons images (9 public domain, mostly 19th-century naturalist plates, and 6 CC BY) for the species
+without a usable free underwater photo. The organism is cut out (BiRefNet), redrawn with SDXL img2img + canny ControlNet
++ an IP-Adapter style reference, reduced to a 128-pixel grid and exported as lossless 256 px WebP. Three seeds per species,
+the best kept after a visual check against the source image (alive, whole, not cropped) and a BioCLIP 2 check with the
+pack index.
+
+**Manifest.** `species_pack_v5.json` (stored on the phone as `species_pack.json`) adds two optional fields:
+
+- `sprites`: list of `sprites/<speciesKey>.webp`; the catalogue `spritePath` already points there.
+- `spriteCredits`: `sprite_credits.json`, `{speciesKey: {attribution, license, url}}`.
+
+Both are optional files of the pack (`SpeciesPackConfig.optionalFiles`): they are listed in `sha256`, downloaded after the
+required files and on updates (unchanged ones are reused), and a failed one only leaves that species on the placeholder.
+Names that leave the pack directory are ignored. Older apps read `species_pack_v4.json` and are not affected.
+
+**App.** `SpeciesSpriteImage` resolves `spritePath` against `models/species/` (it added a second `sprites/` before). The
+species info tab shows the credit of the source image, required by CC BY.
+
+**Build.** `python tools/species/add_sprites.py --pack pack_v4 --sprites <dir of webp> --credits ATRIBUCIONES.tsv --out
+pack_v5` writes the manifest (version + 1), `sprites/` and `sprite_credits.json`.
+
+```
+species_pack.json (v5)    5a7484e88d9286bedf6bb449528d0e65c9bfdebeb954b32273259bb10d1961ef
+sprite_credits.json       718d23fee448ec4f8fd17c401a3a4e03c34882552177f4721122bf29bc802263
+```
+
+**Publishing (author).** Upload `species_pack.json` as `species_pack_v5.json`, `sprite_credits.json` and the `sprites/`
+folder to `asferrer/oceanguard-biodex`, next to the v4 files.

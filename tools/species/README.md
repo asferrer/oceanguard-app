@@ -24,6 +24,7 @@ Scripts that build and evaluate the BioDex species pack (visual RAG). Results, d
 | `precision_lab.py`, `precision_exp.py` | Experiments of the precision study: prototypes vs kNN, references per species, linear head, text rows, TTA, distractors; calibration on val, test and independent report |
 | `onnx_fp16_storage.py`, `build_pack_plus.py`, `eval_pack_ort.py` | fp16 weight storage with fp32 compute, candidate pack builder (BioCLIP 2, text rows, merges) and a stand-alone ONNX Runtime check (run it with `onnxruntime==1.20.1`) |
 | `build_catalog_v2.py` | Catalogue v2 (202 species of the v3 index): WoRMS/GBIF common names with provenance, template descriptions, `group`; see SPECIES_ID.md section 12 |
+| `add_sprites.py` | Pack v5: adds the species sprites (`sprites/<key>.webp`) and their source credits to an existing pack and bumps the version; see SPECIES_ID.md section 15 |
 | `biodex_common.py`, `gpu_guard.py` | Shared helpers (app parity) and the lab GPU guard |
 
 Run them with `python -I` (Python 3.12 with torch, open_clip, timm, transformers, onnxruntime, Pillow, requests).
