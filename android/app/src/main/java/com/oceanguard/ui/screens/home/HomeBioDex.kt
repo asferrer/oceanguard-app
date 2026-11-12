@@ -10,7 +10,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oceanguard.ai.OceanGuardApp
 import com.oceanguard.ai.data.species.SpeciesCatalogEntry
 import com.oceanguard.ai.data.species.SpeciesDexEntry
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 /**
  * What the Home BioDex card shows.
@@ -50,6 +52,10 @@ fun rememberBioDexHome(app: OceanGuardApp): BioDexHomeState {
     val discovered by repo.discoveredCount().collectAsStateWithLifecycle(initialValue = 0)
     var revision by remember { mutableIntStateOf(0) }
     LaunchedEffect(catalog) {
+        if (withContext(Dispatchers.IO) { app.ensureSpeciesCatalogLoaded() }) {
+            revision++
+            return@LaunchedEffect
+        }
         repeat(CATALOG_WAIT_POLLS) {
             if (catalog.isLoaded()) {
                 revision++
