@@ -38,19 +38,23 @@ private suspend fun PointerInputScope.detectDragAndPinch(handler: GlobeGestureHa
         handler.onTouch()
         val tracker = VelocityTracker()
         var multiTouch = false
+        var moved = false
         do {
             val event = awaitPointerEvent()
             multiTouch = multiTouch || event.changes.size > 1
-            applyMotion(event, handler, tracker)
+            moved = applyMotion(event, handler, tracker) || moved
         } while (event.changes.any { it.pressed })
-        if (!multiTouch) {
+        // A tap is not a fling: flinging at zero speed would take the camera and cancel the flight a
+        // tapped marker has just started.
+        if (!multiTouch && moved) {
             val v = tracker.calculateVelocity()
             handler.onRelease(v.x, v.y)
         }
     }
 }
 
-private fun applyMotion(event: PointerEvent, handler: GlobeGestureHandler, tracker: VelocityTracker) {
+/** Applies one pointer event; true when it panned or pinched the globe. */
+private fun applyMotion(event: PointerEvent, handler: GlobeGestureHandler, tracker: VelocityTracker): Boolean {
     val pan = event.calculatePan()
     val zoom = event.calculateZoom()
     val centroid = event.calculateCentroid(useCurrent = true)
@@ -60,4 +64,5 @@ private fun applyMotion(event: PointerEvent, handler: GlobeGestureHandler, track
     if (zoom != 1f) handler.onPinch(zoom)
     if (pan != Offset.Zero) handler.onDrag(pan.x, pan.y)
     event.changes.forEach { if (it.positionChanged()) it.consume() }
+    return zoom != 1f || pan != Offset.Zero
 }
