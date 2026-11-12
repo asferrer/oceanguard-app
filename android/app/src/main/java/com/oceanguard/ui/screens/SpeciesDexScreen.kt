@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -38,19 +39,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.oceanguard.ai.ui.screens.models.SpeciesPackPlacement
 import com.oceanguard.ai.ui.screens.models.SpeciesPackPrompt
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.oceanguard.ai.OceanGuardApp
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.species.SpeciesCatalog
 import com.oceanguard.ai.data.species.SpeciesCollectionRepository
@@ -98,8 +104,14 @@ fun SpeciesDexScreen(
     val catalogTotal = remember(catalogVersion) { vm.catalogTotal }
     // Opened right after the app starts, the catalogue may still be loading in the background: redraw once it is
     // there (it showed "3 / 0" and the discovered cards without names or sprites).
+    val app = LocalContext.current.applicationContext as OceanGuardApp
     LaunchedEffect(Unit) {
         if (catalog.isLoaded()) return@LaunchedEffect
+        if (withContext(Dispatchers.IO) { app.ensureSpeciesCatalogLoaded() }) {
+            catalogVersion++
+            vm.catalogChanged()
+            return@LaunchedEffect
+        }
         repeat(CATALOG_WAIT_POLLS) {
             delay(CATALOG_WAIT_STEP_MS)
             if (catalog.isLoaded()) {
@@ -115,6 +127,10 @@ fun SpeciesDexScreen(
     val discoveredKeys = dexItems.map { it.key }.toSet()
     val lockedItems = remember(catalogVersion, discoveredKeys) { buildLockedItems(catalog, discoveredKeys) }
     val allItems = dexItems + lockedItems
+    var query by rememberSaveable { mutableStateOf("") }
+    val visibleItems = remember(allItems, query, catalogVersion) {
+        SpeciesDexSearch.filter(allItems, query, catalog::byKey)
+    }
 
     // Derive favourites count from the already-collected items.
     val favoriteCount = dexItems.count { it.isFavorite }
@@ -173,7 +189,17 @@ fun SpeciesDexScreen(
                 }
             }
 
-            itemsIndexed(items = allItems, key = { _, item -> item.key }) { index, item ->
+            if (allItems.isNotEmpty()) {
+                item(span = { GridItemSpan(3) }, key = "search") {
+                    SpeciesDexSearchField(query = query, onQueryChange = { query = it }, modifier = Modifier.fillMaxWidth())
+                }
+            }
+
+            if (allItems.isNotEmpty() && visibleItems.isEmpty()) {
+                item(span = { GridItemSpan(3) }, key = "search_empty") { SearchNoResults(query.trim()) }
+            }
+
+            itemsIndexed(items = visibleItems, key = { _, item -> item.key }) { index, item ->
                 DexCard(
                     item = item,
                     animationIndex = index,
@@ -183,6 +209,18 @@ fun SpeciesDexScreen(
             }
         }
     }
+}
+
+/** Short message shown when no discovered species matches [query]. */
+@Composable
+private fun SearchNoResults(query: String) {
+    Text(
+        text = stringResource(R.string.biodex_search_empty, query),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(top = 24.dp, start = 16.dp, end = 16.dp),
+    )
 }
 
 /** Species sprite of a card; a discovered one is the shared element of the detail header. */

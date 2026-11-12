@@ -104,7 +104,7 @@ fun HomeScreen(
             HomeStatusBlock(app, model, bounds, target) { reportCatalogModel(app)?.let(downloader::request) }
             HomeStatsBlock(viewModel, bounds)
             HomeCollectionsBlock(
-                dexEntries, discoveredCount, bounds, navController,
+                app, dexEntries, discoveredCount, bounds, navController,
             )
             HomeTopLists(viewModel, navController)
         }

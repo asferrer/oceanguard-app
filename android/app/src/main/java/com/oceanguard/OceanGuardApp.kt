@@ -326,6 +326,20 @@ class OceanGuardApp : Application(), ContributionHost {
             )
         )
     }
+    /**
+     * Loads [speciesCatalog] from the installed species pack when nothing has loaded it yet. Otherwise it only loads
+     * with the species identifier (which also loads the ~600 MB encoder), so the BioDex and the Home card stayed
+     * empty until a species photo was analysed. Call off the main thread; false when no pack is installed.
+     */
+    fun ensureSpeciesCatalogLoaded(): Boolean {
+        if (speciesCatalog.isLoaded()) return true
+        val dir = vlmModelManager.getSpeciesDirectory()
+        val name = com.oceanguard.ai.inference.species.SpeciesPackConfig.load(dir)?.catalogFile ?: return false
+        return runCatching { speciesCatalog.reload(java.io.File(dir, name)) }
+            .onFailure { android.util.Log.w("OceanGuardApp", "Species catalogue not loaded", it) }
+            .isSuccess
+    }
+
     val speciesCollectionRepository: com.oceanguard.ai.data.species.SpeciesCollectionRepository by lazy {
         com.oceanguard.ai.data.species.SpeciesCollectionRepository(
             database.speciesObservationDao(),

@@ -644,6 +644,9 @@
     <string name="biodex_stat_discovered">Descubiertas</string>
     <string name="biodex_stat_favorites">Favoritos</string>
     <string name="biodex_stat_observations">Observaciones</string>
+    <string name="biodex_search_placeholder">Buscar especies...</string>
+    <string name="biodex_search_empty">Ninguna especie coincide con «%1$s»</string>
+    <string name="home_biodex_progress">%1$d / %2$d descubiertas</string>
 
     <!-- ================================================================== -->
     <!-- Pantalla de detalle de BioDex                                        -->
