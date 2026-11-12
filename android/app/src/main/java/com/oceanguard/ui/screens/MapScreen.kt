@@ -72,6 +72,7 @@ import com.oceanguard.ai.ui.screens.map.globe.GlobeMode
 import com.oceanguard.ai.ui.screens.map.globe.GlobeView
 import com.oceanguard.ai.ui.screens.map.globe.diveInto
 import com.oceanguard.ai.ui.screens.map.globe.divingCamera
+import com.oceanguard.ai.ui.screens.map.globe.rememberZoneDots
 import com.oceanguard.ai.ui.screens.map.rememberIsOnline
 import com.oceanguard.ai.ui.screens.map.rememberMapCamera
 import com.oceanguard.ai.ui.screens.map.rememberMapData
@@ -242,8 +243,9 @@ private fun MapStage(
             modifier = Modifier.fillMaxSize().spotlightTarget("map_view", boundsMap),
         )
     }
-    val introTarget = remember(focus, data.zones) { introCamera(focus, data.zones) }
-    GlobeMapBridge(globe, camera, introTarget, state.fitAllTrigger)
+    val place = remember(focus, data.zones) { globePlace(focus, data.zones) }
+    val diveTarget = remember(place) { place?.let { divingCamera(it.latitude, it.longitude) } }
+    GlobeMapBridge(globe, camera, place, diveTarget, hasFocus = focus != null, fitAllTrigger = state.fitAllTrigger)
     val mapMarkersShown by remember(globe) {
         derivedStateOf { globe.mode == GlobeMode.MAP || globe.opacity < MARKERS_HANDOVER_OPACITY }
     }
@@ -267,8 +269,8 @@ private fun MapStage(
     }
     GlobeView(
         controller = globe,
-        zones = data.zones,
-        onZoneClick = { index ->
+        dots = rememberZoneDots(data.zones),
+        onDotClick = { index ->
             val zone = data.zones.getOrNull(index) ?: return@GlobeView
             scope.launch {
                 val at = Position(zone.centroidLon, zone.centroidLat)
@@ -281,11 +283,14 @@ private fun MapStage(
     )
 }
 
-/** Where the globe opens the screen: the deep-linked place, else the middle of the zones, else nowhere. */
-private fun introCamera(focus: Position?, zones: List<ZoneCluster>): GlobeCamera? {
-    if (focus != null) return divingCamera(focus.latitude, focus.longitude)
+/**
+ * Where the globe turns to face on opening: the deep-linked place, else the middle of the zones,
+ * else nowhere. Facing never zooms; see [com.oceanguard.ai.ui.screens.map.globe.GlobeOpening].
+ */
+private fun globePlace(focus: Position?, zones: List<ZoneCluster>): GlobeCamera? {
+    if (focus != null) return GlobeCamera(focus.latitude, focus.longitude, 0.0)
     val fit = MapMarkerPlanner.fitTarget(zones) ?: return null
-    return divingCamera(fit.latitude, fit.longitude)
+    return GlobeCamera(fit.latitude, fit.longitude, 0.0)
 }
 
 /** The map's markers appear as the globe thins out, not before, so the two never double up. */

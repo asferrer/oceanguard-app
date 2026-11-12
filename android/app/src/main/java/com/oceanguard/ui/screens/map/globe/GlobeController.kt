@@ -26,7 +26,7 @@ enum class GlobeMode { GLOBE, MAP }
  * Lengths are in dp, the unit the flat map's zoom is defined in.
  */
 @Stable
-class GlobeController(initial: GlobeCamera = GlobeCamera(DEFAULT_LATITUDE, DEFAULT_LONGITUDE, 0.0)) {
+class GlobeController(initial: GlobeCamera = GlobeCamera(DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_ZOOM)) {
 
     var view by mutableStateOf(initial)
         private set
@@ -126,10 +126,13 @@ class GlobeController(initial: GlobeCamera = GlobeCamera(DEFAULT_LATITUDE, DEFAU
                 view = clamped
                 return@mutate
             }
-            val start = view
+            val start = GlobeMath.clamp(view, minDimension)
             runFrames { _, elapsed ->
                 val t = (elapsed / seconds).coerceIn(0.0, 1.0)
-                view = GlobeMath.interpolate(start, clamped, FastOutSlowInEasing.transform(t.toFloat()).toDouble())
+                view = GlobeMath.clamp(
+                    GlobeMath.interpolate(start, clamped, FastOutSlowInEasing.transform(t.toFloat()).toDouble()),
+                    minDimension,
+                )
                 t < 1.0
             }
         }
@@ -179,6 +182,7 @@ class GlobeController(initial: GlobeCamera = GlobeCamera(DEFAULT_LATITUDE, DEFAU
     private companion object {
         const val DEFAULT_LATITUDE = 18.0
         const val DEFAULT_LONGITUDE = -150.0
+        const val DEFAULT_ZOOM = 1.3
         const val DEFAULT_MIN_DIMENSION = 360.0
         const val SPIN_DEGREES_PER_SECOND = 7.0
         const val FLING_STOP = 8.0

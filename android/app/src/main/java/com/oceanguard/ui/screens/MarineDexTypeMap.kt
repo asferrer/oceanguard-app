@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.oceanguard.ai.data.DebrisType
 import com.oceanguard.ai.data.DetectionSession
@@ -18,12 +19,15 @@ import com.oceanguard.ai.ui.components.colorForClass
 import com.oceanguard.ai.ui.components.dex.debrisDisplayName
 import com.oceanguard.ai.ui.components.sonar.SonarEmptyState
 import com.oceanguard.ai.ui.screens.map.MapStyles
+import com.oceanguard.ai.ui.screens.map.globe.GlobeMapStage
+import com.oceanguard.ai.ui.screens.map.globe.rememberPointDots
 import com.oceanguard.ai.ui.theme.LocalIsDarkTheme
 import com.oceanguard.ai.ui.theme.SonarTheme
 import com.oceanguard.ai.utils.toGeoJsonFeatureCollection
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import org.maplibre.compose.camera.CameraPosition
+import org.maplibre.compose.camera.CameraState
 import org.maplibre.compose.camera.rememberCameraState
 import org.maplibre.compose.expressions.dsl.const
 import org.maplibre.compose.expressions.dsl.interpolate
@@ -46,6 +50,7 @@ import org.maplibre.spatialk.geojson.Position
  *
  * Sessions without GPS coordinates are silently skipped. If none of the
  * sessions have location data, an empty-state placeholder is shown instead.
+ * The map opens on the 3D globe and crosses into the flat map as it zooms in.
  */
 @Composable
 fun MarineDexTypeMap(
@@ -72,33 +77,46 @@ fun MarineDexTypeMap(
     val styleUrl = remember(isDark) { MapStyles.forDarkMode(isDark) }
     val geoJson = remember(locatedSessions) { locatedSessions.toGeoJsonFeatureCollection() }
     val centerPosition = remember(locatedSessions) { computeCenter(locatedSessions) }
-    val cameraState = rememberCameraState(firstPosition = centerPosition)
+    val pinColor = colorForClass(debrisType.name)
+    val points = remember(locatedSessions) { locatedSessions.mapNotNull { s -> s.location?.let { it.latitude to it.longitude } } }
+    val dots = rememberPointDots(points, pinColor)
+    GlobeMapStage(dots = dots, frame = centerPosition, modifier = modifier) { cameraState ->
+        TypeFlatMap(cameraState, styleUrl, geoJson, pinColor, onSessionClick)
+    }
+}
 
-    Box(modifier = modifier) {
-        MaplibreMap(
-            modifier = Modifier.fillMaxSize(),
-            cameraState = cameraState,
-            baseStyle = BaseStyle.Uri(styleUrl),
-            options = MapOptions(
-                ornamentOptions = OrnamentOptions(
-                    isLogoEnabled = false,
-                    isCompassEnabled = false,
-                    isScaleBarEnabled = false,
-                    isAttributionEnabled = false,
-                ),
+/** The flat map with one pin per session. */
+@Composable
+private fun TypeFlatMap(
+    cameraState: CameraState,
+    styleUrl: String,
+    geoJson: String,
+    pinColor: Color,
+    onSessionClick: (Long) -> Unit,
+) {
+    MaplibreMap(
+        modifier = Modifier.fillMaxSize(),
+        cameraState = cameraState,
+        baseStyle = BaseStyle.Uri(styleUrl),
+        options = MapOptions(
+            ornamentOptions = OrnamentOptions(
+                isLogoEnabled = false,
+                isCompassEnabled = false,
+                isScaleBarEnabled = false,
+                isAttributionEnabled = false,
             ),
-        ) {
-            val stableData = remember(geoJson) { GeoJsonData.JsonString(geoJson) }
-            val stableOptions = remember { GeoJsonOptions(cluster = false) }
-            val source = rememberGeoJsonSource(data = stableData, options = stableOptions)
+        ),
+    ) {
+        val stableData = remember(geoJson) { GeoJsonData.JsonString(geoJson) }
+        val stableOptions = remember { GeoJsonOptions(cluster = false) }
+        val source = rememberGeoJsonSource(data = stableData, options = stableOptions)
 
-            DebrisTypeCircleLayer(
-                source = source,
-                pinColor = colorForClass(debrisType.name),
-                outlineColor = SonarTheme.colors.abyss,
-                onSessionClick = onSessionClick,
-            )
-        }
+        DebrisTypeCircleLayer(
+            source = source,
+            pinColor = pinColor,
+            outlineColor = SonarTheme.colors.abyss,
+            onSessionClick = onSessionClick,
+        )
     }
 }
 

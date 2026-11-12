@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,7 +30,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.oceanguard.ai.R
-import com.oceanguard.ai.data.ZoneCluster
 import com.oceanguard.ai.ui.motion.LocalReducedMotion
 import com.oceanguard.ai.ui.theme.SonarTheme
 import kotlinx.coroutines.launch
@@ -43,18 +43,19 @@ private const val DOUBLE_TAP_ZOOM_STEP = 1.0
 /**
  * A textured, lit 3D Earth with an atmosphere glow, drawn with OpenGL ES 2.0 and a bundled
  * texture, so it works with no network. Drag to turn it (it keeps spinning when flung), pinch or
- * double-tap to zoom; zones are drawn on it as dots that report taps through [onZoneClick].
+ * double-tap to zoom; [dots] are drawn on it and report taps through [onDotClick].
  *
  * Draws nothing and takes no touches while [GlobeController.mode] is the flat map.
  */
 @Composable
 fun GlobeView(
     controller: GlobeController,
-    zones: List<ZoneCluster>,
-    onZoneClick: (zoneIndex: Int) -> Unit,
+    dots: List<GlobeDot>,
+    onDotClick: (index: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (controller.mode != GlobeMode.GLOBE) return
+    val started = rememberIsStarted()
+    if (controller.mode != GlobeMode.GLOBE || !started) return
     val density = LocalDensity.current.density
     val reduced = LocalReducedMotion.current
     val scope = rememberCoroutineScope()
@@ -83,7 +84,7 @@ fun GlobeView(
             },
     ) {
         GlobeSurface(controller)
-        GlobeMarkers(controller, zones, onZoneClick, Modifier.matchParentSize())
+        GlobeMarkers(controller, dots, onDotClick, Modifier.matchParentSize())
     }
 }
 
@@ -122,6 +123,17 @@ private fun createSurface(context: android.content.Context, renderer: GlobeRende
 }
 
 private const val DEPTH_BITS = 16
+
+/**
+ * False while the screen is covered by another destination or the app is in the background. The
+ * globe then leaves the composition, which releases its GL surface: only the visible globe
+ * renders, and two never fight over z-order.
+ */
+@Composable
+private fun rememberIsStarted(): Boolean {
+    val state by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
+    return state.isAtLeast(Lifecycle.State.STARTED)
+}
 
 /** Pauses the GL thread with the screen and resumes it with it. */
 @Composable

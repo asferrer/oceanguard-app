@@ -47,4 +47,9 @@
     <string name="map_globe_cd">Globo interactivo. Arrastra para girarlo, pellizca o toca dos veces para acercar.</string>
     <string name="map_globe_zoom_in">Acercar</string>
     <string name="map_globe_zoom_out">Alejar</string>
+    <string name="map_globe_point_cd">Punto de observación. Toca para acercar.</string>
+    <plurals name="map_globe_cluster_cd">
+        <item quantity="one">%1$d punto de observación aquí. Toca para acercar.</item>
+        <item quantity="other">%1$d puntos de observación aquí. Toca para acercar.</item>
+    </plurals>
 </resources>

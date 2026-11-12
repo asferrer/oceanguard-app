@@ -85,7 +85,7 @@ private fun SpeciesPhotos(observations: List<SpeciesObservation>, onObservationC
 private fun SpeciesMap(observations: List<SpeciesObservation>, onObservationClick: (Long) -> Unit) {
     SonarSection(stringResource(R.string.report_species_map_title)) {
         Box(Modifier.fillMaxWidth().height(SPECIES_MAP_HEIGHT).clip(RoundedCornerShape(12.dp))) {
-            SpeciesObservationMap(observations = observations, onObservationClick = onObservationClick)
+            SpeciesObservationMap(observations = observations, onObservationClick = onObservationClick, withGlobe = false)
         }
     }
 }

@@ -47,4 +47,9 @@
     <string name="map_globe_cd">Globo interattivo. Trascina per ruotarlo, pizzica o tocca due volte per ingrandire.</string>
     <string name="map_globe_zoom_in">Ingrandisci</string>
     <string name="map_globe_zoom_out">Riduci</string>
+    <string name="map_globe_point_cd">Punto di osservazione. Tocca per ingrandire.</string>
+    <plurals name="map_globe_cluster_cd">
+        <item quantity="one">%1$d punto di osservazione qui. Tocca per ingrandire.</item>
+        <item quantity="other">%1$d punti di osservazione qui. Tocca per ingrandire.</item>
+    </plurals>
 </resources>

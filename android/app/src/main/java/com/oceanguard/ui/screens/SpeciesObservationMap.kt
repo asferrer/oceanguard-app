@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.oceanguard.ai.R
@@ -15,11 +16,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOff
 import com.oceanguard.ai.ui.components.sonar.SonarEmptyState
 import com.oceanguard.ai.ui.screens.map.MapStyles
+import com.oceanguard.ai.ui.screens.map.globe.GlobeMapStage
+import com.oceanguard.ai.ui.screens.map.globe.rememberPointDots
 import com.oceanguard.ai.ui.theme.LocalIsDarkTheme
 import com.oceanguard.ai.ui.theme.SonarTheme
 import org.json.JSONArray
 import org.json.JSONObject
 import org.maplibre.compose.camera.CameraPosition
+import org.maplibre.compose.camera.CameraState
 import org.maplibre.compose.camera.rememberCameraState
 import org.maplibre.compose.expressions.dsl.const
 import org.maplibre.compose.expressions.dsl.interpolate
@@ -46,12 +50,15 @@ import org.maplibre.spatialk.geojson.Position
  *
  * @param observations All observations for the currently displayed species.
  * @param onObservationClick Invoked with the observation id when a map pin is tapped.
+ * @param withGlobe Opens on the 3D globe and crosses into the flat map. Off where the map sits
+ * inside a scrolling page, such as a report, and a drag has to scroll it.
  */
 @Composable
 fun SpeciesObservationMap(
     observations: List<SpeciesObservation>,
     onObservationClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    withGlobe: Boolean = true,
 ) {
     val located = remember(observations) { observations.filter { it.location != null } }
 
@@ -67,33 +74,52 @@ fun SpeciesObservationMap(
     val styleUrl = remember(isDark) { MapStyles.forDarkMode(isDark) }
     val geoJson = remember(located) { located.toObservationGeoJson() }
     val centerPosition = remember(located) { computeObservationCenter(located) }
-    val cameraState = rememberCameraState(firstPosition = centerPosition)
+    val pinColor = SonarTheme.colors.echo
+    val flat: @Composable (CameraState) -> Unit = { camera ->
+        SpeciesFlatMap(camera, styleUrl, geoJson, pinColor, onObservationClick)
+    }
+    if (withGlobe) {
+        val points = remember(located) { located.mapNotNull { o -> o.location?.let { it.latitude to it.longitude } } }
+        val dots = rememberPointDots(points, pinColor)
+        GlobeMapStage(dots = dots, frame = centerPosition, modifier = modifier, flatMap = flat)
+    } else {
+        val cameraState = rememberCameraState(firstPosition = centerPosition)
+        Box(modifier = modifier) { flat(cameraState) }
+    }
+}
 
-    Box(modifier = modifier) {
-        MaplibreMap(
-            modifier = Modifier.fillMaxSize(),
-            cameraState = cameraState,
-            baseStyle = BaseStyle.Uri(styleUrl),
-            options = MapOptions(
-                ornamentOptions = OrnamentOptions(
-                    isLogoEnabled = false,
-                    isCompassEnabled = false,
-                    isScaleBarEnabled = false,
-                    isAttributionEnabled = false,
-                ),
+/** The flat map with one pin per observation. */
+@Composable
+private fun SpeciesFlatMap(
+    cameraState: CameraState,
+    styleUrl: String,
+    geoJson: String,
+    pinColor: Color,
+    onObservationClick: (Long) -> Unit,
+) {
+    MaplibreMap(
+        modifier = Modifier.fillMaxSize(),
+        cameraState = cameraState,
+        baseStyle = BaseStyle.Uri(styleUrl),
+        options = MapOptions(
+            ornamentOptions = OrnamentOptions(
+                isLogoEnabled = false,
+                isCompassEnabled = false,
+                isScaleBarEnabled = false,
+                isAttributionEnabled = false,
             ),
-        ) {
-            val stableData = remember(geoJson) { GeoJsonData.JsonString(geoJson) }
-            val stableOptions = remember { GeoJsonOptions(cluster = false) }
-            val source = rememberGeoJsonSource(data = stableData, options = stableOptions)
+        ),
+    ) {
+        val stableData = remember(geoJson) { GeoJsonData.JsonString(geoJson) }
+        val stableOptions = remember { GeoJsonOptions(cluster = false) }
+        val source = rememberGeoJsonSource(data = stableData, options = stableOptions)
 
-            SpeciesObservationCircleLayer(
-                source = source,
-                pinColor = SonarTheme.colors.echo,
-                outlineColor = SonarTheme.colors.abyss,
-                onObservationClick = onObservationClick,
-            )
-        }
+        SpeciesObservationCircleLayer(
+            source = source,
+            pinColor = pinColor,
+            outlineColor = SonarTheme.colors.abyss,
+            onObservationClick = onObservationClick,
+        )
     }
 }
 
