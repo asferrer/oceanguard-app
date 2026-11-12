@@ -55,8 +55,9 @@ object SpeciesPackUpdate {
 
     /**
      * Approximate bytes an update from [installed] to [remote] downloads: the full pack size minus the installed files
-     * it keeps (the encoder when its file name does not change, and the geographic files). [localLength] gives the size
-     * of an installed file (0 when missing). Used for the size shown before updating, not for any check.
+     * it keeps (the encoder when its file name does not change, the geographic files, and any file whose SHA-256 is the
+     * same in both manifests). [localLength] gives the size of an installed file (0 when missing). Used for the size
+     * shown before updating, not for any check.
      */
     fun approxUpdateBytes(
         installed: SpeciesPackConfig,
@@ -67,6 +68,10 @@ object SpeciesPackUpdate {
         val kept = buildSet {
             if (remote.encoderFile == installed.encoderFile) add(remote.encoderFile)
             addAll(SpeciesPackAssets.GEO.map { it.first })
+            val before = installed.sha256.orEmpty()
+            remote.requiredFiles().filter { name ->
+                remote.sha256?.get(name)?.let { it == before[name] } == true
+            }.forEach(::add)
         }
         return (fullBytes - kept.sumOf(localLength)).coerceAtLeast(0L)
     }

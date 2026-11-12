@@ -119,4 +119,14 @@ class SpeciesSpritesTest {
         assertNull(spriteFile(files, "../../secret.webp"))
         assertNull(spriteFile(null, "sprites/x.webp"))
     }
+
+    @Test
+    fun `update size leaves out the files whose hash does not change`() {
+        val v4 = SpeciesPackConfig.parse(manifest(""","sha256":{"enc.onnx":"aa","idx.bin":"bb","cat.json":"cc"}"""))!!
+        val v5 = v4.copy(version = 5, sha256 = v4.sha256!! + ("idx.bin" to "dd"))
+        val local = mapOf("enc.onnx" to 600L, "idx.bin" to 5L, "cat.json" to 3L)
+        val geo = SpeciesPackAssets.GEO.sumOf { local[it.first] ?: 0L }
+        // enc.onnx and cat.json keep their hash: only the index (and what the full size does not list) is counted.
+        assertEquals(615L - 600L - 3L - geo, SpeciesPackUpdate.approxUpdateBytes(v4, v5, 615L) { local[it] ?: 0L })
+    }
 }
