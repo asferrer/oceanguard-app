@@ -9,6 +9,7 @@ import android.opengl.GLUtils
 import com.oceanguard.ai.R
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /** One frame of the globe: where the camera is and how opaque the whole scene is. */
@@ -74,7 +75,7 @@ internal class GlobeRenderer(
         GLES20.glUseProgram(space)
         uniform3(space, "uSpaceColor", colors.space)
         GLES20.glUniform2f(location(space, "uResolution"), width.toFloat(), height.toFloat())
-        GLES20.glUniform2f(location(space, "uDrift"), (f.longitude * DRIFT_PER_DEGREE).toFloat(), (f.latitude * DRIFT_PER_DEGREE).toFloat())
+        GLES20.glUniform2f(location(space, "uDrift"), (sin(Math.toRadians(f.longitude)) * DRIFT_RANGE_PX).toFloat(), (f.latitude * DRIFT_PER_DEGREE).toFloat())
         GLES20.glUniform1f(location(space, "uOpacity"), f.opacity)
         drawQuad(space)
     }
@@ -190,10 +191,11 @@ internal class GlobeRenderer(
 
     private companion object {
         /** The sphere's glow reaches this far past its silhouette. */
-        const val GLOW_EXTENT = 1.32
+        const val GLOW_EXTENT = 1.17
 
-        /** Star field shift, in 3 px cells, per degree of rotation. */
-        const val DRIFT_PER_DEGREE = 0.9
+        /** Nearest star layer shift, in px: sideways over a full turn (smooth at the date line), and per degree of latitude. */
+        const val DRIFT_RANGE_PX = 420.0
+        const val DRIFT_PER_DEGREE = 3.0
         const val MIN_TEXTURE_SIZE = 1024
     }
 }

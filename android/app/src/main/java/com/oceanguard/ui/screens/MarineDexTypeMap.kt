@@ -19,8 +19,8 @@ import com.oceanguard.ai.ui.components.colorForClass
 import com.oceanguard.ai.ui.components.dex.debrisDisplayName
 import com.oceanguard.ai.ui.components.sonar.SonarEmptyState
 import com.oceanguard.ai.ui.screens.map.MapStyles
-import com.oceanguard.ai.ui.screens.map.globe.GlobeDot
 import com.oceanguard.ai.ui.screens.map.globe.GlobeMapStage
+import com.oceanguard.ai.ui.screens.map.globe.rememberPointDots
 import com.oceanguard.ai.ui.theme.LocalIsDarkTheme
 import com.oceanguard.ai.ui.theme.SonarTheme
 import com.oceanguard.ai.utils.toGeoJsonFeatureCollection
@@ -78,18 +78,12 @@ fun MarineDexTypeMap(
     val geoJson = remember(locatedSessions) { locatedSessions.toGeoJsonFeatureCollection() }
     val centerPosition = remember(locatedSessions) { computeCenter(locatedSessions) }
     val pinColor = colorForClass(debrisType.name)
-    val description = stringResource(R.string.map_globe_point_cd)
-    val dots = remember(locatedSessions, pinColor, description) {
-        locatedSessions.mapNotNull { s ->
-            s.location?.let { GlobeDot(it.latitude, it.longitude, pinColor, description, diameterDp = POINT_DOT_DP) }
-        }
-    }
+    val points = remember(locatedSessions) { locatedSessions.mapNotNull { s -> s.location?.let { it.latitude to it.longitude } } }
+    val dots = rememberPointDots(points, pinColor)
     GlobeMapStage(dots = dots, frame = centerPosition, modifier = modifier) { cameraState ->
         TypeFlatMap(cameraState, styleUrl, geoJson, pinColor, onSessionClick)
     }
 }
-
-private const val POINT_DOT_DP = 16
 
 /** The flat map with one pin per session. */
 @Composable

@@ -14,3 +14,5 @@ use and, per NASA's media usage guidelines, may be reused with credit to NASA.
 Changes made here: resized to 2048 x 1024 (Lanczos) and re-encoded as JPEG, quality 88 (about 390 KB).
 
 Suggested credit: "Earth imagery: NASA Earth Observatory / Blue Marble Next Generation".
+
+The space background and the atmosphere are drawn procedurally in the shader (no texture, no third-party asset).

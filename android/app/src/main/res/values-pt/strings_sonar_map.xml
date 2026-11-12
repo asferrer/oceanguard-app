@@ -48,4 +48,8 @@
     <string name="map_globe_zoom_in">Aproximar</string>
     <string name="map_globe_zoom_out">Afastar</string>
     <string name="map_globe_point_cd">Ponto de observação. Toque para aproximar.</string>
+    <plurals name="map_globe_cluster_cd">
+        <item quantity="one">%1$d ponto de observação aqui. Toque para aproximar.</item>
+        <item quantity="other">%1$d pontos de observação aqui. Toque para aproximar.</item>
+    </plurals>
 </resources>

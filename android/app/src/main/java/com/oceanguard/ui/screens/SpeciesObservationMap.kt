@@ -16,8 +16,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOff
 import com.oceanguard.ai.ui.components.sonar.SonarEmptyState
 import com.oceanguard.ai.ui.screens.map.MapStyles
-import com.oceanguard.ai.ui.screens.map.globe.GlobeDot
 import com.oceanguard.ai.ui.screens.map.globe.GlobeMapStage
+import com.oceanguard.ai.ui.screens.map.globe.rememberPointDots
 import com.oceanguard.ai.ui.theme.LocalIsDarkTheme
 import com.oceanguard.ai.ui.theme.SonarTheme
 import org.json.JSONArray
@@ -79,22 +79,14 @@ fun SpeciesObservationMap(
         SpeciesFlatMap(camera, styleUrl, geoJson, pinColor, onObservationClick)
     }
     if (withGlobe) {
-        val description = stringResource(R.string.map_globe_point_cd)
-        val dots = remember(located, pinColor, description) { located.toGlobeDots(pinColor, description) }
+        val points = remember(located) { located.mapNotNull { o -> o.location?.let { it.latitude to it.longitude } } }
+        val dots = rememberPointDots(points, pinColor)
         GlobeMapStage(dots = dots, frame = centerPosition, modifier = modifier, flatMap = flat)
     } else {
         val cameraState = rememberCameraState(firstPosition = centerPosition)
         Box(modifier = modifier) { flat(cameraState) }
     }
 }
-
-private fun List<SpeciesObservation>.toGlobeDots(color: Color, description: String): List<GlobeDot> =
-    mapNotNull { obs ->
-        val loc = obs.location ?: return@mapNotNull null
-        GlobeDot(loc.latitude, loc.longitude, color, description, diameterDp = POINT_DOT_DP)
-    }
-
-private const val POINT_DOT_DP = 16
 
 /** The flat map with one pin per observation. */
 @Composable

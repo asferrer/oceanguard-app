@@ -48,4 +48,8 @@
     <string name="map_globe_zoom_in">Vergrößern</string>
     <string name="map_globe_zoom_out">Verkleinern</string>
     <string name="map_globe_point_cd">Beobachtungspunkt. Zum Heranzoomen tippen.</string>
+    <plurals name="map_globe_cluster_cd">
+        <item quantity="one">%1$d Beobachtungspunkt hier. Zum Heranzoomen tippen.</item>
+        <item quantity="other">%1$d Beobachtungspunkte hier. Zum Heranzoomen tippen.</item>
+    </plurals>
 </resources>

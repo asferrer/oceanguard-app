@@ -10,35 +10,46 @@ import org.maplibre.compose.camera.CameraState
 import org.maplibre.spatialk.geojson.Position
 
 /**
- * Hands the camera back and forth between the globe and the flat map, and opens the screen on the
- * globe.
+ * Hands the camera back and forth between the globe and the flat map, and decides how the screen
+ * opens.
  *
  * - Zooming the globe in past [GlobeTransition.FADE_START_ZOOM] makes the map follow its camera
  *   underneath while the globe fades out; at [GlobeTransition.ENTER_MAP_ZOOM] the map takes over.
  * - Zooming the map out below [GlobeTransition.EXIT_MAP_ZOOM] brings the globe back, centred on
  *   the map's centre.
- * - Unless the user has already touched the globe, it opens by spinning, or by flying to
- *   [introTarget] when there is one; the map then frames the zones as it always did.
+ * - The globe never zooms in by itself: it opens spinning, or turned to face [faceTarget] at the
+ *   same zoom ([GlobeOpening]). Only a deep link ([hasFocus]) or the user's "frame all"
+ *   ([fitAllTrigger]) fly to [diveTarget], and the map then frames the zones as it always did.
  *
- * @param introTarget Where the opening flight lands, already at the zoom where the map takes over.
- * @param fitAllTrigger Changes when the user asks to see everything again; repeats the flight.
+ * @param faceTarget Where the globe turns on opening, or null to spin; its zoom is ignored.
+ * @param diveTarget Where an explicit flight lands, already at the zoom where the map takes over.
+ * @param hasFocus The screen was opened on one place, so it flies there on opening.
+ * @param fitAllTrigger Changes when the user asks to see everything again.
  */
 @Composable
 fun GlobeMapBridge(
     controller: GlobeController,
     camera: CameraState,
-    introTarget: GlobeCamera?,
+    faceTarget: GlobeCamera?,
+    diveTarget: GlobeCamera?,
+    hasFocus: Boolean,
     fitAllTrigger: Int,
 ) {
     val reduced = LocalReducedMotion.current
     GlobeToMapEffect(controller, camera)
     MapToGlobeEffect(controller, camera, reduced)
     val handled = remember { IntArray(1) }
-    LaunchedEffect(controller, introTarget, fitAllTrigger, reduced) {
+    LaunchedEffect(controller, faceTarget, diveTarget, hasFocus, fitAllTrigger, reduced) {
         val asked = fitAllTrigger != handled[0]
         handled[0] = fitAllTrigger
-        if (controller.mode != GlobeMode.GLOBE || (controller.userTookOver && !asked)) return@LaunchedEffect
-        if (introTarget != null) controller.flyTo(introTarget, reduced, intro = true) else if (!reduced) controller.spin()
+        if (controller.mode != GlobeMode.GLOBE) return@LaunchedEffect
+        val hasData = faceTarget != null || diveTarget != null
+        when (GlobeOpening.plan(hasFocus, hasData, controller.userTookOver, asked, reduced)) {
+            OpeningAction.DIVE -> diveTarget?.let { controller.flyTo(it, reduced, intro = true) }
+            OpeningAction.FACE -> faceTarget?.let { controller.flyTo(GlobeOpening.facing(controller.view, it.latitude, it.longitude), reduced) }
+            OpeningAction.SPIN -> controller.spin()
+            OpeningAction.NONE -> Unit
+        }
     }
 }
 

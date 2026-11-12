@@ -48,4 +48,8 @@
     <string name="map_globe_zoom_in">Zoom avant</string>
     <string name="map_globe_zoom_out">Zoom arrière</string>
     <string name="map_globe_point_cd">Point d\'observation. Touchez pour zoomer.</string>
+    <plurals name="map_globe_cluster_cd">
+        <item quantity="one">%1$d point d\'observation ici. Touchez pour zoomer.</item>
+        <item quantity="other">%1$d points d\'observation ici. Touchez pour zoomer.</item>
+    </plurals>
 </resources>

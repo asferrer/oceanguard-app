@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -45,6 +46,8 @@ data class GlobeDot(
     val description: String,
     val label: String? = null,
     val diameterDp: Int = DEFAULT_DOT_DP,
+    /** Larger side, in degrees, of the box around the points this dot stands for; 0 for a lone point. */
+    val spanDegrees: Double = 0.0,
 )
 
 const val DEFAULT_DOT_DP = 30
@@ -66,6 +69,38 @@ fun rememberZoneDots(zones: List<ZoneCluster>): List<GlobeDot> {
         }
     }
 }
+
+/**
+ * Dots for bare points, grouped by [GlobeClusters]: a crowd shows as one numbered circle, which is
+ * what the user taps to fly into it.
+ */
+@Composable
+fun rememberPointDots(points: List<Pair<Double, Double>>, color: Color): List<GlobeDot> {
+    val single = stringResource(R.string.map_globe_point_cd)
+    val groups = remember(points) { GlobeClusters.group(points) }
+    val descriptions = groups.map {
+        val n = it.members.size
+        if (n == 1) single else pluralStringResource(R.plurals.map_globe_cluster_cd, n, n)
+    }
+    return remember(groups, color, descriptions) {
+        groups.mapIndexed { i, g ->
+            val n = g.members.size
+            GlobeDot(
+                latitude = g.latitude,
+                longitude = g.longitude,
+                color = color,
+                description = descriptions[i],
+                label = if (n > 1) n.toString() else null,
+                diameterDp = if (n > 1) CLUSTER_DOT_DP + CLUSTER_DOT_STEP_DP * n.toString().length else POINT_DOT_DP,
+                spanDegrees = g.spanDegrees,
+            )
+        }
+    }
+}
+
+private const val POINT_DOT_DP = 16
+private const val CLUSTER_DOT_DP = 22
+private const val CLUSTER_DOT_STEP_DP = 6
 
 /**
  * Dots on the globe. Those on the far side are not composed, and those near the horizon fade out.
