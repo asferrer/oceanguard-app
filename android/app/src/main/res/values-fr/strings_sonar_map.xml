@@ -47,4 +47,5 @@
     <string name="map_globe_cd">Globe interactif. Faites glisser pour le tourner, pincez ou touchez deux fois pour zoomer.</string>
     <string name="map_globe_zoom_in">Zoom avant</string>
     <string name="map_globe_zoom_out">Zoom arrière</string>
+    <string name="map_globe_point_cd">Point d\'observation. Touchez pour zoomer.</string>
 </resources>

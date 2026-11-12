@@ -47,4 +47,5 @@
     <string name="map_globe_cd">Interaktiver Globus. Zum Drehen ziehen, zum Zoomen zusammenziehen oder doppeltippen.</string>
     <string name="map_globe_zoom_in">Vergrößern</string>
     <string name="map_globe_zoom_out">Verkleinern</string>
+    <string name="map_globe_point_cd">Beobachtungspunkt. Zum Heranzoomen tippen.</string>
 </resources>

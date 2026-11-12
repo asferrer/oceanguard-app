@@ -10,10 +10,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.Role
@@ -31,36 +34,69 @@ private val TOUCH_TARGET = 48.dp
 private val RING = 2.dp
 
 /**
- * Zones on the globe: one dot per zone, coloured by its health score and numbered with its
- * photos. Zones on the far side are not composed, and those near the horizon fade out.
+ * A point drawn on the globe. [label] is the number inside the dot, if any; [description] is what
+ * a screen reader says for it.
+ */
+@Immutable
+data class GlobeDot(
+    val latitude: Double,
+    val longitude: Double,
+    val color: Color,
+    val description: String,
+    val label: String? = null,
+    val diameterDp: Int = DEFAULT_DOT_DP,
+)
+
+const val DEFAULT_DOT_DP = 30
+
+/** One dot per zone, coloured by its health score and numbered with its photos. */
+@Composable
+fun rememberZoneDots(zones: List<ZoneCluster>): List<GlobeDot> {
+    val descriptions = zones.map { pluralStringResource(R.plurals.map_cluster_cd, it.sessions.size, it.sessions.size) }
+    return remember(zones, descriptions) {
+        zones.mapIndexed { i, zone ->
+            GlobeDot(
+                latitude = zone.centroidLat,
+                longitude = zone.centroidLon,
+                color = healthScoreColor(zone.aggregateHealthScore),
+                description = descriptions[i],
+                label = zone.sessions.size.toString(),
+                diameterDp = (MapMarkerPlanner.clusterDiameterDp(zone.sessions.size) * ZONE_DOT_SCALE).toInt(),
+            )
+        }
+    }
+}
+
+/**
+ * Dots on the globe. Those on the far side are not composed, and those near the horizon fade out.
  *
  * Reads the controller's camera, so it recomposes with every frame of the globe's motion.
  */
 @Composable
 internal fun GlobeMarkers(
     controller: GlobeController,
-    zones: List<ZoneCluster>,
-    onZoneClick: (zoneIndex: Int) -> Unit,
+    dots: List<GlobeDot>,
+    onDotClick: (index: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier) {
         val camera = controller.view
         val distance = GlobeMath.distanceForZoom(camera.zoom, minOf(maxWidth, maxHeight).value.toDouble())
         val opacity = controller.opacity
-        zones.forEachIndexed { index, zone ->
-            val at = GlobeMath.project(zone.centroidLat, zone.centroidLon, camera, maxWidth.value.toDouble(), maxHeight.value.toDouble())
+        dots.forEachIndexed { index, dot ->
+            val at = GlobeMath.project(dot.latitude, dot.longitude, camera, maxWidth.value.toDouble(), maxHeight.value.toDouble())
                 ?: return@forEachIndexed
-            val rotated = GlobeMath.rotateToView(zone.centroidLat, zone.centroidLon, camera.latitude, camera.longitude)
+            val rotated = GlobeMath.rotateToView(dot.latitude, dot.longitude, camera.latitude, camera.longitude)
             val alpha = GlobeMath.limbOpacity(rotated, distance) * opacity
             if (alpha <= 0f) return@forEachIndexed
-            key(index) { GlobeZoneDot(zone, at, alpha, maxWidth, maxHeight) { onZoneClick(index) } }
+            key(index) { GlobeDotView(dot, at, alpha, maxWidth, maxHeight) { onDotClick(index) } }
         }
     }
 }
 
 @Composable
-private fun GlobeZoneDot(
-    zone: ZoneCluster,
+private fun GlobeDotView(
+    dot: GlobeDot,
     at: ScreenPoint,
     alpha: Float,
     width: Dp,
@@ -69,9 +105,7 @@ private fun GlobeZoneDot(
 ) {
     if (at.x < -TOUCH_TARGET.value || at.y < -TOUCH_TARGET.value) return
     if (at.x > width.value + TOUCH_TARGET.value || at.y > height.value + TOUCH_TARGET.value) return
-    val count = zone.sessions.size
-    val description = pluralStringResource(R.plurals.map_cluster_cd, count, count)
-    val dot = MapMarkerPlanner.clusterDiameterDp(count).dp * DOT_SCALE
+    val description = dot.description
     Box(
         modifier = Modifier
             .offset(at.x.dp - TOUCH_TARGET / 2, at.y.dp - TOUCH_TARGET / 2)
@@ -83,16 +117,16 @@ private fun GlobeZoneDot(
     ) {
         Box(
             modifier = Modifier
-                .size(dot)
+                .size(dot.diameterDp.dp)
                 .clip(CircleShape)
-                .background(healthScoreColor(zone.aggregateHealthScore))
+                .background(dot.color)
                 .border(RING, SonarTheme.colors.ink, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Text(count.toString(), style = SonarTheme.type.data, color = SonarTheme.colors.abyss)
+            dot.label?.let { Text(it, style = SonarTheme.type.data, color = SonarTheme.colors.abyss) }
         }
     }
 }
 
-/** Dots are smaller than the flat map's clusters: a whole ocean of them has to fit. */
-private const val DOT_SCALE = 0.62f
+/** Zone dots are smaller than the flat map's clusters: a whole ocean of them has to fit. */
+private const val ZONE_DOT_SCALE = 0.62f

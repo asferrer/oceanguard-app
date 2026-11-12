@@ -47,4 +47,5 @@
     <string name="map_globe_cd">Interactive globe. Drag to turn it, pinch or double-tap to zoom in.</string>
     <string name="map_globe_zoom_in">Zoom in</string>
     <string name="map_globe_zoom_out">Zoom out</string>
+    <string name="map_globe_point_cd">Observation point. Tap to zoom in.</string>
 </resources>

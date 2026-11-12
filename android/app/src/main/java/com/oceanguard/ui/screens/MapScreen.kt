@@ -72,6 +72,7 @@ import com.oceanguard.ai.ui.screens.map.globe.GlobeMode
 import com.oceanguard.ai.ui.screens.map.globe.GlobeView
 import com.oceanguard.ai.ui.screens.map.globe.diveInto
 import com.oceanguard.ai.ui.screens.map.globe.divingCamera
+import com.oceanguard.ai.ui.screens.map.globe.rememberZoneDots
 import com.oceanguard.ai.ui.screens.map.rememberIsOnline
 import com.oceanguard.ai.ui.screens.map.rememberMapCamera
 import com.oceanguard.ai.ui.screens.map.rememberMapData
@@ -267,8 +268,8 @@ private fun MapStage(
     }
     GlobeView(
         controller = globe,
-        zones = data.zones,
-        onZoneClick = { index ->
+        dots = rememberZoneDots(data.zones),
+        onDotClick = { index ->
             val zone = data.zones.getOrNull(index) ?: return@GlobeView
             scope.launch {
                 val at = Position(zone.centroidLon, zone.centroidLat)
