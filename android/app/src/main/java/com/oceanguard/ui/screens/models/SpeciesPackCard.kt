@@ -72,10 +72,12 @@ private fun rememberSpeciesPackState(app: OceanGuardApp): SpeciesPackCardState {
     val manager = app.vlmModelManager
     val state by manager.downloadState.collectAsStateWithLifecycle()
     val selected by manager.speciesPackSelected.collectAsStateWithLifecycle()
+    val revision by manager.speciesPackRevision.collectAsStateWithLifecycle()
     var installedVersion by remember { mutableStateOf(manager.installedSpeciesPackVersion()) }
     var remote by remember { mutableStateOf<SpeciesPackConfig?>(null) }
-    // Re-read the disk when the download ends (completed, failed or cancelled), not on each byte.
-    LaunchedEffect(state.javaClass) {
+    // Re-read the disk when the download ends (completed, failed or cancelled), not on each byte; the revision
+    // covers the end of an update, whose last state has the same class as the per-file ones.
+    LaunchedEffect(state.javaClass, revision) {
         installedVersion = withContext(Dispatchers.IO) { manager.installedSpeciesPackVersion() }
     }
     // Once per installed version: is a newer pack published? (null offline: no offer)

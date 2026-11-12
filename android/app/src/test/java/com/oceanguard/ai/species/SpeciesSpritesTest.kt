@@ -1,5 +1,6 @@
 package com.oceanguard.ai.species
 
+import com.oceanguard.ai.data.species.SpeciesCatalogEntry
 import com.oceanguard.ai.inference.species.SpeciesPackAssets
 import com.oceanguard.ai.inference.species.SpeciesPackConfig
 import com.oceanguard.ai.inference.species.SpeciesPackUpdate
@@ -128,5 +129,13 @@ class SpeciesSpritesTest {
         val geo = SpeciesPackAssets.GEO.sumOf { local[it.first] ?: 0L }
         // enc.onnx and cat.json keep their hash: only the index (and what the full size does not list) is counted.
         assertEquals(615L - 600L - 3L - geo, SpeciesPackUpdate.approxUpdateBytes(v4, v5, 615L) { local[it] ?: 0L })
+    }
+
+    @Test
+    fun `species without spritePath use the sprite named after their key`() {
+        fun entry(path: String?) = SpeciesCatalogEntry("hypanus_americanus", null, "Hypanus americanus", emptyMap(), path, emptyList())
+        assertEquals("sprites/hypanus_americanus.webp", entry(null).sprite)
+        assertEquals("sprites/hypanus_americanus.webp", entry(" ").sprite)
+        assertEquals("sprites/other.webp", entry("sprites/other.webp").sprite)
     }
 }

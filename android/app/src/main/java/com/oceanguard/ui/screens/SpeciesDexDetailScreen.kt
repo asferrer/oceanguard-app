@@ -75,7 +75,7 @@ fun SpeciesDexDetailScreen(
             ),
         ) { spriteModifier, size ->
             SpeciesSpriteImage(
-                spritePath = catalogEntry?.spritePath,
+                spritePath = catalogEntry?.sprite,
                 size = size,
                 modifier = spriteModifier.oceanSharedElement(OceanSharedKeys.speciesSprite(speciesKey)),
             )

@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +43,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.oceanguard.ai.ui.screens.models.SpeciesPackPlacement
 import com.oceanguard.ai.ui.screens.models.SpeciesPackPrompt
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -94,6 +96,19 @@ fun SpeciesDexScreen(
     var catalogVersion by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     val catalogTotal = remember(catalogVersion) { vm.catalogTotal }
+    // Opened right after the app starts, the catalogue may still be loading in the background: redraw once it is
+    // there (it showed "3 / 0" and the discovered cards without names or sprites).
+    LaunchedEffect(Unit) {
+        if (catalog.isLoaded()) return@LaunchedEffect
+        repeat(CATALOG_WAIT_POLLS) {
+            delay(CATALOG_WAIT_STEP_MS)
+            if (catalog.isLoaded()) {
+                catalogVersion++
+                vm.catalogChanged()
+                return@LaunchedEffect
+            }
+        }
+    }
 
     // Build the full grid: discovered items first, then locked placeholders for
     // entries in the catalog that the user has not yet seen.
@@ -154,7 +169,7 @@ fun SpeciesDexScreen(
 
             if (allItems.isEmpty()) {
                 item(span = { GridItemSpan(3) }) {
-                    BioDexEmptyState(onPackInstalled = { scope.launch { onPackInstalled(); catalogVersion++ } })
+                    BioDexEmptyState(onPackInstalled = { scope.launch { onPackInstalled(); catalogVersion++; vm.catalogChanged() } })
                 }
             }
 
@@ -208,7 +223,7 @@ private fun buildLockedItems(
             DexItem(
                 key = key,
                 displayName = SpeciesNames.commonName(entry, lang),
-                spritePath = entry?.spritePath,
+                spritePath = entry?.sprite,
                 discovered = false,
                 count = 0,
                 isFavorite = false,
@@ -253,3 +268,7 @@ private fun BioDexEmptyState(onPackInstalled: () -> Unit) {
         SpeciesPackPrompt(placement = SpeciesPackPlacement.INLINE, onInstalled = onPackInstalled)
     }
 }
+
+/** The BioDex waits up to CATALOG_WAIT_POLLS x CATALOG_WAIT_STEP_MS (30 s) for the catalogue to load. */
+private const val CATALOG_WAIT_POLLS = 60
+private const val CATALOG_WAIT_STEP_MS = 500L

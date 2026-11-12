@@ -11,9 +11,10 @@ import com.oceanguard.ai.data.species.SpeciesNames
 import com.oceanguard.ai.data.species.SpeciesObservation
 import com.oceanguard.ai.ui.components.dex.DexItem
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -38,8 +39,12 @@ class SpeciesDexViewModel(
     // Grid state — all dex entries mapped to DexItem for the shared card
     // ---------------------------------------------------------------------------
 
-    val dexItems: StateFlow<List<DexItem>> = repo.allDexEntries
-        .map { entries -> entries.map { it.toDexItem() } }
+    /** Bumped when the catalogue finishes loading after the screen opened, so names and sprites are mapped again. */
+    private val catalogRevision = MutableStateFlow(0)
+
+    val dexItems: StateFlow<List<DexItem>> = combine(repo.allDexEntries, catalogRevision) { entries, _ ->
+        entries.map { it.toDexItem() }
+    }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -66,6 +71,11 @@ class SpeciesDexViewModel(
     fun catalogEntry(speciesKey: String): SpeciesCatalogEntry? =
         catalog.byKey(speciesKey)
 
+    /** The catalogue was (re)loaded: map the discovered entries again with its names and sprites. */
+    fun catalogChanged() {
+        catalogRevision.value++
+    }
+
     // ---------------------------------------------------------------------------
     // Actions
     // ---------------------------------------------------------------------------
@@ -86,7 +96,7 @@ class SpeciesDexViewModel(
         return DexItem(
             key = speciesKey,
             displayName = displayName,
-            spritePath = entry?.spritePath,
+            spritePath = entry?.sprite,
             discovered = true,
             count = timesObserved,
             isFavorite = isFavorite,

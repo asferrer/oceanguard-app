@@ -114,6 +114,13 @@ class VlmModelManager(
     private val _speciesPackSelected = MutableStateFlow(false)
     val speciesPackSelected = _speciesPackSelected.asStateFlow()
 
+    /**
+     * Bumped each time a species pack download or update ends, so screens re-read the installed
+     * version: [downloadState] ends on the same Complete state after every file and cannot tell.
+     */
+    private val _speciesPackRevision = MutableStateFlow(0)
+    val speciesPackRevision = _speciesPackRevision.asStateFlow()
+
     @Volatile
     private var cancelled = false
 
@@ -444,6 +451,7 @@ class VlmModelManager(
                 // Retry the artwork that failed before (only what is missing or differs is fetched).
                 SpeciesPackConfig.load(dir)?.takeIf { !cancelled }?.let { downloadSpeciesOptional(dir, it) }
                 _downloadState.value = VlmDownloadState.Complete
+                _speciesPackRevision.value++
                 return@withContext
             }
             val manifest = speciesManifest(dir)
@@ -456,6 +464,7 @@ class VlmModelManager(
             }
             if (manifest != null && !cancelled) downloadSpeciesOptional(dir, manifest)
             _downloadState.value = VlmDownloadState.Complete
+            _speciesPackRevision.value++
         } catch (e: VlmDownloadException) {
             _downloadState.value = VlmDownloadState.Error(e.message ?: "Species pack download failed", e.kind)
             throw e

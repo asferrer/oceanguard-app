@@ -13,8 +13,8 @@ package com.oceanguard.ai.data.species
  * @param scientificName   Binomial name, e.g. "Caretta caretta".
  * @param commonNames      Map of BCP-47 language tag → common name,
  *                         e.g. {"en":"Loggerhead turtle","es":"Tortuga boba"}.
- * @param spritePath       Relative path inside the sprites atlas directory
- *                         (e.g. "caretta_caretta.webp"), or null = use fallback.
+ * @param spritePath       Path of the sprite inside the species pack directory
+ *                         (e.g. "sprites/caretta_caretta.webp"); null = `sprites/<speciesKey>.webp`, see [sprite].
  * @param ecoregions       List of MEOW ecoregion IDs (Spalding 2007 coding)
  *                         where this species has confirmed occurrences.
  *                         Empty list = no distribution data → treated like cosmopolitan.
@@ -38,4 +38,11 @@ data class SpeciesCatalogEntry(
     val descriptions: Map<String, String> = emptyMap(),
     val iucnStatus: String? = null,
     val group: String? = null,
-)
+) {
+    /**
+     * Sprite of the species inside the pack directory: [spritePath], or `sprites/<speciesKey>.webp` when the
+     * catalogue leaves it out (the 30 species added in pack v4 have no `spritePath`).
+     */
+    val sprite: String
+        get() = spritePath?.takeIf { it.isNotBlank() } ?: "sprites/$speciesKey.webp"
+}
