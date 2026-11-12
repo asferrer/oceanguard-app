@@ -66,6 +66,9 @@ class SettingsRepository(private val context: Context) {
         val CONTRIBUTE_DECLINE_COUNT  = intPreferencesKey("contribute_decline_count")
         val CONTRIBUTE_NEVER_PROMPT   = booleanPreferencesKey("contribute_never_prompt")
 
+        /** Which data the main map shows: debris, species or both. */
+        val MAP_DATA_MODE = stringPreferencesKey("map_data_mode")
+
         // BioDex species feature
         val SPECIES_ONLINE_ENRICHMENT_ENABLED = booleanPreferencesKey("species_online_enrichment_enabled")
         val GEO_FILTER_SENSITIVITY            = stringPreferencesKey("geo_filter_sensitivity")
@@ -231,6 +234,13 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[Keys.LANGUAGE] = code
         }
+    }
+
+    /** The map's data mode key (see the map's `MapDataMode`); null until the user picks one. */
+    val mapDataMode: Flow<String?> = context.dataStore.data.map { prefs -> prefs[Keys.MAP_DATA_MODE] }
+
+    suspend fun setMapDataMode(key: String) {
+        context.dataStore.edit { prefs -> prefs[Keys.MAP_DATA_MODE] = key }
     }
 
     suspend fun setDarkMode(enabled: Boolean) {

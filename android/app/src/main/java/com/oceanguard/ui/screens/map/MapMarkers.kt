@@ -1,6 +1,8 @@
 package com.oceanguard.ai.ui.screens.map
 
+import com.oceanguard.ai.data.ZoneAggregator
 import com.oceanguard.ai.data.ZoneCluster
+import com.oceanguard.ai.ui.screens.map.species.SpeciesSpot
 
 /** Something drawn over the map at a real coordinate. */
 sealed interface MapMarker {
@@ -31,6 +33,53 @@ data class PinMarker(
     val healthScore: Int,
 ) : MapMarker {
     override val key: String get() = "session-$sessionId"
+}
+
+/** A grid cell of species observations that has not been opened yet: shows how many were seen there. */
+data class SpeciesClusterMarker(
+    val spotIndex: Int,
+    override val latitude: Double,
+    override val longitude: Double,
+    val observationCount: Int,
+    val speciesCount: Int,
+) : MapMarker {
+    override val key: String get() = "species-spot-$spotIndex"
+}
+
+/** One species at one place, once its cell is open: the sprite of the species in a badge. */
+data class SpeciesPinMarker(
+    val spotIndex: Int,
+    val speciesKey: String?,
+    val scientificName: String,
+    override val latitude: Double,
+    override val longitude: Double,
+    val observationCount: Int,
+    val lastSeenMs: Long,
+) : MapMarker {
+    override val key: String get() = "species-$spotIndex-${speciesKey ?: scientificName}"
+}
+
+/**
+ * Photos that are so close at this zoom that their pins would stack: drawn as one study zone with
+ * a stack of thumbnails, the count and the average health. Zooming in splits it again.
+ */
+data class PinGroupMarker(
+    val members: List<PinMarker>,
+    override val latitude: Double,
+    override val longitude: Double,
+) : MapMarker {
+    val healthScore: Int get() = members.map { it.healthScore }.average().toInt()
+    override val key: String get() = "group-${members.minOf { it.sessionId }}-${members.size}"
+}
+
+/** Species pins that would stack: one marker with the sprites and a count, opening a list. */
+data class SpeciesGroupMarker(
+    val members: List<SpeciesPinMarker>,
+    override val latitude: Double,
+    override val longitude: Double,
+) : MapMarker {
+    val observationCount: Int get() = members.sumOf { it.observationCount }
+    override val key: String get() = "species-group-${members.first().key}-${members.size}"
 }
 
 /** "38.12345, -0.50000": signed decimals with a point, so they can be pasted into any map app. */
@@ -64,6 +113,74 @@ object MapMarkerPlanner {
 
     fun plan(zones: List<ZoneCluster>, expanded: Boolean): List<MapMarker> =
         if (expanded) pins(zones) else clusters(zones)
+
+    /** Debris zones and species spots together, each in the form the zoom asks for. */
+    fun planAll(zones: List<ZoneCluster>, spots: List<SpeciesSpot>, expanded: Boolean): List<MapMarker> =
+        plan(zones, expanded) + planSpecies(spots, expanded)
+
+    /** One cluster per species spot, or one pin per species in it once [expanded]. */
+    fun planSpecies(spots: List<SpeciesSpot>, expanded: Boolean): List<MapMarker> =
+        spots.flatMapIndexed { index, spot ->
+            if (expanded) {
+                spot.entries.map { e ->
+                    SpeciesPinMarker(index, e.key, e.scientificName, e.latitude, e.longitude, e.count, e.lastSeenMs)
+                }
+            } else {
+                listOf(
+                    SpeciesClusterMarker(
+                        spotIndex = index,
+                        latitude = spot.latitude,
+                        longitude = spot.longitude,
+                        observationCount = spot.observationCount,
+                        speciesCount = spot.entries.map { it.key ?: it.scientificName }.distinct().size,
+                    ),
+                )
+            }
+        }
+
+    /** Diameter of a pin, the unit the stacking threshold is measured in. */
+    const val PIN_DP = 40.0
+
+    /** Zoom is quantised to this step before grouping, so a pinch does not regroup on every frame. */
+    const val ZOOM_STEP = 0.25
+
+    fun quantizeZoom(zoom: Double): Double = Math.round(zoom / ZOOM_STEP) * ZOOM_STEP
+
+    /**
+     * Merges the pins of [markers] that stack at [zoom] into [PinGroupMarker]s and
+     * [SpeciesGroupMarker]s. A pin with no neighbour keeps its own marker, and the other kinds pass
+     * through. Photos and species never merge with each other.
+     */
+    fun groupStacked(markers: List<MapMarker>, zoom: Double): List<MapMarker> {
+        val pins = markers.filterIsInstance<PinMarker>()
+        val speciesPins = markers.filterIsInstance<SpeciesPinMarker>()
+        val rest = markers.filter { it !is PinMarker && it !is SpeciesPinMarker }
+        val photos = ProximityGrouping.group(pins.map { GeoPoint(it.latitude, it.longitude) }, zoom, PIN_DP)
+            .map { g ->
+                if (g.members.size == 1) pins[g.members.first()] else PinGroupMarker(g.members.map { pins[it] }, g.latitude, g.longitude)
+            }
+        val species = ProximityGrouping.group(speciesPins.map { GeoPoint(it.latitude, it.longitude) }, zoom, PIN_DP)
+            .map { g ->
+                if (g.members.size == 1) {
+                    speciesPins[g.members.first()]
+                } else {
+                    SpeciesGroupMarker(g.members.map { speciesPins[it] }, g.latitude, g.longitude)
+                }
+            }
+        return rest + photos + species
+    }
+
+    /**
+     * The zone a tapped study-zone marker opens: the original zone when the group is all of it,
+     * else a zone made of just the grouped photos.
+     */
+    fun zoneFor(group: PinGroupMarker, zones: List<ZoneCluster>): ZoneCluster? {
+        val ids = group.members.map { it.sessionId }.toSet()
+        val inZone = group.members.map { it.zoneIndex }.distinct().singleOrNull()?.let { zones.getOrNull(it) }
+        if (inZone != null && inZone.sessions.size == ids.size) return inZone
+        val sessions = zones.flatMap { it.sessions }.filter { it.id in ids }
+        return if (sessions.isEmpty()) null else ZoneAggregator.zoneOf(sessions)
+    }
 
     private fun clusters(zones: List<ZoneCluster>): List<MapMarker> =
         zones.mapIndexed { index, zone ->
@@ -101,12 +218,15 @@ object MapMarkerPlanner {
     fun isOnScreen(xDp: Float, yDp: Float, widthDp: Float, heightDp: Float, marginDp: Float): Boolean =
         xDp in -marginDp..(widthDp + marginDp) && yDp in -marginDp..(heightDp + marginDp)
 
-    /** Centre and zoom that frame every zone; null when there is nothing to frame. */
-    fun fitTarget(zones: List<ZoneCluster>): FitTarget? {
-        if (zones.isEmpty()) return null
-        val lats = zones.map { it.centroidLat }
-        val lons = zones.map { it.centroidLon }
-        val zoom = if (zones.size == 1) {
+    /**
+     * Centre and zoom that frame every zone and every extra (latitude, longitude) point, such as
+     * species spots; null when there is nothing to frame.
+     */
+    fun fitTarget(zones: List<ZoneCluster>, extra: List<Pair<Double, Double>> = emptyList()): FitTarget? {
+        val lats = zones.map { it.centroidLat } + extra.map { it.first }
+        val lons = zones.map { it.centroidLon } + extra.map { it.second }
+        if (lats.isEmpty()) return null
+        val zoom = if (lats.size == 1) {
             SINGLE_ZONE_ZOOM
         } else {
             zoomForSpan(maxOf(lats.max() - lats.min(), lons.max() - lons.min()))

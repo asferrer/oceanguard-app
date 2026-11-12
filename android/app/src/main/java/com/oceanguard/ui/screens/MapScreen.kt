@@ -22,6 +22,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -51,6 +52,17 @@ import com.oceanguard.ai.ui.components.spotlight.spotlightTarget
 import com.oceanguard.ai.ui.motion.LocalReducedMotion
 import com.oceanguard.ai.ui.navigation.OceanRoutes
 import com.oceanguard.ai.ui.screens.map.MapData
+import com.oceanguard.ai.ui.screens.map.MapDataModeSelector
+import com.oceanguard.ai.ui.screens.map.MapSpeciesCard
+import com.oceanguard.ai.ui.screens.map.MapSpeciesListCard
+import com.oceanguard.ai.ui.screens.map.MapStage
+import com.oceanguard.ai.ui.screens.map.SpeciesSummaryCard
+import com.oceanguard.ai.ui.screens.map.species.MapDataMode
+import com.oceanguard.ai.ui.screens.map.species.MapSummary
+import com.oceanguard.ai.ui.screens.map.species.SpeciesMapData
+import com.oceanguard.ai.ui.screens.map.species.SummaryKind
+import com.oceanguard.ai.ui.screens.map.species.SummaryPart
+import com.oceanguard.ai.ui.screens.map.species.rememberSpeciesMapData
 import com.oceanguard.ai.ui.screens.map.MapFabControls
 import com.oceanguard.ai.ui.screens.map.MapFilterBar
 import com.oceanguard.ai.ui.screens.map.MapLegend
@@ -100,6 +112,14 @@ fun MapScreen(
     val darkMode by viewModel.settingsRepository.darkMode.collectAsStateWithLifecycle(initialValue = true)
     val state = rememberMapScreenState()
     val data = rememberMapData(sessions, state.filters)
+    val species = rememberSpeciesMapData(state.filters)
+    val savedMode by viewModel.settingsRepository.mapDataMode.collectAsStateWithLifecycle(initialValue = null)
+    val mode = MapDataMode.fromKey(savedMode)
+    SideEffect {
+        state.dataMode = mode
+        state.species = species
+    }
+    val scope = rememberCoroutineScope()
     val boundsMap = rememberSpotlightBounds()
     val tour = rememberSpotlightController(TourDefinitions.MAP)
     val focus = remember(focusLat, focusLon) {
@@ -109,7 +129,7 @@ fun MapScreen(
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
-            topBar = { MapTopBar(navController, data) },
+            topBar = { MapTopBar(navController, data, mode, species) },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
             MapBody(
@@ -121,6 +141,12 @@ fun MapScreen(
                 hasAnySessions = sessions.isNotEmpty(),
                 tour = tour,
                 boundsMap = boundsMap,
+                onModeChange = { picked ->
+                    state.selectedPinId = null
+                    state.selectedSpecies = null
+                    state.selectedSpeciesGroup = null
+                    scope.launch { viewModel.settingsRepository.setMapDataMode(picked.key) }
+                },
                 modifier = Modifier.padding(padding),
             )
         }
@@ -144,12 +170,12 @@ private fun distanceTo(p: Position, zone: ZoneCluster): Double =
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MapTopBar(navController: NavController, data: MapData) {
+private fun MapTopBar(navController: NavController, data: MapData, mode: MapDataMode, species: SpeciesMapData) {
     TopAppBar(
         title = {
             Column {
                 Text(stringResource(R.string.map_title), style = MaterialTheme.typography.titleLarge)
-                if (data.located.isNotEmpty()) MapSubtitle(data.located.size, data.zones.size)
+                MapSubtitle(MapSummary.parts(mode, data.located.size, data.zones.size, species.observationCount, species.speciesCount))
             }
         },
         navigationIcon = {
@@ -164,14 +190,20 @@ private fun MapTopBar(navController: NavController, data: MapData) {
     )
 }
 
+/** "13 analyses · 1 zone", or "6 observations · 3 species": whatever the chosen data counts. */
 @Composable
-private fun MapSubtitle(sessionCount: Int, zoneCount: Int) {
-    val sessions = pluralStringResource(R.plurals.map_subtitle_sessions, sessionCount, sessionCount)
-    val text = if (zoneCount > 0) {
-        sessions + " · " + pluralStringResource(R.plurals.map_subtitle_zones, zoneCount, zoneCount)
-    } else {
-        sessions
+private fun MapSubtitle(parts: List<SummaryPart>) {
+    if (parts.isEmpty()) return
+    val texts = mutableListOf<String>()
+    for (part in parts) {
+        texts += when (part.kind) {
+            SummaryKind.SESSIONS -> pluralStringResource(R.plurals.map_subtitle_sessions, part.count, part.count)
+            SummaryKind.ZONES -> pluralStringResource(R.plurals.map_subtitle_zones, part.count, part.count)
+            SummaryKind.OBSERVATIONS -> pluralStringResource(R.plurals.map_subtitle_observations, part.count, part.count)
+            SummaryKind.SPECIES -> pluralStringResource(R.plurals.map_subtitle_species, part.count, part.count)
+        }
     }
+    val text = texts.joinToString(" · ")
     Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
@@ -185,15 +217,24 @@ private fun MapBody(
     hasAnySessions: Boolean,
     tour: SpotlightController,
     boundsMap: MutableMap<String, Rect>,
+    onModeChange: (MapDataMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val camera = rememberMapCamera()
+    val hasData = (state.dataMode.showsDebris && data.located.isNotEmpty()) ||
+        (state.dataMode.showsSpecies && state.species.spots.isNotEmpty())
     Column(modifier.fillMaxSize()) {
+        MapDataModeSelector(
+            mode = state.dataMode,
+            onSelect = onModeChange,
+            modifier = Modifier.padding(horizontal = 16.dp).padding(top = 4.dp),
+        )
         MapFilterBar(
             filterState = state.filters,
             onFilterChanged = { state.filters = it },
             availableDebrisTypes = data.debrisTypes,
             onDateRangeClick = { state.showDatePicker = true },
+            showDebrisTypeChip = state.dataMode.offersDebrisControls,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
@@ -201,8 +242,8 @@ private fun MapBody(
         )
         Box(Modifier.weight(1f)) {
             MapStage(state, data, style, focus, camera, boundsMap)
-            if (data.located.isEmpty()) {
-                EmptyMapCard(navController, hasAnySessions, Modifier.align(Alignment.Center))
+            if (!hasData) {
+                EmptyMapCard(navController, hasAnySessions, state.dataMode == MapDataMode.SPECIES, Modifier.align(Alignment.Center))
             } else {
                 MapHud(navController, state, data, style, tour, boundsMap)
             }
@@ -211,90 +252,6 @@ private fun MapBody(
     }
     MapDatePicker(state, data)
 }
-
-/** Base map, the zones and photos drawn on it, and the camera that moves them. */
-@Composable
-private fun MapStage(
-    state: MapScreenState,
-    data: MapData,
-    style: MapStyle,
-    focus: Position?,
-    camera: CameraState,
-    boundsMap: MutableMap<String, Rect>,
-) {
-    val scope = rememberCoroutineScope()
-    val reduced = LocalReducedMotion.current
-    val focusTrigger = if (focus != null) 1 else 0
-    val globe = state.globe
-    key(state.retryKey) {
-        OceanGuardMap(
-            cameraState = camera,
-            geoJson = data.geoJson,
-            styleUrl = style.url,
-            showHeatmap = state.showHeatmap,
-            zoneClusters = data.zones,
-            fitAllTrigger = state.fitAllTrigger,
-            focusPosition = focus,
-            focusTrigger = focusTrigger,
-            flightsEnabled = globe.mode == GlobeMode.MAP,
-            flightsEpoch = globe.introEpoch,
-            onLoadFailed = { state.loadFailed = true },
-            onLoadFinished = { state.loadFailed = false },
-            modifier = Modifier.fillMaxSize().spotlightTarget("map_view", boundsMap),
-        )
-    }
-    val place = remember(focus, data.zones) { globePlace(focus, data.zones) }
-    val diveTarget = remember(place) { place?.let { divingCamera(it.latitude, it.longitude) } }
-    GlobeMapBridge(globe, camera, place, diveTarget, hasFocus = focus != null, fitAllTrigger = state.fitAllTrigger)
-    val mapMarkersShown by remember(globe) {
-        derivedStateOf { globe.mode == GlobeMode.MAP || globe.opacity < MARKERS_HANDOVER_OPACITY }
-    }
-    if (!state.showHeatmap && !state.loadFailed && mapMarkersShown) {
-        MapMarkersOverlay(
-            cameraState = camera,
-            zones = data.zones,
-            selectedSessionId = state.selectedPinId,
-            onClusterClick = { index ->
-                val zone = data.zones.getOrNull(index) ?: return@MapMarkersOverlay
-                scope.launch {
-                    camera.flyTo(Position(zone.centroidLon, zone.centroidLat), MapMarkerPlanner.FLY_ZOOM, reduced)
-                    state.selectedZone = zone
-                }
-            },
-            onPinClick = { state.selectedPinId = it },
-            modifier = Modifier.fillMaxSize().graphicsLayer {
-                alpha = if (globe.mode == GlobeMode.MAP) 1f else 1f - globe.opacity
-            },
-        )
-    }
-    GlobeView(
-        controller = globe,
-        dots = rememberZoneDots(data.zones),
-        onDotClick = { index ->
-            val zone = data.zones.getOrNull(index) ?: return@GlobeView
-            scope.launch {
-                val at = Position(zone.centroidLon, zone.centroidLat)
-                globe.diveInto(at, camera, reduced)
-                camera.flyTo(at, MapMarkerPlanner.FLY_ZOOM, reduced)
-                state.selectedZone = zone
-            }
-        },
-        modifier = Modifier.fillMaxSize(),
-    )
-}
-
-/**
- * Where the globe turns to face on opening: the deep-linked place, else the middle of the zones,
- * else nowhere. Facing never zooms; see [com.oceanguard.ai.ui.screens.map.globe.GlobeOpening].
- */
-private fun globePlace(focus: Position?, zones: List<ZoneCluster>): GlobeCamera? {
-    if (focus != null) return GlobeCamera(focus.latitude, focus.longitude, 0.0)
-    val fit = MapMarkerPlanner.fitTarget(zones) ?: return null
-    return GlobeCamera(fit.latitude, fit.longitude, 0.0)
-}
-
-/** The map's markers appear as the globe thins out, not before, so the two never double up. */
-private const val MARKERS_HANDOVER_OPACITY = 0.99f
 
 @Composable
 private fun MapHud(
@@ -306,12 +263,13 @@ private fun MapHud(
     boundsMap: MutableMap<String, Rect>,
 ) {
     Box(Modifier.fillMaxSize()) {
-        if (data.zones.isNotEmpty() && !tour.isActive) {
-            ZoneHealthSummary(
-                clusterCount = data.zones.size,
-                avgScore = data.avgHealth,
-                modifier = Modifier.align(Alignment.TopStart).padding(16.dp).spotlightTarget("map_zones", boundsMap),
-            )
+        val summaryModifier = Modifier.align(Alignment.TopStart).padding(16.dp).spotlightTarget("map_zones", boundsMap)
+        if (!tour.isActive) {
+            if (state.dataMode.showsDebris && data.zones.isNotEmpty()) {
+                ZoneHealthSummary(clusterCount = data.zones.size, avgScore = data.avgHealth, modifier = summaryModifier)
+            } else if (state.dataMode.showsSpecies && state.species.observationCount > 0) {
+                SpeciesSummaryCard(state.species.observationCount, state.species.speciesCount, summaryModifier)
+            }
         }
         Column(
             modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
@@ -329,6 +287,7 @@ private fun MapHud(
                     style = style,
                     onStyleSelected = { state.styleChoice = it },
                     boundsMap = boundsMap,
+                    showHeatmapButton = state.dataMode.offersDebrisControls,
                 )
             }
             SelectedPinCard(navController, state, data)
@@ -338,6 +297,24 @@ private fun MapHud(
 
 @Composable
 private fun SelectedPinCard(navController: NavController, state: MapScreenState, data: MapData) {
+    state.selectedSpeciesGroup?.let { group ->
+        MapSpeciesListCard(
+            group = group,
+            catalog = state.species.catalog,
+            onOpenSpecies = { key -> navController.navigate("biodex/$key") },
+            onClose = { state.selectedSpeciesGroup = null },
+        )
+        return
+    }
+    state.selectedSpecies?.let { pin ->
+        MapSpeciesCard(
+            pin = pin,
+            catalog = state.species.catalog,
+            onOpenSpecies = pin.speciesKey?.let { key -> { navController.navigate("biodex/$key") } },
+            onClose = { state.selectedSpecies = null },
+        )
+        return
+    }
     val session = data.located.firstOrNull { it.id == state.selectedPinId } ?: return
     MapPinCard(
         session = session,
@@ -363,7 +340,11 @@ private fun MapConnectionStatus(state: MapScreenState) {
 
 /** No analysis has a position yet: the map stays visible, with the reason and the next step. */
 @Composable
-private fun EmptyMapCard(navController: NavController, hasAnySessions: Boolean, modifier: Modifier) {
+private fun EmptyMapCard(navController: NavController, hasAnySessions: Boolean, speciesOnly: Boolean, modifier: Modifier) {
+    if (speciesOnly) {
+        SpeciesEmptyCard(modifier)
+        return
+    }
     Surface(
         modifier = modifier.padding(24.dp),
         shape = MaterialTheme.shapes.large,
@@ -415,4 +396,20 @@ private fun MapSheets(navController: NavController, state: MapScreenState) {
             navController.navigate("reports?lat=$lat&lon=$lon&name=${URLEncoder.encode(name, "UTF-8")}")
         },
     )
+}
+
+/** Only species are shown and none has a position yet: the same reason the BioDex map gives. */
+@Composable
+private fun SpeciesEmptyCard(modifier: Modifier) {
+    Surface(
+        modifier = modifier.padding(24.dp),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface,
+    ) {
+        SonarEmptyState(
+            icon = Icons.Filled.Map,
+            title = stringResource(R.string.biodex_detail_tab_map),
+            message = stringResource(R.string.biodex_map_empty_no_location),
+        )
+    }
 }

@@ -101,18 +101,20 @@ object ZoneAggregator {
             }
         }
 
-        return groups.map { group ->
-            // Recompute centroid precisely at the end (one pass per group).
-            val (lat, lon) = centroidOf(group)
-            val avgScore = group.map { it.healthScore }.average().toInt()
-            ZoneCluster(
-                centroidLat = lat,
-                centroidLon = lon,
-                sessions = group,
-                aggregateHealthScore = avgScore,
-                trend = computeTrend(group),
-            )
-        }
+        return groups.map { group -> zoneOf(group) }
+    }
+
+    /** One zone made of exactly [sessions], with its centroid, average health and trend. */
+    fun zoneOf(sessions: List<DetectionSession>): ZoneCluster {
+        // Recompute centroid precisely at the end (one pass per group).
+        val (lat, lon) = centroidOf(sessions)
+        return ZoneCluster(
+            centroidLat = lat,
+            centroidLon = lon,
+            sessions = sessions,
+            aggregateHealthScore = sessions.map { it.healthScore }.average().toInt(),
+            trend = computeTrend(sessions),
+        )
     }
 
     /**

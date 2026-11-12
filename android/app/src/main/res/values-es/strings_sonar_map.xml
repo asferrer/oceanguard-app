@@ -52,4 +52,38 @@
         <item quantity="one">%1$d punto de observación aquí. Toca para acercar.</item>
         <item quantity="other">%1$d puntos de observación aquí. Toca para acercar.</item>
     </plurals>
+    <string name="map_mode_debris">Residuos</string>
+    <string name="map_mode_species">Especies</string>
+    <string name="map_mode_both">Ambos</string>
+    <string name="map_mode_cd">Datos que se muestran en el mapa</string>
+    <string name="map_species_last_seen">Vista por última vez el %1$s</string>
+    <string name="map_species_open">Abrir en el BioDex</string>
+    <plurals name="map_species_cluster_cd">
+        <item quantity="one">Observaciones en esta zona: %1$d, especies: %2$d. Toca para acercar.</item>
+        <item quantity="other">Observaciones en esta zona: %1$d, especies: %2$d. Toca para acercar.</item>
+    </plurals>
+    <plurals name="map_species_pin_cd">
+        <item quantity="one">%1$s, %2$d observación. Toca para ver el detalle.</item>
+        <item quantity="other">%1$s, %2$d observaciones. Toca para ver el detalle.</item>
+    </plurals>
+    <plurals name="map_species_card_count">
+        <item quantity="one">%1$d observación aquí</item>
+        <item quantity="other">%1$d observaciones aquí</item>
+    </plurals>
+    <plurals name="map_subtitle_observations">
+        <item quantity="one">%1$d observación</item>
+        <item quantity="other">%1$d observaciones</item>
+    </plurals>
+    <plurals name="map_subtitle_species">
+        <item quantity="one">%1$d especie</item>
+        <item quantity="other">%1$d especies</item>
+    </plurals>
+    <plurals name="map_group_cd">
+        <item quantity="one">%1$d fotos en esta zona de estudio, salud media %2$d. Toca para verlas.</item>
+        <item quantity="other">%1$d fotos en esta zona de estudio, salud media %2$d. Toca para verlas.</item>
+    </plurals>
+    <plurals name="map_species_group_cd">
+        <item quantity="one">%1$d observaciones de %2$d especies aquí. Toca para ver la lista.</item>
+        <item quantity="other">%1$d observaciones de %2$d especies aquí. Toca para ver la lista.</item>
+    </plurals>
 </resources>

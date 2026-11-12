@@ -13,6 +13,8 @@ import com.oceanguard.ai.data.SessionDatesHelper
 import com.oceanguard.ai.data.ZoneAggregator
 import com.oceanguard.ai.data.ZoneCluster
 import com.oceanguard.ai.ui.screens.map.globe.GlobeController
+import com.oceanguard.ai.ui.screens.map.species.MapDataMode
+import com.oceanguard.ai.ui.screens.map.species.SpeciesMapData
 import com.oceanguard.ai.utils.toZoneGeoJson
 import java.time.LocalDate
 
@@ -43,6 +45,12 @@ class MapScreenState {
     var fitAllTrigger by mutableIntStateOf(0)
     var loadFailed by mutableStateOf(false)
     var retryKey by mutableIntStateOf(0)
+
+    /** Which data is shown; kept in the settings and mirrored here by the screen. */
+    var dataMode by mutableStateOf(MapDataMode.DEFAULT)
+    var species by mutableStateOf(SpeciesMapData.EMPTY)
+    var selectedSpecies by mutableStateOf<SpeciesPinMarker?>(null)
+    var selectedSpeciesGroup by mutableStateOf<SpeciesGroupMarker?>(null)
 
     /** The 3D globe shown when zoomed far out, and which of it and the flat map is in charge. */
     val globe = GlobeController()
