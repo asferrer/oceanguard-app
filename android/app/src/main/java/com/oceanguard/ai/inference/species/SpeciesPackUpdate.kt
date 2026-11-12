@@ -72,6 +72,8 @@ object SpeciesPackUpdate {
     }
 
     /** Files of the [old] pack that the [new] one no longer uses (safe to delete after the swap). */
-    fun orphans(old: SpeciesPackConfig, new: SpeciesPackConfig): List<String> =
-        old.requiredFiles().filter { it !in new.requiredFiles() }
+    fun orphans(old: SpeciesPackConfig, new: SpeciesPackConfig): List<String> {
+        val keep = (new.requiredFiles() + new.optionalFiles()).toSet()
+        return (old.requiredFiles() + old.optionalFiles()).filter { it !in keep }
+    }
 }

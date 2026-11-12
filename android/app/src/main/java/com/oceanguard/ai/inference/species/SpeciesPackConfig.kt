@@ -38,6 +38,9 @@ import java.io.File
  *                     summed probability reaches [GroupFallback.threshold] (docs/SPECIES_ID.md, 13).
  * @param sha256       Optional file name -> SHA-256 (hex) of the pack files, used by the update to
  *                     reuse the files that did not change.
+ * @param sprites      Optional pack v5: species artwork files (`sprites/<speciesKey>.webp`). They are
+ *                     optional assets: a missing or failed one shows the placeholder.
+ * @param spriteCredits Optional pack v5: JSON file with the source image credit of each sprite.
  * @param selfTest     Optional reference embedding of [SelfTest.pattern] computed
  *                     on the PC in fp32, used to detect a numerically broken
  *                     accelerator path on the device.
@@ -57,6 +60,8 @@ data class SpeciesPackConfig(
     val merged: Map<String, String>? = null,
     val groupFallback: GroupFallbackSpec? = null,
     val sha256: Map<String, String>? = null,
+    val sprites: List<String>? = null,
+    val spriteCredits: String? = null,
 ) {
     /** `groupFallback` of the manifest. */
     data class GroupFallbackSpec(val threshold: Float = 0f)
@@ -125,6 +130,9 @@ data class SpeciesPackConfig(
 
     /** Files that must exist in the pack directory for the pack to be usable. */
     fun requiredFiles(): List<String> = listOf(encoderFile, indexFile, catalogFile)
+
+    /** Files the pack ships that it can work without: the species artwork and its credits. */
+    fun optionalFiles(): List<String> = sprites.orEmpty() + listOfNotNull(spriteCredits)
 
     companion object {
         const val MANIFEST = "species_pack.json"
@@ -196,8 +204,15 @@ data class SpeciesPackConfig(
                 merged = clean ?: emptyMap(),
                 groupFallback = groupFallback?.takeIf { groupThreshold != null },
                 sha256 = sha256?.filter { (k, v) -> k != null && v != null }?.mapValues { it.value.lowercase() },
+                sprites = sprites?.filter { it != null && isSafeRelative(it) }.orEmpty(),
+                spriteCredits = spriteCredits?.takeIf { isSafeRelative(it) },
             )
         }
+
+        /** A file name the manifest may point to: relative, inside the pack directory. */
+        internal fun isSafeRelative(name: String): Boolean =
+            name.isNotBlank() && !name.startsWith("/") && !name.contains('\\') &&
+                name.split('/').none { it.isEmpty() || it == "." || it == ".." }
 
         // Gson ignores Kotlin nullability and leaves missing fields as null: check them.
         @Suppress("SENSELESS_COMPARISON")

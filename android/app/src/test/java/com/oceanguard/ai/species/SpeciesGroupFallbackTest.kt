@@ -158,9 +158,9 @@ class SpeciesGroupFallbackTest {
     }
 
     @Test
-    fun `remote manifests are tried v4 then v3 then the legacy name`() {
+    fun `remote manifests are tried v5 then v4 then v3 then the legacy name`() {
         assertEquals(
-            listOf("species_pack_v4.json", "species_pack_v3.json", "species_pack.json"),
+            listOf("species_pack_v5.json", "species_pack_v4.json", "species_pack_v3.json", "species_pack.json"),
             REMOTE_SPECIES_MANIFESTS,
         )
     }

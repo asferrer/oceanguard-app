@@ -178,33 +178,44 @@ class OrganismLocatorCropModeTest {
     }
 }
 
-/** Versioned manifest: v4 first, then v3, then the legacy name when the repository does not have it. */
+/** Versioned manifest: v5 first, then v4, v3 and the legacy name when the repository does not have it. */
 class SpeciesManifestFetchTest {
 
     private fun missing() = VlmDownloadException("HTTP 404", kind = DownloadFailureKind.NOT_FOUND)
 
     @Test
-    fun `asks v4 first and stops when it exists`() = runBlocking {
+    fun `asks v5 first and stops when it exists`() = runBlocking {
         val asked = mutableListOf<String>()
         val used = fetchFirstAvailable { asked += it }
-        assertEquals("species_pack_v4.json", used)
-        assertEquals(listOf("species_pack_v4.json"), asked)
+        assertEquals("species_pack_v5.json", used)
+        assertEquals(listOf("species_pack_v5.json"), asked)
     }
 
     @Test
-    fun `falls back to v3 when v4 is not published`() = runBlocking {
+    fun `falls back to v4 when v5 is not published`() = runBlocking {
         val asked = mutableListOf<String>()
-        val used = fetchFirstAvailable { asked += it; if (it.contains("v4")) throw missing() }
-        assertEquals("species_pack_v3.json", used)
-        assertEquals(listOf("species_pack_v4.json", "species_pack_v3.json"), asked)
+        val used = fetchFirstAvailable { asked += it; if (it.contains("v5")) throw missing() }
+        assertEquals("species_pack_v4.json", used)
+        assertEquals(listOf("species_pack_v5.json", "species_pack_v4.json"), asked)
     }
 
     @Test
-    fun `falls back to species_pack json when v4 and v3 are not published`() = runBlocking {
+    fun `falls back to v3 when v5 and v4 are not published`() = runBlocking {
+        val asked = mutableListOf<String>()
+        val used = fetchFirstAvailable { asked += it; if (it.contains("v5") || it.contains("v4")) throw missing() }
+        assertEquals("species_pack_v3.json", used)
+        assertEquals(listOf("species_pack_v5.json", "species_pack_v4.json", "species_pack_v3.json"), asked)
+    }
+
+    @Test
+    fun `falls back to species_pack json when no versioned manifest is published`() = runBlocking {
         val asked = mutableListOf<String>()
         val used = fetchFirstAvailable { asked += it; if (it.contains("_v")) throw missing() }
         assertEquals("species_pack.json", used)
-        assertEquals(listOf("species_pack_v4.json", "species_pack_v3.json", "species_pack.json"), asked)
+        assertEquals(
+            listOf("species_pack_v5.json", "species_pack_v4.json", "species_pack_v3.json", "species_pack.json"),
+            asked,
+        )
     }
 
     @Test

@@ -30,10 +30,17 @@ object SpeciesPackAssets {
         config.catalogFile to 100L,
     ) + GEO
 
+    /** Minimum bytes of an optional file (a sprite or the credits). */
+    const val OPTIONAL_MIN_BYTES = 20L
+
+    /** Optional files of the pack described by [config] (species artwork); a failure does not stop the pack. */
+    fun optionalFor(config: SpeciesPackConfig): List<Pair<String, Long>> =
+        config.optionalFiles().map { it to OPTIONAL_MIN_BYTES }
+
     /** Every file name that may belong to the pack installed in [dir]. */
     fun fileNames(dir: File): List<String> {
         val installed = SpeciesPackConfig.load(dir)
-        val own = installed?.let { forConfig(it).map { (name, _) -> name } } ?: emptyList()
+        val own = installed?.let { (forConfig(it) + optionalFor(it)).map { (name, _) -> name } } ?: emptyList()
         return (V1.map { it.first } + own + SpeciesPackConfig.MANIFEST).distinct()
     }
 }

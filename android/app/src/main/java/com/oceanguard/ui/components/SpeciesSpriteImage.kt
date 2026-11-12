@@ -16,19 +16,20 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.oceanguard.ai.R
+import com.oceanguard.ai.inference.species.SpeciesPackConfig
 import java.io.File
 
 /**
- * Loads a species sprite from [spritePath] inside
- * `getExternalFilesDir/models/species/sprites/`.
+ * Loads a species sprite from [spritePath] inside the species pack directory
+ * (`getExternalFilesDir/models/species/`); the catalogue stores it as `sprites/<speciesKey>.webp`.
  *
  * Uses Coil 3 [AsyncImage] for async disk I/O and crossfade.
  * Falls back to the [R.drawable.dex_species_unknown] placeholder drawable
  * when [spritePath] is null or the file does not exist on disk.
  *
- * Species artwork is not bundled yet, so every species shows the neutral placeholder. With
- * [silhouette] the image is painted as a flat shape of [silhouetteColor] instead (an entry not
- * discovered yet).
+ * The artwork comes with the species pack (v5 and later); species without a sprite, or a pack
+ * without them, show the neutral placeholder. With [silhouette] the image is painted as a flat
+ * shape of [silhouetteColor] instead (an entry not discovered yet).
  *
  * @param spritePath  Relative path as stored in SpeciesCatalogEntry.spritePath.
  *                    May be null for uncatalogued species.
@@ -44,12 +45,10 @@ fun SpeciesSpriteImage(
     silhouetteColor: Color = Color.Unspecified,
 ) {
     val context = LocalContext.current
-    val spriteFile = spritePath?.let { path ->
-        File(context.getExternalFilesDir(null), "models/species/sprites/$path")
-    }
-    val model = if (spriteFile != null && spriteFile.exists()) {
+    val file = spritePath?.let { path -> spriteFile(context.getExternalFilesDir(null), path) }
+    val model = if (file != null && file.exists()) {
         ImageRequest.Builder(context)
-            .data(spriteFile)
+            .data(file)
             .crossfade(true)
             .build()
     } else {
@@ -74,3 +73,7 @@ fun SpeciesSpriteImage(
     )
 }
 
+/** Sprite file of the catalogue [spritePath] (`sprites/<key>.webp`) under [filesDir]; null for a path leaving the pack. */
+internal fun spriteFile(filesDir: File?, spritePath: String): File? =
+    filesDir?.takeIf { SpeciesPackConfig.isSafeRelative(spritePath) }
+        ?.let { File(it, "models/species/$spritePath") }

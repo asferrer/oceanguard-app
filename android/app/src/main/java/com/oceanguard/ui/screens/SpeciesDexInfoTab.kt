@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -29,9 +30,14 @@ import coil3.compose.AsyncImage
 import com.oceanguard.ai.R
 import com.oceanguard.ai.data.species.SpeciesCatalogEntry
 import com.oceanguard.ai.data.species.enrichment.SpeciesEnrichment
+import com.oceanguard.ai.inference.species.SpriteCredit
+import com.oceanguard.ai.inference.species.SpriteCredits
 import com.oceanguard.ai.ui.components.dex.DexItem
 import com.oceanguard.ai.ui.components.sonar.SonarCard
 import com.oceanguard.ai.ui.theme.SonarTheme
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** How worrying an IUCN status is. The label always carries the code; colour only reinforces it. */
 internal enum class IucnTone { THREATENED, WATCH, SAFE, UNKNOWN }
@@ -106,6 +112,25 @@ internal fun SpeciesInfoTabContent(
             enrichment != null -> OnlineInfoCard(enrichment = enrichment)
             else -> OnlineInfoDisabledHint()
         }
+        SpriteCreditLine(speciesKey)
+    }
+}
+
+/** Credit of the image the species sprite was drawn from (required by CC BY); nothing without a sprite credit. */
+@Composable
+private fun SpriteCreditLine(speciesKey: String) {
+    val context = LocalContext.current
+    val credit by produceState<SpriteCredit?>(initialValue = null, key1 = speciesKey) {
+        value = withContext(Dispatchers.IO) {
+            context.getExternalFilesDir(null)?.let { SpriteCredits.forSpecies(File(it, "models/species"), speciesKey) }
+        }
+    }
+    credit?.let {
+        Text(
+            text = stringResource(R.string.biodex_sprite_credit, it.attribution),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

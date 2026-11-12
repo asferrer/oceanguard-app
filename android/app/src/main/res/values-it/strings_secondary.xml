@@ -700,6 +700,7 @@
     <string name="biodex_enrichment_label_status">Stato</string>
     <string name="biodex_enrichment_label_distribution">Distribuzione</string>
     <string name="biodex_enrichment_source_prefix">Fonti: %1$s</string>
+    <string name="biodex_sprite_credit">Illustrazione basata su un’immagine di %1$s</string>
     <string name="biodex_enrichment_disabled_hint">Attiva «Info specie online» nelle Impostazioni per caricare le schede esterne di WoRMS, GBIF e iNaturalist.</string>
 
     <!-- ================================================================== -->

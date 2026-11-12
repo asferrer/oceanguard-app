@@ -701,6 +701,7 @@
     <string name="biodex_enrichment_label_status">Estado</string>
     <string name="biodex_enrichment_label_distribution">Distribuição</string>
     <string name="biodex_enrichment_source_prefix">Fontes: %1$s</string>
+    <string name="biodex_sprite_credit">Ilustração baseada numa imagem de %1$s</string>
     <string name="biodex_enrichment_disabled_hint">Ative «Informações online de espécies» nas Definições para carregar fichas externas do WoRMS, GBIF e iNaturalist.</string>
 
     <!-- ================================================================== -->

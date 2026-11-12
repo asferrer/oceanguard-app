@@ -441,16 +441,20 @@ class VlmModelManager(
             val installed = SpeciesPackConfig.load(dir)
             if (installed != null) {
                 updateSpeciesPack(dir, installed)
+                // Retry the artwork that failed before (only what is missing or differs is fetched).
+                SpeciesPackConfig.load(dir)?.takeIf { !cancelled }?.let { downloadSpeciesOptional(dir, it) }
                 _downloadState.value = VlmDownloadState.Complete
                 return@withContext
             }
-            val assets = speciesManifest(dir)?.let(SpeciesPackAssets::forConfig) ?: SpeciesPackAssets.V1
+            val manifest = speciesManifest(dir)
+            val assets = manifest?.let(SpeciesPackAssets::forConfig) ?: SpeciesPackAssets.V1
             for ((name, minBytes) in assets) {
                 if (cancelled) break
                 val target = File(dir, name)
                 if (target.exists() && target.length() >= minBytes) continue
                 downloadFile(url = "$SPECIES_REPO/$name", target = target, minValidBytes = minBytes, filename = name)
             }
+            if (manifest != null && !cancelled) downloadSpeciesOptional(dir, manifest)
             _downloadState.value = VlmDownloadState.Complete
         } catch (e: VlmDownloadException) {
             _downloadState.value = VlmDownloadState.Error(e.message ?: "Species pack download failed", e.kind)
@@ -522,6 +526,16 @@ class VlmModelManager(
                 }
                 staged += stage to target
             }
+            for ((name, minBytes) in SpeciesPackAssets.optionalFor(config)) {
+                if (cancelled) return
+                val target = File(dir, name)
+                val reuse = SpeciesPackUpdate.canReuse(
+                    name, config, target.exists(), target.length(), minBytes,
+                ) { SpeciesPackUpdate.sha256(target) }
+                if (reuse) continue
+                val stage = File(dir, name + SpeciesPackUpdate.STAGE_SUFFIX)
+                if (fetchOptional(name, stage, minBytes, config.sha256?.get(name))) staged += stage to target
+            }
             // All verified: swap the files in, the manifest last, then drop what the new pack no longer uses.
             for ((stage, target) in staged + (manifestStage to File(dir, SpeciesPackConfig.MANIFEST))) {
                 stage.copyTo(target, overwrite = true)
@@ -531,6 +545,41 @@ class VlmModelManager(
         } finally {
             staged.forEach { it.first.delete() }
             manifestStage.delete()
+        }
+    }
+
+    /**
+     * Download the optional files of [config] (species artwork) that are missing or differ from the manifest.
+     * A failure only leaves that sprite on the placeholder: the pack stays usable.
+     */
+    private suspend fun downloadSpeciesOptional(dir: File, config: SpeciesPackConfig) {
+        for ((name, minBytes) in SpeciesPackAssets.optionalFor(config)) {
+            if (cancelled) return
+            val target = File(dir, name)
+            val ok = SpeciesPackUpdate.canReuse(
+                name, config, target.exists(), target.length(), minBytes,
+            ) { SpeciesPackUpdate.sha256(target) }
+            if (ok) continue
+            val stage = File(dir, name + SpeciesPackUpdate.STAGE_SUFFIX)
+            if (fetchOptional(name, stage, minBytes, config.sha256?.get(name))) {
+                stage.copyTo(target, overwrite = true)
+                stage.delete()
+            }
+        }
+    }
+
+    /** Download the optional pack file [name] to [stage] and check it; false (nothing left) on any failure. */
+    private suspend fun fetchOptional(name: String, stage: File, minBytes: Long, sha256: String?): Boolean {
+        stage.parentFile?.mkdirs()
+        return try {
+            downloadFile("$SPECIES_REPO/$name", stage, minBytes, stage.name)
+            val ok = stage.exists() && SpeciesPackUpdate.matches(stage, sha256)
+            if (!ok) stage.delete()
+            ok
+        } catch (e: VlmDownloadException) {
+            Log.w(TAG, "Optional species file $name not downloaded: ${e.message}")
+            stage.delete()
+            false
         }
     }
 
