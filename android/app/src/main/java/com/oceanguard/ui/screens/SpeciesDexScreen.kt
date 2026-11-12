@@ -38,6 +38,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -115,6 +117,10 @@ fun SpeciesDexScreen(
     val discoveredKeys = dexItems.map { it.key }.toSet()
     val lockedItems = remember(catalogVersion, discoveredKeys) { buildLockedItems(catalog, discoveredKeys) }
     val allItems = dexItems + lockedItems
+    var query by rememberSaveable { mutableStateOf("") }
+    val visibleItems = remember(allItems, query, catalogVersion) {
+        SpeciesDexSearch.filter(allItems, query, catalog::byKey)
+    }
 
     // Derive favourites count from the already-collected items.
     val favoriteCount = dexItems.count { it.isFavorite }
@@ -173,7 +179,17 @@ fun SpeciesDexScreen(
                 }
             }
 
-            itemsIndexed(items = allItems, key = { _, item -> item.key }) { index, item ->
+            if (allItems.isNotEmpty()) {
+                item(span = { GridItemSpan(3) }, key = "search") {
+                    SpeciesDexSearchField(query = query, onQueryChange = { query = it }, modifier = Modifier.fillMaxWidth())
+                }
+            }
+
+            if (allItems.isNotEmpty() && visibleItems.isEmpty()) {
+                item(span = { GridItemSpan(3) }, key = "search_empty") { SearchNoResults(query.trim()) }
+            }
+
+            itemsIndexed(items = visibleItems, key = { _, item -> item.key }) { index, item ->
                 DexCard(
                     item = item,
                     animationIndex = index,
@@ -183,6 +199,18 @@ fun SpeciesDexScreen(
             }
         }
     }
+}
+
+/** Short message shown when no discovered species matches [query]. */
+@Composable
+private fun SearchNoResults(query: String) {
+    Text(
+        text = stringResource(R.string.biodex_search_empty, query),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(top = 24.dp, start = 16.dp, end = 16.dp),
+    )
 }
 
 /** Species sprite of a card; a discovered one is the shared element of the detail header. */

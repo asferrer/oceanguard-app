@@ -651,6 +651,9 @@
     <string name="biodex_stat_discovered">Discovered</string>
     <string name="biodex_stat_favorites">Favorites</string>
     <string name="biodex_stat_observations">Observations</string>
+    <string name="biodex_search_placeholder">Search species...</string>
+    <string name="biodex_search_empty">No species match "%1$s"</string>
+    <string name="home_biodex_progress">%1$d / %2$d discovered</string>
 
     <!-- ================================================================== -->
     <!-- BioDex Detail Screen                                                 -->
