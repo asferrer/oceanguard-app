@@ -1,0 +1,16 @@
+Globe texture: res/drawable-nodpi/globe_blue_marble.jpg
+
+Source image: "Blue Marble: Next Generation + topography + bathymetry"
+Produced by Reto Stockli, NASA Earth Observatory (NASA Goddard Space Flight Center),
+from the NASA Visible Earth collection:
+https://visibleearth.nasa.gov/images/73909/topography
+Original NASA file: world.topo.bathy.200412.3x5400x2700.jpg (equirectangular, December 2004 composite).
+
+Copy used: the 3600 x 1800 JPEG republished on Wikimedia Commons
+(File:Blue_Marble_Next_Generation_+_topography_+_bathymetry.jpg), marked public domain there.
+NASA imagery is not subject to copyright in the United States for non-commercial and educational
+use and, per NASA's media usage guidelines, may be reused with credit to NASA.
+
+Changes made here: resized to 2048 x 1024 (Lanczos) and re-encoded as JPEG, quality 88 (about 390 KB).
+
+Suggested credit: "Earth imagery: NASA Earth Observatory / Blue Marble Next Generation".
