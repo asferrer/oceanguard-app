@@ -22,6 +22,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -29,6 +30,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -64,6 +66,12 @@ import com.oceanguard.ai.ui.screens.map.OceanGuardMap
 import com.oceanguard.ai.ui.screens.map.ZoneHealthSummary
 import com.oceanguard.ai.ui.screens.map.ZoneMapBottomSheet
 import com.oceanguard.ai.ui.screens.map.flyTo
+import com.oceanguard.ai.ui.screens.map.globe.GlobeCamera
+import com.oceanguard.ai.ui.screens.map.globe.GlobeMapBridge
+import com.oceanguard.ai.ui.screens.map.globe.GlobeMode
+import com.oceanguard.ai.ui.screens.map.globe.GlobeView
+import com.oceanguard.ai.ui.screens.map.globe.diveInto
+import com.oceanguard.ai.ui.screens.map.globe.divingCamera
 import com.oceanguard.ai.ui.screens.map.rememberIsOnline
 import com.oceanguard.ai.ui.screens.map.rememberMapCamera
 import com.oceanguard.ai.ui.screens.map.rememberMapData
@@ -216,6 +224,7 @@ private fun MapStage(
     val scope = rememberCoroutineScope()
     val reduced = LocalReducedMotion.current
     val focusTrigger = if (focus != null) 1 else 0
+    val globe = state.globe
     key(state.retryKey) {
         OceanGuardMap(
             cameraState = camera,
@@ -226,12 +235,19 @@ private fun MapStage(
             fitAllTrigger = state.fitAllTrigger,
             focusPosition = focus,
             focusTrigger = focusTrigger,
+            flightsEnabled = globe.mode == GlobeMode.MAP,
+            flightsEpoch = globe.introEpoch,
             onLoadFailed = { state.loadFailed = true },
             onLoadFinished = { state.loadFailed = false },
             modifier = Modifier.fillMaxSize().spotlightTarget("map_view", boundsMap),
         )
     }
-    if (!state.showHeatmap && !state.loadFailed) {
+    val introTarget = remember(focus, data.zones) { introCamera(focus, data.zones) }
+    GlobeMapBridge(globe, camera, introTarget, state.fitAllTrigger)
+    val mapMarkersShown by remember(globe) {
+        derivedStateOf { globe.mode == GlobeMode.MAP || globe.opacity < MARKERS_HANDOVER_OPACITY }
+    }
+    if (!state.showHeatmap && !state.loadFailed && mapMarkersShown) {
         MapMarkersOverlay(
             cameraState = camera,
             zones = data.zones,
@@ -244,10 +260,36 @@ private fun MapStage(
                 }
             },
             onPinClick = { state.selectedPinId = it },
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().graphicsLayer {
+                alpha = if (globe.mode == GlobeMode.MAP) 1f else 1f - globe.opacity
+            },
         )
     }
+    GlobeView(
+        controller = globe,
+        zones = data.zones,
+        onZoneClick = { index ->
+            val zone = data.zones.getOrNull(index) ?: return@GlobeView
+            scope.launch {
+                val at = Position(zone.centroidLon, zone.centroidLat)
+                globe.diveInto(at, camera, reduced)
+                camera.flyTo(at, MapMarkerPlanner.FLY_ZOOM, reduced)
+                state.selectedZone = zone
+            }
+        },
+        modifier = Modifier.fillMaxSize(),
+    )
 }
+
+/** Where the globe opens the screen: the deep-linked place, else the middle of the zones, else nowhere. */
+private fun introCamera(focus: Position?, zones: List<ZoneCluster>): GlobeCamera? {
+    if (focus != null) return divingCamera(focus.latitude, focus.longitude)
+    val fit = MapMarkerPlanner.fitTarget(zones) ?: return null
+    return divingCamera(fit.latitude, fit.longitude)
+}
+
+/** The map's markers appear as the globe thins out, not before, so the two never double up. */
+private const val MARKERS_HANDOVER_OPACITY = 0.99f
 
 @Composable
 private fun MapHud(
@@ -300,12 +342,14 @@ private fun SelectedPinCard(navController: NavController, state: MapScreenState,
     )
 }
 
-/** Over the blank map: the style failed to load, or there is no connection to download it. */
+/** Over the blank flat map: the style failed to load, or there is no connection to download it. */
 @Composable
 private fun MapConnectionStatus(state: MapScreenState) {
     val online by rememberIsOnline()
     Box(Modifier.fillMaxSize()) {
         when {
+            // The globe is bundled with the app: it needs no connection, so it shows no warning.
+            state.globe.mode == GlobeMode.GLOBE -> Unit
             state.loadFailed -> MapLoadFailed(state::retryLoad, Modifier.align(Alignment.Center))
             !online -> MapOfflineBanner(Modifier.align(Alignment.TopCenter).padding(16.dp))
         }

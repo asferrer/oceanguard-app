@@ -44,4 +44,7 @@
     <string name="history_quality_poor">Schlecht</string>
     <string name="history_state_selected">Ausgewählt</string>
     <string name="history_state_not_selected">Nicht ausgewählt</string>
+    <string name="map_globe_cd">Interaktiver Globus. Zum Drehen ziehen, zum Zoomen zusammenziehen oder doppeltippen.</string>
+    <string name="map_globe_zoom_in">Vergrößern</string>
+    <string name="map_globe_zoom_out">Verkleinern</string>
 </resources>

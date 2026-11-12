@@ -44,4 +44,7 @@
     <string name="history_quality_poor">Fraca</string>
     <string name="history_state_selected">Selecionado</string>
     <string name="history_state_not_selected">Não selecionado</string>
+    <string name="map_globe_cd">Globo interativo. Arraste para girar, faça o gesto de pinça ou toque duas vezes para aproximar.</string>
+    <string name="map_globe_zoom_in">Aproximar</string>
+    <string name="map_globe_zoom_out">Afastar</string>
 </resources>

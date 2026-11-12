@@ -12,6 +12,7 @@ import com.oceanguard.ai.data.DetectionSession
 import com.oceanguard.ai.data.SessionDatesHelper
 import com.oceanguard.ai.data.ZoneAggregator
 import com.oceanguard.ai.data.ZoneCluster
+import com.oceanguard.ai.ui.screens.map.globe.GlobeController
 import com.oceanguard.ai.utils.toZoneGeoJson
 import java.time.LocalDate
 
@@ -42,6 +43,9 @@ class MapScreenState {
     var fitAllTrigger by mutableIntStateOf(0)
     var loadFailed by mutableStateOf(false)
     var retryKey by mutableIntStateOf(0)
+
+    /** The 3D globe shown when zoomed far out, and which of it and the flat map is in charge. */
+    val globe = GlobeController()
 
     fun retryLoad() {
         loadFailed = false

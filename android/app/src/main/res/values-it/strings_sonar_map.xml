@@ -44,4 +44,7 @@
     <string name="history_quality_poor">Scarsa</string>
     <string name="history_state_selected">Selezionato</string>
     <string name="history_state_not_selected">Non selezionato</string>
+    <string name="map_globe_cd">Globo interattivo. Trascina per ruotarlo, pizzica o tocca due volte per ingrandire.</string>
+    <string name="map_globe_zoom_in">Ingrandisci</string>
+    <string name="map_globe_zoom_out">Riduci</string>
 </resources>
