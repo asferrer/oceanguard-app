@@ -4,22 +4,19 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -40,19 +37,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import com.oceanguard.ai.ui.screens.models.SpeciesPackPlacement
-import com.oceanguard.ai.ui.screens.models.SpeciesPackPrompt
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -61,14 +56,23 @@ import com.oceanguard.ai.R
 import com.oceanguard.ai.data.species.SpeciesCatalog
 import com.oceanguard.ai.data.species.SpeciesCollectionRepository
 import com.oceanguard.ai.data.species.SpeciesNames
+import com.oceanguard.ai.ui.components.SpeciesSpriteImage
 import com.oceanguard.ai.ui.components.dex.DexCard
 import com.oceanguard.ai.ui.components.dex.DexCollectionHeader
-import com.oceanguard.ai.ui.components.SpeciesSpriteImage
+import com.oceanguard.ai.ui.components.dex.DexFavorites
+import com.oceanguard.ai.ui.components.dex.DexFavoritesChip
 import com.oceanguard.ai.ui.components.dex.DexItem
+import com.oceanguard.ai.ui.components.dex.DexNoFavorites
 import com.oceanguard.ai.ui.components.dex.DexSpriteSlot
 import com.oceanguard.ai.ui.navigation.OceanSharedKeys
 import com.oceanguard.ai.ui.navigation.oceanSharedElement
+import com.oceanguard.ai.ui.screens.models.SpeciesPackPlacement
+import com.oceanguard.ai.ui.screens.models.SpeciesPackPrompt
 import com.oceanguard.ai.ui.theme.SonarTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * BioDex — Pokédex-style grid of discovered marine species.
@@ -105,20 +109,15 @@ fun SpeciesDexScreen(
     // Opened right after the app starts, the catalogue may still be loading in the background: redraw once it is
     // there (it showed "3 / 0" and the discovered cards without names or sprites).
     val app = LocalContext.current.applicationContext as OceanGuardApp
+    // Always redraw once the catalogue is there, even when it already is as this effect starts: the first frame may
+    // have been drawn just before it finished loading (cards with "?" and no undiscovered species).
     LaunchedEffect(Unit) {
-        if (catalog.isLoaded()) return@LaunchedEffect
-        if (withContext(Dispatchers.IO) { app.ensureSpeciesCatalogLoaded() }) {
+        val loaded = catalog.isLoaded() ||
+            withContext(Dispatchers.IO) { app.ensureSpeciesCatalogLoaded() } ||
+            waitForCatalog(catalog)
+        if (loaded) {
             catalogVersion++
             vm.catalogChanged()
-            return@LaunchedEffect
-        }
-        repeat(CATALOG_WAIT_POLLS) {
-            delay(CATALOG_WAIT_STEP_MS)
-            if (catalog.isLoaded()) {
-                catalogVersion++
-                vm.catalogChanged()
-                return@LaunchedEffect
-            }
         }
     }
 
@@ -128,8 +127,9 @@ fun SpeciesDexScreen(
     val lockedItems = remember(catalogVersion, discoveredKeys) { buildLockedItems(catalog, discoveredKeys) }
     val allItems = dexItems + lockedItems
     var query by rememberSaveable { mutableStateOf("") }
-    val visibleItems = remember(allItems, query, catalogVersion) {
-        SpeciesDexSearch.filter(allItems, query, catalog::byKey)
+    var onlyFavorites by rememberSaveable { mutableStateOf(false) }
+    val visibleItems = remember(allItems, query, catalogVersion, onlyFavorites) {
+        DexFavorites.keep(SpeciesDexSearch.filter(allItems, query, catalog::byKey), onlyFavorites) { it.isFavorite }
     }
 
     // Derive favourites count from the already-collected items.
@@ -193,10 +193,15 @@ fun SpeciesDexScreen(
                 item(span = { GridItemSpan(3) }, key = "search") {
                     SpeciesDexSearchField(query = query, onQueryChange = { query = it }, modifier = Modifier.fillMaxWidth())
                 }
+                item(span = { GridItemSpan(3) }, key = "favorites") {
+                    Row { DexFavoritesChip(onlyFavorites, favoriteCount, onToggle = { onlyFavorites = !onlyFavorites }) }
+                }
             }
 
             if (allItems.isNotEmpty() && visibleItems.isEmpty()) {
-                item(span = { GridItemSpan(3) }, key = "search_empty") { SearchNoResults(query.trim()) }
+                item(span = { GridItemSpan(3) }, key = "search_empty") {
+                    if (onlyFavorites && favoriteCount == 0) DexNoFavorites() else SearchNoResults(query.trim())
+                }
             }
 
             itemsIndexed(items = visibleItems, key = { _, item -> item.key }) { index, item ->
@@ -305,6 +310,15 @@ private fun BioDexEmptyState(onPackInstalled: () -> Unit) {
         Spacer(modifier = Modifier.height(20.dp))
         SpeciesPackPrompt(placement = SpeciesPackPlacement.INLINE, onInstalled = onPackInstalled)
     }
+}
+
+/** True once [catalog] is loaded, polling for up to CATALOG_WAIT_POLLS x CATALOG_WAIT_STEP_MS; false if it never is. */
+private suspend fun waitForCatalog(catalog: SpeciesCatalog): Boolean {
+    repeat(CATALOG_WAIT_POLLS) {
+        delay(CATALOG_WAIT_STEP_MS)
+        if (catalog.isLoaded()) return true
+    }
+    return false
 }
 
 /** The BioDex waits up to CATALOG_WAIT_POLLS x CATALOG_WAIT_STEP_MS (30 s) for the catalogue to load. */

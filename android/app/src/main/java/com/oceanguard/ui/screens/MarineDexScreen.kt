@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -45,7 +47,10 @@ import com.oceanguard.ai.data.collection.MarineDexEntry
 import com.oceanguard.ai.ui.components.DexSpriteImage
 import com.oceanguard.ai.ui.components.dex.DexCard
 import com.oceanguard.ai.ui.components.dex.DexCollectionHeader
+import com.oceanguard.ai.ui.components.dex.DexFavorites
+import com.oceanguard.ai.ui.components.dex.DexFavoritesChip
 import com.oceanguard.ai.ui.components.dex.DexItem
+import com.oceanguard.ai.ui.components.dex.DexNoFavorites
 import com.oceanguard.ai.ui.components.dex.DexSpriteSlot
 import com.oceanguard.ai.ui.components.dex.debrisDisplayName
 import com.oceanguard.ai.ui.components.spotlight.GuidedTourTransitionDialog
@@ -207,6 +212,8 @@ private fun MarineDexGrid(
     modifier: Modifier = Modifier,
 ) {
     val complete = discoveredCount == TOTAL_DEX_ENTRIES
+    var onlyFavorites by rememberSaveable { mutableStateOf(false) }
+    val types = DexFavorites.keep(DebrisType.CANONICAL, onlyFavorites) { discoveredTypes[it.name]?.isFavorite == true }
     val caption = if (complete) {
         stringResource(R.string.marinedex_collection_complete)
     } else {
@@ -232,9 +239,15 @@ private fun MarineDexGrid(
                 modifier = Modifier.spotlightTarget("dex_progress", boundsMap),
             )
         }
+        item(span = { GridItemSpan(3) }, key = "favorites") {
+            Row { DexFavoritesChip(onlyFavorites, favoriteCount, onToggle = { onlyFavorites = !onlyFavorites }) }
+        }
+        if (types.isEmpty()) {
+            item(span = { GridItemSpan(3) }, key = "no_favorites") { DexNoFavorites() }
+        }
         // Extended types (PLASTIC_BAG, STYROFOAM, ...) collapse to their canonical parent in
         // AchievementChecker, so only the canonical ones ever reach the dex table.
-        itemsIndexed(items = DebrisType.CANONICAL, key = { _, type -> type.name }) { index, type ->
+        itemsIndexed(items = types, key = { _, type -> type.name }) { index, type ->
             MarineDexCard(
                 type = type,
                 entry = discoveredTypes[type.name],

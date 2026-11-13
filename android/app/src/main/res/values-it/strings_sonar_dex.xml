@@ -28,4 +28,6 @@
     <string name="dex_gallery_cd_session">Foto analizzata con %1$s</string>
     <string name="biodex_iucn_badge">IUCN: %1$s</string>
     <string name="species_batch_more">+%1$d altri</string>
+    <string name="dex_filter_favorites">Solo preferiti (%1$d)</string>
+    <string name="dex_no_favorites">Ancora nessun preferito: segnali con il cuore di ogni scheda.</string>
 </resources>
