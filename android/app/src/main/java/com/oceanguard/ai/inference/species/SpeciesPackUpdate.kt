@@ -54,10 +54,12 @@ object SpeciesPackUpdate {
     }
 
     /**
-     * Approximate bytes an update from [installed] to [remote] downloads: the full pack size minus the installed files
-     * it keeps (the encoder when its file name does not change, the geographic files, and any file whose SHA-256 is the
-     * same in both manifests). [localLength] gives the size of an installed file (0 when missing). Used for the size
-     * shown before updating, not for any check.
+     * Approximate bytes an update from [installed] to [remote] downloads. Required files: the full pack size minus
+     * the installed ones it keeps (the encoder when its file name does not change, the geographic files, and any
+     * file whose SHA-256 is the same in both manifests); nothing when it keeps them all, so a sprites-only update
+     * is not shown as the rest of the full size. Optional files (sprites, credits) whose SHA-256 changes count
+     * with their installed size, or [NEW_OPTIONAL_GUESS] when not installed yet. [localLength] gives the size of
+     * an installed file (0 when missing). Used for the size shown before updating, not for any check.
      */
     fun approxUpdateBytes(
         installed: SpeciesPackConfig,
@@ -65,16 +67,23 @@ object SpeciesPackUpdate {
         fullBytes: Long,
         localLength: (String) -> Long,
     ): Long {
+        val before = installed.sha256.orEmpty()
+        val same = { name: String -> remote.sha256?.get(name)?.let { it == before[name] } == true }
         val kept = buildSet {
             if (remote.encoderFile == installed.encoderFile) add(remote.encoderFile)
             addAll(SpeciesPackAssets.GEO.map { it.first })
-            val before = installed.sha256.orEmpty()
-            remote.requiredFiles().filter { name ->
-                remote.sha256?.get(name)?.let { it == before[name] } == true
-            }.forEach(::add)
+            remote.requiredFiles().filter(same).forEach(::add)
         }
-        return (fullBytes - kept.sumOf(localLength)).coerceAtLeast(0L)
+        val required = if (remote.requiredFiles().all { it in kept }) 0L
+        else (fullBytes - kept.sumOf(localLength)).coerceAtLeast(0L)
+        val optional = remote.optionalFiles().filterNot(same).sumOf { name ->
+            localLength(name).takeIf { it > 0L } ?: NEW_OPTIONAL_GUESS
+        }
+        return required + optional
     }
+
+    /** Size guessed for an optional file not installed yet: about one sprite. */
+    const val NEW_OPTIONAL_GUESS = 4_096L
 
     /** Files of the [old] pack that the [new] one no longer uses (safe to delete after the swap). */
     fun orphans(old: SpeciesPackConfig, new: SpeciesPackConfig): List<String> {

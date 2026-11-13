@@ -132,6 +132,21 @@ class SpeciesSpritesTest {
     }
 
     @Test
+    fun `a sprites-only update counts just the files that change`() {
+        val v6 = SpeciesPackConfig.parse(withSprites)!!.let { c ->
+            c.copy(sha256 = mapOf("enc.onnx" to "cd", "idx.bin" to "i", "cat.json" to "c",
+                "sprites/octopus_vulgaris.webp" to "ab", "sprites/caretta_caretta.webp" to "c1", "sprite_credits.json" to "k1"))
+        }
+        val v7 = v6.copy(version = 7, sha256 = v6.sha256!! + mapOf("sprites/caretta_caretta.webp" to "c2", "sprite_credits.json" to "k2"))
+        val local = mapOf("enc.onnx" to 600L, "idx.bin" to 5L, "cat.json" to 3L,
+            "sprites/octopus_vulgaris.webp" to 3_000L, "sprites/caretta_caretta.webp" to 3_500L, "sprite_credits.json" to 40_000L)
+        assertEquals(43_500L, SpeciesPackUpdate.approxUpdateBytes(v6, v7, 615L) { local[it] ?: 0L })
+        // A sprite the phone does not have yet counts as about one sprite.
+        assertEquals(43_500L - 3_500L + SpeciesPackUpdate.NEW_OPTIONAL_GUESS,
+            SpeciesPackUpdate.approxUpdateBytes(v6, v7, 615L) { if (it == "sprites/caretta_caretta.webp") 0L else local[it] ?: 0L })
+    }
+
+    @Test
     fun `species without spritePath use the sprite named after their key`() {
         fun entry(path: String?) = SpeciesCatalogEntry("hypanus_americanus", null, "Hypanus americanus", emptyMap(), path, emptyList())
         assertEquals("sprites/hypanus_americanus.webp", entry(null).sprite)
