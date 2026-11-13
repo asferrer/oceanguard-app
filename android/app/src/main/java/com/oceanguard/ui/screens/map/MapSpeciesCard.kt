@@ -90,9 +90,9 @@ fun MapSpeciesCard(
                     )
                 }
                 Text(
-                    text = pluralStringResource(R.plurals.map_species_card_count, pin.observationCount, pin.observationCount),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SonarTheme.colors.trace,
+                    text = pluralStringResource(R.plurals.map_in_photos, pin.photos.size, pin.photos.size),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 LastSeenLine(pin.lastSeenMs)
             }
@@ -158,7 +158,7 @@ fun MapSpeciesListCard(
     MapCard(modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = pluralStringResource(R.plurals.map_species_card_count, group.observationCount, group.observationCount),
+                text = pluralStringResource(R.plurals.map_photos_here, group.photoCount, group.photoCount),
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f),
             )

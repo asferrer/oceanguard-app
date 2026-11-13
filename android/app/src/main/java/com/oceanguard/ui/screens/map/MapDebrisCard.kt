@@ -58,7 +58,7 @@ fun MapDebrisListCard(place: DebrisPlace, actions: DebrisPlaceActions, modifier:
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = pluralStringResource(R.plurals.map_debris_photos_here, photos, photos),
+                    text = pluralStringResource(R.plurals.map_photos_here, photos, photos),
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
@@ -157,7 +157,7 @@ fun MapDebrisCard(
                     color = SonarTheme.colors.echo,
                 )
                 Text(
-                    text = pluralStringResource(R.plurals.map_debris_in_photos, here.photos.size, here.photos.size),
+                    text = pluralStringResource(R.plurals.map_in_photos, here.photos.size, here.photos.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

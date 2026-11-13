@@ -99,10 +99,25 @@ class SpeciesMapLogicTest {
 
         val sparus = spots.single().entries.first { it.key == "sparus_aurata" }
         assertEquals(
-            listOf(SpeciesPhoto(2, "file://2_thumb.jpg", 30), SpeciesPhoto(1, "file://1.jpg", 10)),
+            listOf(SpeciesPhoto(2, "file://2_thumb.jpg", 30, "file://2.jpg"), SpeciesPhoto(1, "file://1.jpg", 10)),
             sparus.photos,
         )
         assertEquals(listOf(3L), spots.single().entries.first { it.key == "mola_mola" }.photos.map { it.observationId })
+    }
+
+    @Test
+    fun twoObservationsOfASpeciesInOnePhotoShowThePhotoOnce() {
+        val spots = SpeciesAggregator.spots(
+            listOf(
+                obs(1, "Sparus aurata", 38.001, -0.501, at = 10),
+                obs(2, "Sparus aurata", 38.001, -0.501, at = 10).copy(imageUri = "file://1.jpg"),
+            ),
+            keyOf,
+        )
+
+        val entry = spots.single().entries.single()
+        assertEquals(2, entry.count)
+        assertEquals(1, entry.photos.size)
     }
 
     @Test

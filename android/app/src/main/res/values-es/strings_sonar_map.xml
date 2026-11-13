@@ -67,10 +67,6 @@
         <item quantity="one">%1$s, %2$d observación. Toca para ver el detalle.</item>
         <item quantity="other">%1$s, %2$d observaciones. Toca para ver el detalle.</item>
     </plurals>
-    <plurals name="map_species_card_count">
-        <item quantity="one">%1$d observación aquí</item>
-        <item quantity="other">%1$d observaciones aquí</item>
-    </plurals>
     <plurals name="map_subtitle_observations">
         <item quantity="one">%1$d observación</item>
         <item quantity="other">%1$d observaciones</item>
@@ -92,7 +88,7 @@
     <string name="map_debris_open">Abrir en el MarineDex</string>
     <string name="map_debris_photo_cd">Abrir el análisis de esta foto</string>
     <string name="map_back_to_list">Volver a la lista</string>
-    <plurals name="map_debris_photos_here">
+    <plurals name="map_photos_here">
         <item quantity="one">%1$d foto aquí</item>
         <item quantity="other">%1$d fotos aquí</item>
     </plurals>
@@ -100,7 +96,7 @@
         <item quantity="one">%1$d objeto aquí</item>
         <item quantity="other">%1$d objetos aquí</item>
     </plurals>
-    <plurals name="map_debris_in_photos">
+    <plurals name="map_in_photos">
         <item quantity="one">en %1$d foto</item>
         <item quantity="other">en %1$d fotos</item>
     </plurals>

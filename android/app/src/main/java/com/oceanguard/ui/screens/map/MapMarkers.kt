@@ -81,6 +81,9 @@ data class SpeciesGroupMarker(
     override val longitude: Double,
 ) : MapMarker {
     val observationCount: Int get() = members.sumOf { it.observationCount }
+
+    /** Photos behind the group, each counted once even when it shows several of its species. */
+    val photoCount: Int get() = members.flatMap { it.photos }.distinctBy { it.imageUri }.size
     override val key: String get() = "species-group-${members.first().key}-${members.size}"
 }
 
