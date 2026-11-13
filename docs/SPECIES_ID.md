@@ -839,3 +839,13 @@ sprites and the credits.
 species_pack_v5.json (version 6)  5156673d66b75768d7e3184f21d3dc14c62fb84d26440e7797095e2715ccaed3
 sprite_credits.json               87326a1b172d710b901a2281fe5af50e93f6d00d235b847f06c25f14855f9acf
 ```
+
+**Manifest version 7 (2026-11-13).** Two more sprites redrawn from whole-animal photos: `octopus_cyanea` and
+`ophioderma_longicauda` (iNaturalist names the latter *Ophioderma longicaudum*, so the earlier searches only reached
+Wikimedia Commons). Same name `species_pack_v5.json` with `version: 7`: a v6 install downloads the 2 sprites and the
+credits (about 45 KB).
+
+```
+species_pack_v5.json (version 7)  efd39c91323b21a71fb71a39bbe08ab678b1e55154e2cc381e6df89b525acb46
+sprite_credits.json               40fed62fbd873aab44385e4318ebfb6a2c844ab12df4d01faaefbf0416c7824b
+```
