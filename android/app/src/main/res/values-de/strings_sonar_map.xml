@@ -56,7 +56,6 @@
     <string name="map_mode_species">Arten</string>
     <string name="map_mode_both">Beides</string>
     <string name="map_mode_cd">Auf der Karte angezeigte Daten</string>
-    <string name="map_species_last_seen">Zuletzt gesehen am %1$s</string>
     <string name="map_species_open">Im BioDex öffnen</string>
     <string name="map_species_photos">Hier aufgenommene Fotos</string>
     <string name="map_species_photo_cd">Bestimmung dieses Fotos öffnen</string>
@@ -105,5 +104,5 @@
         <item quantity="one">auf %1$d Foto</item>
         <item quantity="other">auf %1$d Fotos</item>
     </plurals>
-    <string name="map_debris_last_seen">Zuletzt gesehen am %1$s</string>
+    <string name="map_last_seen_short">Zuletzt: %1$s</string>
 </resources>

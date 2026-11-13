@@ -17,7 +17,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -29,13 +28,10 @@ import com.oceanguard.ai.ui.components.DexSpriteImage
 import com.oceanguard.ai.ui.components.dex.debrisDisplayName
 import com.oceanguard.ai.ui.components.sonar.SonarButton
 import com.oceanguard.ai.ui.components.sonar.SonarButtonStyle
-import com.oceanguard.ai.ui.components.sonar.SonarCard
 import com.oceanguard.ai.ui.theme.SonarTheme
 import com.oceanguard.ai.ui.theme.healthScoreColor
-import java.text.DateFormat
-import java.util.Date
 
-private val SPRITE_SIZE = 72.dp
+private val SPRITE_SIZE = 64.dp
 private val LIST_SPRITE = 36.dp
 private val LIST_MAX_HEIGHT = 220.dp
 
@@ -58,7 +54,7 @@ class DebrisPlaceActions(
 @Composable
 fun MapDebrisListCard(place: DebrisPlace, actions: DebrisPlaceActions, modifier: Modifier = Modifier) {
     val photos = place.sessions.size
-    SonarCard(modifier = modifier) {
+    MapCard(modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(
@@ -149,8 +145,7 @@ fun MapDebrisCard(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val dateFormat = remember { DateFormat.getDateInstance(DateFormat.MEDIUM) }
-    SonarCard(modifier = modifier) {
+    MapCard(modifier) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
             BackToListButton(onBack)
             DexSpriteImage(debrisType = here.type, size = SPRITE_SIZE)
@@ -166,11 +161,7 @@ fun MapDebrisCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Text(
-                    text = stringResource(R.string.map_debris_last_seen, dateFormat.format(Date(here.lastSeenMs))),
-                    style = SonarTheme.type.dataSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                LastSeenLine(here.lastSeenMs)
             }
             IconButton(onClick = onClose) {
                 Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.common_close))

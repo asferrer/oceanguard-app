@@ -35,6 +35,8 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.oceanguard.ai.R
@@ -44,14 +46,12 @@ import com.oceanguard.ai.ui.components.SpeciesSpriteImage
 import com.oceanguard.ai.ui.components.sonar.SonarButton
 import com.oceanguard.ai.ui.components.sonar.SonarCard
 import com.oceanguard.ai.ui.theme.SonarTheme
-import java.text.DateFormat
-import java.util.Date
 
-private val SPRITE_SIZE = 72.dp
+private val SPRITE_SIZE = 64.dp
 private val LIST_SPRITE = 36.dp
 private val LIST_MAX_HEIGHT = 220.dp
 private val SUMMARY_SHAPE = RoundedCornerShape(12.dp)
-private val PHOTO_SIZE = 72.dp
+private val PHOTO_SIZE = 56.dp
 private val PHOTO_SHAPE = RoundedCornerShape(10.dp)
 private const val SUMMARY_ALPHA = 0.92f
 
@@ -76,8 +76,7 @@ fun MapSpeciesCard(
 ) {
     val entry = pin.speciesKey?.let { catalog?.byKey(it) }
     val name = SpeciesNames.commonName(entry, fallback = pin.scientificName)
-    val dateFormat = remember { DateFormat.getDateInstance(DateFormat.MEDIUM) }
-    SonarCard(modifier = modifier) {
+    MapCard(modifier) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
             onBack?.let { BackToListButton(it) }
             SpeciesSpriteImage(spritePath = entry?.sprite, size = SPRITE_SIZE)
@@ -95,11 +94,7 @@ fun MapSpeciesCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = SonarTheme.colors.trace,
                 )
-                Text(
-                    text = stringResource(R.string.map_species_last_seen, dateFormat.format(Date(pin.lastSeenMs))),
-                    style = SonarTheme.type.dataSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                LastSeenLine(pin.lastSeenMs)
             }
             IconButton(onClick = onClose) {
                 Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.common_close))
@@ -160,7 +155,7 @@ fun MapSpeciesListCard(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SonarCard(modifier = modifier) {
+    MapCard(modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = pluralStringResource(R.plurals.map_species_card_count, group.observationCount, group.observationCount),
@@ -233,4 +228,37 @@ internal fun BackToListButton(onBack: () -> Unit) {
     IconButton(onClick = onBack) {
         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.map_back_to_list))
     }
+}
+
+/** Gap between the blocks of a map card: header, photos and button never touch. */
+private val CARD_GAP = 12.dp
+
+/** A [SonarCard] whose blocks are spaced, for the cards that open over the map. */
+@Composable
+internal fun MapCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    SonarCard(modifier = modifier) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(CARD_GAP), content = content)
+    }
+}
+
+/** "Last seen: 11 Nov" in one small line; the year only when it is not the current one. */
+@Composable
+internal fun LastSeenLine(lastSeenMs: Long) {
+    val date = remember(lastSeenMs) { shortDate(lastSeenMs) }
+    Text(
+        text = stringResource(R.string.map_last_seen_short, date),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+/** Day and short month in the order of the locale, with the year only for another year. */
+private fun shortDate(ms: Long): String {
+    val locale = java.util.Locale.getDefault()
+    val year = { t: Long -> java.util.Calendar.getInstance().apply { timeInMillis = t }.get(java.util.Calendar.YEAR) }
+    val skeleton = if (year(ms) == year(System.currentTimeMillis())) "dMMM" else "dMMMyyyy"
+    val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, skeleton)
+    return java.text.SimpleDateFormat(pattern, locale).format(java.util.Date(ms))
 }
