@@ -45,9 +45,13 @@ ReportValidator -> Markdown / PDF / CSV / GeoJSON
   methods (debris summary, material and type breakdown, risk assessment, collection waypoints, survey statistics,
   ecological impacts, temporal trend, per-session details), so every number in a report is computed in Kotlin and not written by the model.
   `ReportValidator` scores the result with 12+ checks.
+- **Species identification.** An ONNX image encoder (BioCLIP 2) compares the photo with a reference index of 232 marine
+  species, mostly Mediterranean, downloaded in-app as the BioDex species pack; when no species is certain it answers
+  with the group. Details in [docs/SPECIES_ID.md](docs/SPECIES_ID.md).
 - **Other features.** Continuous scan with RT-DETRv2 (about one pass every 4 s on the reference phone, not real time),
-  map with the real location of each analysis (MapLibre, OpenFreeMap), GPS from EXIF or device, hotspot clustering,
-  MarineDex and BioDex collections, achievements, and six languages (EN, ES, FR, DE, IT, PT).
+  map on a 3D globe with debris and species at the real location of each analysis (MapLibre, OpenFreeMap), nearby
+  photos grouped into study zones, GPS from EXIF or device, batches in the background, MarineDex and BioDex collections
+  with pixel-art sprites, search and favourites, achievements, and six languages (EN, ES, FR, DE, IT, PT).
 - **Alternative engines.** A llama.cpp path for the fine-tuned Gemma 4 (GGUF) and for Qwen 3.5 text models.
 
 ## Architecture
