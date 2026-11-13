@@ -58,6 +58,8 @@
     <string name="map_mode_cd">Dati mostrati sulla mappa</string>
     <string name="map_species_last_seen">Vista l\'ultima volta il %1$s</string>
     <string name="map_species_open">Apri nel BioDex</string>
+    <string name="map_species_photos">Foto scattate qui</string>
+    <string name="map_species_photo_cd">Apri l\'identificazione di questa foto</string>
     <plurals name="map_species_cluster_cd">
         <item quantity="one">Osservazioni in questa zona: %1$d, specie: %2$d. Tocca per ingrandire.</item>
         <item quantity="other">Osservazioni in questa zona: %1$d, specie: %2$d. Tocca per ingrandire.</item>

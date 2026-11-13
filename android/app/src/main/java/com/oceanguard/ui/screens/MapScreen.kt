@@ -276,7 +276,7 @@ private fun MapHud(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                if (!tour.isActive) {
+                if (!tour.isActive && state.dataMode.showsDebris) {
                     MapLegend(Modifier.spotlightTarget("map_legend", boundsMap))
                 }
                 Spacer(Modifier.weight(1f))
@@ -301,7 +301,10 @@ private fun SelectedPinCard(navController: NavController, state: MapScreenState,
         MapSpeciesListCard(
             group = group,
             catalog = state.species.catalog,
-            onOpenSpecies = { key -> navController.navigate("biodex/$key") },
+            onSelect = { pin ->
+                state.selectedSpeciesGroup = null
+                state.selectedSpecies = pin
+            },
             onClose = { state.selectedSpeciesGroup = null },
         )
         return
@@ -311,6 +314,7 @@ private fun SelectedPinCard(navController: NavController, state: MapScreenState,
             pin = pin,
             catalog = state.species.catalog,
             onOpenSpecies = pin.speciesKey?.let { key -> { navController.navigate("biodex/$key") } },
+            onOpenPhoto = { id -> navController.navigate("species_observation/$id") },
             onClose = { state.selectedSpecies = null },
         )
         return

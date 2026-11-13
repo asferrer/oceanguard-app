@@ -92,14 +92,20 @@ fun MapMarkersOverlay(
         // Read here, not in a child, so every camera frame re-projects the markers.
         cameraState.position
         val projection = cameraState.projection ?: return@BoxWithConstraints
+        val points = markers.map { projection.screenLocationFromPosition(Position(it.longitude, it.latitude)) }
+        val xy = points.map { it.x.value to it.y.value }
+        val speciesAt = xy.filterIndexed { i, _ -> markers[i].isSpecies }
+        val debrisAt = xy.filterIndexed { i, _ -> !markers[i].isSpecies }
         var shown = 0
-        for (marker in markers) {
+        for ((i, marker) in markers.withIndex()) {
             if (shown >= MapMarkerPlanner.MAX_MARKERS) break
-            val at = projection.screenLocationFromPosition(Position(marker.longitude, marker.latitude))
+            val at = points[i]
             if (!at.isOnScreen(maxWidth, maxHeight)) continue
+            val others = if (marker.isSpecies) debrisAt else speciesAt
+            val x = at.x + MapMarkerPlanner.sideBySideShift(at.x.value, at.y.value, marker.isSpecies, others).dp
             key(marker.key) {
                 PositionedMarker(
-                    marker, at.x, at.y, shown, selectedSessionId, onClusterClick, onPinClick,
+                    marker, x, at.y, shown, selectedSessionId, onClusterClick, onPinClick,
                     SpeciesMarkerActions(
                         speciesCatalog, selectedSpeciesKey, onSpeciesClusterClick, onSpeciesPinClick,
                         onGroupClick, onSpeciesGroupClick,

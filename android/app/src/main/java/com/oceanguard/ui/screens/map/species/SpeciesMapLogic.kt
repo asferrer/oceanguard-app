@@ -38,6 +38,7 @@ object SpeciesMapFilter {
  *
  * @param key Catalogue key, which is the BioDex route argument; null for an uncatalogued
  * identification, which has no BioDex page.
+ * @param photos The photos it was identified in, newest first.
  */
 data class SpeciesEntry(
     val key: String?,
@@ -46,7 +47,11 @@ data class SpeciesEntry(
     val longitude: Double,
     val count: Int,
     val lastSeenMs: Long,
+    val photos: List<SpeciesPhoto> = emptyList(),
 )
+
+/** A photo in which a species was identified: the observation it opens and the picture to show. */
+data class SpeciesPhoto(val observationId: Long, val uri: String, val takenMs: Long)
 
 /** Every species seen inside one grid cell of about a kilometre, drawn as one cluster. */
 data class SpeciesSpot(
@@ -97,6 +102,9 @@ object SpeciesAggregator {
         longitude = rows.map { checkNotNull(it.location).longitude }.average(),
         count = rows.size,
         lastSeenMs = rows.maxOf { it.timestamp.time },
+        photos = rows
+            .sortedByDescending { it.timestamp.time }
+            .map { SpeciesPhoto(it.id, it.thumbnailUri ?: it.imageUri, it.timestamp.time) },
     )
 
     /** Distinct species across [spots], uncatalogued ones counted by name. */

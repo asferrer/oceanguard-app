@@ -58,6 +58,8 @@
     <string name="map_mode_cd">Données affichées sur la carte</string>
     <string name="map_species_last_seen">Vue pour la dernière fois le %1$s</string>
     <string name="map_species_open">Ouvrir dans le BioDex</string>
+    <string name="map_species_photos">Photos prises ici</string>
+    <string name="map_species_photo_cd">Ouvrir l\'identification de cette photo</string>
     <plurals name="map_species_cluster_cd">
         <item quantity="one">Observations dans cette zone : %1$d, espèces : %2$d. Touchez pour zoomer.</item>
         <item quantity="other">Observations dans cette zone : %1$d, espèces : %2$d. Touchez pour zoomer.</item>

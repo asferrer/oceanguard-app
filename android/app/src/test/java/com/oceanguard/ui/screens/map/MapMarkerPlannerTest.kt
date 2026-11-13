@@ -112,4 +112,16 @@ class MapMarkerPlannerTest {
         val far = listOf(zone(session(1, 0.0, 0.0), lat = 0.0, lon = 0.0), zone(session(2, 0.0, 40.0), lat = 0.0, lon = 40.0))
         assertEquals(3.0, MapMarkerPlanner.fitTarget(far)!!.zoom, 0.0)
     }
+
+    @Test
+    fun `debris and species markers on the same spot are drawn side by side`() {
+        val half = MapMarkerPlanner.SIDE_BY_SIDE_DP / 2
+        val debris = listOf(100f to 200f)
+        assertEquals(half, MapMarkerPlanner.sideBySideShift(105f, 203f, true, debris), 0f)
+        assertEquals(-half, MapMarkerPlanner.sideBySideShift(100f, 200f, false, listOf(105f to 203f)), 0f)
+        assertEquals(0f, MapMarkerPlanner.sideBySideShift(300f, 200f, true, debris), 0f)
+        assertEquals(0f, MapMarkerPlanner.sideBySideShift(100f, 200f, false, emptyList()), 0f)
+        assertTrue(SpeciesClusterMarker(0, 0.0, 0.0, 1, 1).isSpecies)
+        assertFalse(ClusterMarker(0, 0.0, 0.0, 1, 50).isSpecies)
+    }
 }

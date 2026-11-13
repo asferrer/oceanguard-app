@@ -55,6 +55,8 @@ data class SpeciesPinMarker(
     override val longitude: Double,
     val observationCount: Int,
     val lastSeenMs: Long,
+    /** The photos the species was identified in here, newest first. */
+    val photos: List<com.oceanguard.ai.ui.screens.map.species.SpeciesPhoto> = emptyList(),
 ) : MapMarker {
     override val key: String get() = "species-$spotIndex-${speciesKey ?: scientificName}"
 }
@@ -81,6 +83,10 @@ data class SpeciesGroupMarker(
     val observationCount: Int get() = members.sumOf { it.observationCount }
     override val key: String get() = "species-group-${members.first().key}-${members.size}"
 }
+
+/** Whether the marker is a species observation (as opposed to a debris photo or zone). */
+val MapMarker.isSpecies: Boolean
+    get() = this is SpeciesClusterMarker || this is SpeciesPinMarker || this is SpeciesGroupMarker
 
 /** "38.12345, -0.50000": signed decimals with a point, so they can be pasted into any map app. */
 fun formatCoordinates(latitude: Double, longitude: Double): String =
@@ -123,7 +129,7 @@ object MapMarkerPlanner {
         spots.flatMapIndexed { index, spot ->
             if (expanded) {
                 spot.entries.map { e ->
-                    SpeciesPinMarker(index, e.key, e.scientificName, e.latitude, e.longitude, e.count, e.lastSeenMs)
+                    SpeciesPinMarker(index, e.key, e.scientificName, e.latitude, e.longitude, e.count, e.lastSeenMs, e.photos)
                 }
             } else {
                 listOf(
@@ -145,6 +151,24 @@ object MapMarkerPlanner {
     const val ZOOM_STEP = 0.25
 
     fun quantizeZoom(zoom: Double): Double = Math.round(zoom / ZOOM_STEP) * ZOOM_STEP
+
+    /** How far apart, in dp, a debris marker and a species marker on the same spot are drawn. */
+    const val SIDE_BY_SIDE_DP = 52f
+
+    /**
+     * Horizontal shift, in dp, that keeps a debris marker and a species marker on the same spot
+     * from hiding each other: when the marker at ([x], [y]) is closer than [SIDE_BY_SIDE_DP] to one
+     * of the [others] (markers of the other kind), debris moves left and species right by half of
+     * it, so the pair stays centred on the place. Zero when nothing of the other kind is there.
+     */
+    fun sideBySideShift(x: Float, y: Float, isSpecies: Boolean, others: List<Pair<Float, Float>>): Float {
+        val near = others.any { (ox, oy) -> kotlin.math.hypot(ox - x, oy - y) < SIDE_BY_SIDE_DP }
+        return when {
+            !near -> 0f
+            isSpecies -> SIDE_BY_SIDE_DP / 2
+            else -> -SIDE_BY_SIDE_DP / 2
+        }
+    }
 
     /**
      * Merges the pins of [markers] that stack at [zoom] into [PinGroupMarker]s and
