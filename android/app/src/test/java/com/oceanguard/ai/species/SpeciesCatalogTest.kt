@@ -89,4 +89,22 @@ class SpeciesCatalogTest {
         catalog.load()
         assertNull(catalog.byKey("nonexistent_species"))
     }
+
+    @Test
+    fun `reload swaps the new catalogue in and keeps the old one when the new file cannot be read`() {
+        val catalog = SpeciesCatalog(tempCatalog(wrapperJson))
+        catalog.load()
+        assertNotNull(catalog.byKey("octopus_vulgaris"))
+
+        val missing = File(tempCatalog(wrapperJson).parentFile, "no_such_catalog_${System.nanoTime()}.json")
+        val failed = runCatching { catalog.reload(missing) }
+        assertEquals(true, failed.isFailure)
+        // Never left empty: the old entries are still there.
+        assertNotNull(catalog.byKey("octopus_vulgaris"))
+
+        val onlyOne = wrapperJson.replace("\"octopus_vulgaris\"", "\"octopus_vulgaris_x\"")
+        catalog.reload(tempCatalog(onlyOne))
+        assertNull(catalog.byKey("octopus_vulgaris"))
+        assertNotNull(catalog.byKey("octopus_vulgaris_x"))
+    }
 }

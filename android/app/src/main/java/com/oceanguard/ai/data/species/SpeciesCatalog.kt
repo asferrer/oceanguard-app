@@ -43,22 +43,25 @@ class SpeciesCatalog(@Volatile private var catalogFile: File) {
      */
     fun load() {
         if (entries != null) return
-        check(catalogFile.exists()) {
-            "Species catalog not found at ${catalogFile.absolutePath}. Download it first."
-        }
-        val parsed: CatalogFile = gson.fromJson(
-            catalogFile.readText(Charsets.UTF_8),
-            catalogFileType,
-        )
-        entries = parsed.species.associateBy { it.speciesKey }
+        entries = parse(catalogFile)
     }
 
-    /** Drop the cached entries and parse [file] (the species pack changed). */
+    /**
+     * Parse [file] (the species pack changed) and swap it in at once. The old entries stay readable until the new
+     * ones are ready, so a screen reading the catalogue meanwhile never sees it empty; if [file] cannot be read the
+     * old entries are kept and the error is thrown.
+     */
     @Synchronized
     fun reload(file: File = catalogFile) {
+        val parsed = parse(file)
         catalogFile = file
-        entries = null
-        load()
+        entries = parsed
+    }
+
+    private fun parse(file: File): Map<String, SpeciesCatalogEntry> {
+        check(file.exists()) { "Species catalog not found at ${file.absolutePath}. Download it first." }
+        val parsed: CatalogFile = gson.fromJson(file.readText(Charsets.UTF_8), catalogFileType)
+        return parsed.species.associateBy { it.speciesKey }
     }
 
     /**
