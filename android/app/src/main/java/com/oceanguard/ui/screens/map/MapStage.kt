@@ -98,11 +98,15 @@ private fun FlatMarkers(
         onClusterClick = { index ->
             val zone = zones.getOrNull(index) ?: return@MapMarkersOverlay
             scope.launch {
-                camera.flyTo(Position(zone.centroidLon, zone.centroidLat), MapMarkerPlanner.FLY_ZOOM, reduced)
-                state.selectedZone = zone
+                val (lat, lon) = MapMarkerPlanner.centreAboveCard(zone.centroidLat, zone.centroidLon, MapMarkerPlanner.FLY_ZOOM)
+                camera.flyTo(Position(lon, lat), MapMarkerPlanner.FLY_ZOOM, reduced)
+                state.showDebris(DebrisPlace(zone.sessions, zone))
             }
         },
-        onPinClick = { state.selectedPinId = it },
+        onPinClick = { id ->
+            val session = zones.firstNotNullOfOrNull { z -> z.sessions.firstOrNull { it.id == id } }
+            if (session != null) state.showDebris(DebrisPlace(listOf(session), zone = null), pinId = id)
+        },
         modifier = Modifier.fillMaxSize().graphicsLayer {
             alpha = if (globe.mode == GlobeMode.MAP) 1f else 1f - globe.opacity
         },
@@ -114,12 +118,14 @@ private fun FlatMarkers(
             scope.launch { camera.flyTo(Position(spot.longitude, spot.latitude), MapMarkerPlanner.FLY_ZOOM, reduced) }
         },
         onSpeciesPinClick = {
-            state.selectedSpeciesGroup = null
+            state.clearSelection()
             state.selectedSpecies = it
         },
-        onGroupClick = { group -> MapMarkerPlanner.zoneFor(group, zones)?.let { state.selectedZone = it } },
+        onGroupClick = { group ->
+            state.showDebris(DebrisPlace(DebrisMapSummary.sessionsOf(group, zones), MapMarkerPlanner.zoneFor(group, zones)))
+        },
         onSpeciesGroupClick = {
-            state.selectedSpecies = null
+            state.clearSelection()
             state.selectedSpeciesGroup = it
         },
     )
@@ -148,8 +154,9 @@ private fun GlobeDots(state: MapScreenState, camera: CameraState, zones: List<Zo
                 val at = Position(dot.longitude, dot.latitude)
                 globe.diveInto(at, camera, reduced)
                 if (index < zoneDots.size) {
-                    camera.flyTo(at, MapMarkerPlanner.FLY_ZOOM, reduced)
-                    state.selectedZone = zones.getOrNull(index)
+                    val (lat, lon) = MapMarkerPlanner.centreAboveCard(dot.latitude, dot.longitude, MapMarkerPlanner.FLY_ZOOM)
+                    camera.flyTo(Position(lon, lat), MapMarkerPlanner.FLY_ZOOM, reduced)
+                    zones.getOrNull(index)?.let { state.showDebris(DebrisPlace(it.sessions, it)) }
                 } else {
                     camera.flyTo(at, GlobeClusters.frameZoom(dot.spanDegrees, globe.minDimension), reduced)
                 }

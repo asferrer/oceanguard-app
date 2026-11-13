@@ -152,6 +152,20 @@ object MapMarkerPlanner {
 
     fun quantizeZoom(zoom: Double): Double = Math.round(zoom / ZOOM_STEP) * ZOOM_STEP
 
+    /** How far above the middle of the map, in dp, a tapped zone is left, so the card under it does not cover it. */
+    const val CARD_CLEARANCE_DP = 140.0
+
+    /**
+     * Where to centre the camera so the place at ([latitude], [longitude]) shows [CARD_CLEARANCE_DP]
+     * above the middle of the map at [zoom]: the card that opens covers the lower part.
+     */
+    fun centreAboveCard(latitude: Double, longitude: Double, zoom: Double): Pair<Double, Double> {
+        val metres = CARD_CLEARANCE_DP * ProximityGrouping.metresPerDp(zoom, latitude)
+        return (latitude - metres / METRES_PER_DEGREE_LAT) to longitude
+    }
+
+    private const val METRES_PER_DEGREE_LAT = 111_320.0
+
     /** How far apart, in dp, a debris marker and a species marker on the same spot are drawn. */
     const val SIDE_BY_SIDE_DP = 52f
 
@@ -160,13 +174,21 @@ object MapMarkerPlanner {
      * from hiding each other: when the marker at ([x], [y]) is closer than [SIDE_BY_SIDE_DP] to one
      * of the [others] (markers of the other kind), debris moves left and species right by half of
      * it, so the pair stays centred on the place. Zero when nothing of the other kind is there.
+     *
+     * @param apart Distance between the two centres; the globe's dots are smaller than the map's markers.
      */
-    fun sideBySideShift(x: Float, y: Float, isSpecies: Boolean, others: List<Pair<Float, Float>>): Float {
-        val near = others.any { (ox, oy) -> kotlin.math.hypot(ox - x, oy - y) < SIDE_BY_SIDE_DP }
+    fun sideBySideShift(
+        x: Float,
+        y: Float,
+        isSpecies: Boolean,
+        others: List<Pair<Float, Float>>,
+        apart: Float = SIDE_BY_SIDE_DP,
+    ): Float {
+        val near = others.any { (ox, oy) -> kotlin.math.hypot(ox - x, oy - y) < apart }
         return when {
             !near -> 0f
-            isSpecies -> SIDE_BY_SIDE_DP / 2
-            else -> -SIDE_BY_SIDE_DP / 2
+            isSpecies -> apart / 2
+            else -> -apart / 2
         }
     }
 

@@ -88,4 +88,22 @@
         <item quantity="one">%1$d osservazioni di %2$d specie qui. Tocca per l\'elenco.</item>
         <item quantity="other">%1$d osservazioni di %2$d specie qui. Tocca per l\'elenco.</item>
     </plurals>
+    <string name="map_debris_none">Nessun rifiuto rilevato qui</string>
+    <string name="map_debris_view_zone">Vedi la zona</string>
+    <string name="map_debris_open">Apri nel MarineDex</string>
+    <string name="map_debris_photo_cd">Apri l’analisi di questa foto</string>
+    <string name="map_back_to_list">Torna all’elenco</string>
+    <plurals name="map_debris_photos_here">
+        <item quantity="one">%1$d foto qui</item>
+        <item quantity="other">%1$d foto qui</item>
+    </plurals>
+    <plurals name="map_debris_objects_here">
+        <item quantity="one">%1$d oggetto qui</item>
+        <item quantity="other">%1$d oggetti qui</item>
+    </plurals>
+    <plurals name="map_debris_in_photos">
+        <item quantity="one">in %1$d foto</item>
+        <item quantity="other">in %1$d foto</item>
+    </plurals>
+    <string name="map_debris_last_seen">Visto l’ultima volta il %1$s</string>
 </resources>

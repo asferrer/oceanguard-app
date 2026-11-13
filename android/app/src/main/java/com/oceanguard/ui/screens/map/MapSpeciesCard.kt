@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,7 +41,6 @@ import com.oceanguard.ai.R
 import com.oceanguard.ai.data.species.SpeciesCatalog
 import com.oceanguard.ai.data.species.SpeciesNames
 import com.oceanguard.ai.ui.components.SpeciesSpriteImage
-import com.oceanguard.ai.ui.screens.map.species.SpeciesPhoto
 import com.oceanguard.ai.ui.components.sonar.SonarButton
 import com.oceanguard.ai.ui.components.sonar.SonarCard
 import com.oceanguard.ai.ui.theme.SonarTheme
@@ -62,6 +62,7 @@ private const val SUMMARY_ALPHA = 0.92f
  *
  * @param onOpenSpecies Null for an identification with no catalogue entry, which has no page.
  * @param onOpenPhoto Opens the identification of one photo, by observation id.
+ * @param onBack Back to the list the species was picked from; null when it was tapped on the map.
  */
 @Composable
 fun MapSpeciesCard(
@@ -71,12 +72,14 @@ fun MapSpeciesCard(
     onOpenPhoto: (Long) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
 ) {
     val entry = pin.speciesKey?.let { catalog?.byKey(it) }
     val name = SpeciesNames.commonName(entry, fallback = pin.scientificName)
     val dateFormat = remember { DateFormat.getDateInstance(DateFormat.MEDIUM) }
     SonarCard(modifier = modifier) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+            onBack?.let { BackToListButton(it) }
             SpeciesSpriteImage(spritePath = entry?.sprite, size = SPRITE_SIZE)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(name, style = MaterialTheme.typography.titleSmall)
@@ -103,7 +106,11 @@ fun MapSpeciesCard(
             }
         }
         if (pin.photos.isNotEmpty()) {
-            SpeciesPhotoStrip(pin.photos, onOpenPhoto)
+            CapturedPhotoStrip(
+                photos = pin.photos.map { it.observationId to it.uri },
+                description = stringResource(R.string.map_species_photo_cd),
+                onOpen = onOpenPhoto,
+            )
         }
         if (onOpenSpecies != null) {
             SonarButton(
@@ -115,10 +122,12 @@ fun MapSpeciesCard(
     }
 }
 
-/** The photos a species was identified in, newest first, in a row that scrolls; each opens its identification. */
+/**
+ * Photos taken at a place, newest first, in a row that scrolls: the species card and the debris card
+ * use it alike. Each photo is (id, picture) and [onOpen] gets the id of the one tapped.
+ */
 @Composable
-private fun SpeciesPhotoStrip(photos: List<SpeciesPhoto>, onOpenPhoto: (Long) -> Unit) {
-    val description = stringResource(R.string.map_species_photo_cd)
+internal fun CapturedPhotoStrip(photos: List<Pair<Long, String>>, description: String, onOpen: (Long) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             text = stringResource(R.string.map_species_photos),
@@ -126,16 +135,16 @@ private fun SpeciesPhotoStrip(photos: List<SpeciesPhoto>, onOpenPhoto: (Long) ->
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(photos, key = { it.observationId }) { photo ->
+            items(photos, key = { it.first }) { (id, uri) ->
                 AsyncImage(
-                    model = photo.uri,
+                    model = uri,
                     contentDescription = description,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(PHOTO_SIZE)
                         .clip(PHOTO_SHAPE)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                        .clickable(role = Role.Button) { onOpenPhoto(photo.observationId) },
+                        .clickable(role = Role.Button) { onOpen(id) },
                 )
             }
         }
@@ -215,5 +224,13 @@ fun SpeciesSummaryCard(observations: Int, species: Int, modifier: Modifier = Mod
                 )
             }
         }
+    }
+}
+
+/** Back from one item's card to the list of the place it was picked from. */
+@Composable
+internal fun BackToListButton(onBack: () -> Unit) {
+    IconButton(onClick = onBack) {
+        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.map_back_to_list))
     }
 }

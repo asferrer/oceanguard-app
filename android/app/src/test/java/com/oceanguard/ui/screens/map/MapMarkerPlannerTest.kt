@@ -114,6 +114,15 @@ class MapMarkerPlannerTest {
     }
 
     @Test
+    fun `a tapped zone is framed above the card`() {
+        val (lat, lon) = MapMarkerPlanner.centreAboveCard(38.0, -0.5, 15.0)
+        val metres = MapMarkerPlanner.CARD_CLEARANCE_DP * ProximityGrouping.metresPerDp(15.0, 38.0)
+        assertEquals(-0.5, lon, 0.0)
+        assertTrue(lat < 38.0)
+        assertEquals(metres, (38.0 - lat) * 111_320.0, 0.01)
+    }
+
+    @Test
     fun `debris and species markers on the same spot are drawn side by side`() {
         val half = MapMarkerPlanner.SIDE_BY_SIDE_DP / 2
         val debris = listOf(100f to 200f)

@@ -51,6 +51,26 @@ class MapScreenState {
     var species by mutableStateOf(SpeciesMapData.EMPTY)
     var selectedSpecies by mutableStateOf<SpeciesPinMarker?>(null)
     var selectedSpeciesGroup by mutableStateOf<SpeciesGroupMarker?>(null)
+    /** Debris photos that were tapped (a zone, a study zone or one photo), listed by type. */
+    var selectedDebris by mutableStateOf<DebrisPlace?>(null)
+    /** The debris type picked from [selectedDebris], whose card is open. */
+    var selectedDebrisType by mutableStateOf<DebrisTypeHere?>(null)
+
+    /** Closes whatever card of the map is open. */
+    fun clearSelection() {
+        selectedPinId = null
+        selectedDebris = null
+        selectedDebrisType = null
+        selectedSpecies = null
+        selectedSpeciesGroup = null
+    }
+
+    /** Opens the debris list of [place]; [pinId] is the photo to highlight when it is a single one. */
+    fun showDebris(place: DebrisPlace, pinId: Long? = null) {
+        clearSelection()
+        selectedDebris = place
+        selectedPinId = pinId
+    }
 
     /** The 3D globe shown when zoomed far out, and which of it and the flat map is in charge. */
     val globe = GlobeController()

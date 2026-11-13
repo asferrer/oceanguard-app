@@ -70,7 +70,9 @@ import com.oceanguard.ai.ui.screens.map.MapLoadFailed
 import com.oceanguard.ai.ui.screens.map.MapMarkerPlanner
 import com.oceanguard.ai.ui.screens.map.MapMarkersOverlay
 import com.oceanguard.ai.ui.screens.map.MapOfflineBanner
-import com.oceanguard.ai.ui.screens.map.MapPinCard
+import com.oceanguard.ai.ui.screens.map.DebrisPlaceActions
+import com.oceanguard.ai.ui.screens.map.MapDebrisCard
+import com.oceanguard.ai.ui.screens.map.MapDebrisListCard
 import com.oceanguard.ai.ui.screens.map.MapScreenState
 import com.oceanguard.ai.ui.screens.map.MapStyle
 import com.oceanguard.ai.ui.screens.map.MapTourOverlay
@@ -142,9 +144,7 @@ fun MapScreen(
                 tour = tour,
                 boundsMap = boundsMap,
                 onModeChange = { picked ->
-                    state.selectedPinId = null
-                    state.selectedSpecies = null
-                    state.selectedSpeciesGroup = null
+                    state.clearSelection()
                     scope.launch { viewModel.settingsRepository.setMapDataMode(picked.key) }
                 },
                 modifier = Modifier.padding(padding),
@@ -290,41 +290,64 @@ private fun MapHud(
                     showHeatmapButton = state.dataMode.offersDebrisControls,
                 )
             }
-            SelectedPinCard(navController, state, data)
+            SelectedPinCard(navController, state)
         }
     }
 }
 
+/** The card of what was tapped on the map: debris and species follow the same list, then card, flow. */
 @Composable
-private fun SelectedPinCard(navController: NavController, state: MapScreenState, data: MapData) {
-    state.selectedSpeciesGroup?.let { group ->
-        MapSpeciesListCard(
-            group = group,
-            catalog = state.species.catalog,
-            onSelect = { pin ->
-                state.selectedSpeciesGroup = null
-                state.selectedSpecies = pin
-            },
-            onClose = { state.selectedSpeciesGroup = null },
-        )
+private fun SelectedPinCard(navController: NavController, state: MapScreenState) {
+    if (state.selectedDebris != null) {
+        DebrisSelectionCard(navController, state)
         return
     }
     state.selectedSpecies?.let { pin ->
+        val fromList = state.selectedSpeciesGroup != null
         MapSpeciesCard(
             pin = pin,
             catalog = state.species.catalog,
             onOpenSpecies = pin.speciesKey?.let { key -> { navController.navigate("biodex/$key") } },
             onOpenPhoto = { id -> navController.navigate("species_observation/$id") },
-            onClose = { state.selectedSpecies = null },
+            onClose = { state.clearSelection() },
+            onBack = if (fromList) ({ state.selectedSpecies = null }) else null,
         )
         return
     }
-    val session = data.located.firstOrNull { it.id == state.selectedPinId } ?: return
-    MapPinCard(
-        session = session,
-        onOpenDetail = { navController.navigate("session/${session.id}") },
-        onFixLocation = { navController.navigate("location_picker/${session.id}") },
-        onClose = { state.selectedPinId = null },
+    state.selectedSpeciesGroup?.let { group ->
+        MapSpeciesListCard(
+            group = group,
+            catalog = state.species.catalog,
+            onSelect = { pin -> state.selectedSpecies = pin },
+            onClose = { state.clearSelection() },
+        )
+    }
+}
+
+/** Debris at the tapped place: the list of types with their sprites, or the card of the type picked. */
+@Composable
+private fun DebrisSelectionCard(navController: NavController, state: MapScreenState) {
+    val place = state.selectedDebris ?: return
+    state.selectedDebrisType?.let { here ->
+        MapDebrisCard(
+            here = here,
+            onOpenPhoto = { id -> navController.navigate("session/$id") },
+            onOpenMarineDex = { navController.navigate("marinedex/${here.type.name}") },
+            onBack = { state.selectedDebrisType = null },
+            onClose = { state.clearSelection() },
+        )
+        return
+    }
+    val single = place.sessions.singleOrNull()?.takeIf { place.zone == null }
+    MapDebrisListCard(
+        place = place,
+        actions = DebrisPlaceActions(
+            onSelect = { state.selectedDebrisType = it },
+            onClose = { state.clearSelection() },
+            onOpenZone = place.zone?.let { zone -> { state.selectedZone = zone } },
+            onOpenPhoto = single?.let { s -> { navController.navigate("session/${s.id}") } },
+            onFixLocation = single?.let { s -> { navController.navigate("location_picker/${s.id}") } },
+        ),
     )
 }
 

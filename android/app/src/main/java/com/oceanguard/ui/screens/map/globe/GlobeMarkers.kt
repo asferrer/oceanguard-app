@@ -129,9 +129,18 @@ internal fun GlobeMarkers(
         val camera = controller.view
         val distance = GlobeMath.distanceForZoom(camera.zoom, minOf(maxWidth, maxHeight).value.toDouble())
         val opacity = controller.opacity
+        val projected = dots.map {
+            GlobeMath.project(it.latitude, it.longitude, camera, maxWidth.value.toDouble(), maxHeight.value.toDouble())
+        }
+        val zonesAt = dots.indices.filter { dots[it].shape == GlobeDotShape.CIRCLE }.mapNotNull { projected[it]?.pair() }
+        val speciesAt = dots.indices.filter { dots[it].shape == GlobeDotShape.ROUNDED }.mapNotNull { projected[it]?.pair() }
         dots.forEachIndexed { index, dot ->
-            val at = GlobeMath.project(dot.latitude, dot.longitude, camera, maxWidth.value.toDouble(), maxHeight.value.toDouble())
-                ?: return@forEachIndexed
+            val raw = projected[index] ?: return@forEachIndexed
+            val isSpecies = dot.shape == GlobeDotShape.ROUNDED
+            val shift = MapMarkerPlanner.sideBySideShift(
+                raw.x, raw.y, isSpecies, if (isSpecies) zonesAt else speciesAt, GLOBE_SIDE_BY_SIDE_DP,
+            )
+            val at = raw.copy(x = raw.x + shift)
             val rotated = GlobeMath.rotateToView(dot.latitude, dot.longitude, camera.latitude, camera.longitude)
             val alpha = GlobeMath.limbOpacity(rotated, distance) * opacity
             if (alpha <= 0f) return@forEachIndexed
@@ -174,6 +183,14 @@ private fun GlobeDotView(
         }
     }
 }
+
+private fun ScreenPoint.pair(): Pair<Float, Float> = x to y
+
+/**
+ * Centre-to-centre distance of a zone dot and a species dot on the same place, so the species
+ * square does not cover the zone's count.
+ */
+private const val GLOBE_SIDE_BY_SIDE_DP = 34f
 
 /** Zone dots are smaller than the flat map's clusters: a whole ocean of them has to fit. */
 private const val ZONE_DOT_SCALE = 0.62f
